@@ -18,6 +18,13 @@ export const APP_TAGLINE =
 export const TOKEN_KEY = 'sourcebook_token'
 
 /**
+ * The `cred` claim of a session opened with the Human Resources password.
+ * Mirrors HR_PASSWORD_HASH_VAR in sourcebook/api/routes/auth.py; change both
+ * together.
+ */
+export const HR_CRED = 'HR_PASSWORD_HASH'
+
+/**
  * Who a refused or unhelpful answer is handed to. Mirrors ESCALATION_CONTACT
  * in sourcebook/rag/config.py; change both together.
  */
