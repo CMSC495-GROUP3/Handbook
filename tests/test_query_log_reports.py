@@ -787,6 +787,80 @@ def test_faq_counts_conversations_not_asks(use_collection):
     assert "hash=solo" not in faq_section
 
 
-def test_faq_pipeline_drops_session_ids_before_output():
-    stages = reports.faq_pipeline(SINCE, UNTIL, 5, 2)
-    assert {"$project": {"sessions": 0}} in stages
+def _accumulators(pipeline: list[dict[str, Any]]) -> list[tuple[str, Any]]:
+    """Every (operator, argument) pair in the pipeline's $group accumulators."""
+    return [
+        (op, arg)
+        for stage in pipeline
+        if "$group" in stage
+        for field, accumulator in stage["$group"].items()
+        if field != "_id"
+        for op, arg in accumulator.items()
+    ]
+
+
+@pytest.mark.parametrize(
+    "pipeline",
+    [
+        reports.content_gap_pipeline(SINCE, UNTIL, 5),
+        reports.faq_pipeline(SINCE, UNTIL, 5, 2),
+    ],
+    ids=["gaps", "faq"],
+)
+def test_no_stage_collects_session_ids(pipeline):
+    """A popular question over 90 days has hundreds of thousands of
+    conversations (#291), so session_id may be a group key but never a value
+    an accumulator gathers into an array."""
+    assert "$addToSet" not in repr(pipeline)
+    assert "$push" not in repr(pipeline)
+    assert all("session_id" not in repr(arg) for _, arg in _accumulators(pipeline))
+    groups = [stage["$group"] for stage in pipeline if "$group" in stage]
+    assert groups[0]["_id"] == {"hash": "$question_hash", "session": "$session_id"}
+
+
+@pytest.mark.parametrize(
+    ("pipeline", "fields"),
+    [
+        (
+            reports.content_gap_pipeline(SINCE, UNTIL, 5),
+            {"_id", "count", "session_count", "sample_raw", "sample_condensed"},
+        ),
+        (
+            reports.faq_pipeline(SINCE, UNTIL, 5, 2),
+            {"_id", "count", "session_count", "refused_count", "sample_raw", "sample_condensed"},
+        ),
+    ],
+    ids=["gaps", "faq"],
+)
+def test_ranked_rows_keep_their_fields(sample_docs, pipeline, fields):
+    """The route, CLI, and page read these names, and nothing else leaves."""
+    rows = SyntheticQueryLogs(sample_docs).aggregate(pipeline)
+    assert rows
+    assert all(set(row) == fields for row in rows)
+
+
+def test_sample_text_comes_from_the_questions_first_row():
+    docs = [
+        _doc(
+            created_at=datetime(2026, 8, 2, tzinfo=UTC),
+            question_hash="h",
+            question_raw="first wording",
+            session_id="s1",
+        ),
+        _doc(
+            created_at=datetime(2026, 8, 3, tzinfo=UTC),
+            question_hash="h",
+            question_raw="second wording",
+            session_id="s2",
+        ),
+        _doc(
+            created_at=datetime(2026, 8, 4, tzinfo=UTC),
+            question_hash="h",
+            question_raw="third wording",
+            session_id="s1",
+        ),
+    ]
+    rows = SyntheticQueryLogs(docs).aggregate(reports.faq_pipeline(SINCE, UNTIL, 5, 2))
+    assert [(r["count"], r["session_count"], r["sample_raw"]) for r in rows] == [
+        (3, 2, "first wording"),
+    ]

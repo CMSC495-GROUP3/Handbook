@@ -118,21 +118,44 @@ def _time_match(since: datetime, until: datetime) -> dict[str, Any]:
     return {"created_at": {"$gte": since, "$lt": until}}
 
 
-def _group_fields() -> dict[str, Any]:
-    """Accumulators both rankings share: asks, conversations, sample text."""
-    return {
-        "count": {"$sum": 1},
-        "sessions": {"$addToSet": "$session_id"},
-        **_sample_fields(),
-    }
+def _question_groups(extra: Mapping[str, Any] | None = None) -> list[dict[str, Any]]:
+    """Group rows by ``question_hash``, counting asks and distinct conversations.
 
+    Two passes, so no stage holds a list of session ids (#291). The first
+    groups on (hash, session), one document per conversation that asked the
+    question. The second folds those into one document per hash and counts
+    them. ``extra`` holds per-row ``$sum`` accumulators, summed in both passes.
 
-# Replace the session list with its size; the ids themselves never leave the
-# pipeline.
-_SESSION_COUNT_STAGES: list[dict[str, Any]] = [
-    {"$addFields": {"session_count": {"$size": "$sessions"}}},
-    {"$project": {"sessions": 0}},
-]
+    Rows logged with a null ``session_id`` share one first-pass group, so they
+    count as one conversation, as before. A row with no ``session_id`` field
+    also forms one, where ``$addToSet`` skipped it; ``log_query`` always
+    writes the field, so no logged row lacks it.
+
+    Neither pass sorts and Mongo does not order ``$group`` output, so the
+    sample is the first row of one of the question's conversations. The single
+    ``$group`` took the first row the scan returned, which was no more ordered.
+    """
+    extra = dict(extra or {})
+    return [
+        {
+            "$group": {
+                "_id": {"hash": "$question_hash", "session": "$session_id"},
+                "count": {"$sum": 1},
+                **extra,
+                **_sample_fields(),
+            }
+        },
+        {
+            "$group": {
+                "_id": "$_id.hash",
+                "count": {"$sum": "$count"},
+                "session_count": {"$sum": 1},
+                **{field: {"$sum": f"${field}"} for field in extra},
+                "sample_raw": {"$first": "$sample_raw"},
+                "sample_condensed": {"$first": "$sample_condensed"},
+            }
+        },
+    ]
 
 
 def _sample_fields() -> dict[str, Any]:
@@ -147,8 +170,7 @@ def content_gap_pipeline(since: datetime, until: datetime, top: int) -> list[dic
     """Aggregation: refused hashes ranked by count within the time window."""
     return [
         {"$match": {**_time_match(since, until), "refused": True}},
-        {"$group": {"_id": "$question_hash", **_group_fields()}},
-        *_SESSION_COUNT_STAGES,
+        *_question_groups(),
         # Sorted on asks, not conversations: every refusal is a gap, even
         # when one person hit it repeatedly.
         {"$sort": {"count": -1, "_id": 1}},
@@ -165,16 +187,9 @@ def faq_pipeline(
     """Aggregation: hashes asked in at least ``min_repeat`` conversations (FAQ candidates)."""
     return [
         {"$match": _time_match(since, until)},
-        {
-            "$group": {
-                "_id": "$question_hash",
-                **_group_fields(),
-                "refused_count": {
-                    "$sum": {"$cond": [{"$eq": ["$refused", True]}, 1, 0]},
-                },
-            }
-        },
-        *_SESSION_COUNT_STAGES,
+        *_question_groups(
+            {"refused_count": {"$sum": {"$cond": [{"$eq": ["$refused", True]}, 1, 0]}}}
+        ),
         {"$match": {"session_count": {"$gte": min_repeat}}},
         {"$sort": {"session_count": -1, "count": -1, "_id": 1}},
         {"$limit": top},
