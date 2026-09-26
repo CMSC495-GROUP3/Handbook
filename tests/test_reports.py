@@ -229,3 +229,53 @@ def test_fake_sort_puts_null_first_ascending_like_mongo():
 
     assert [row["k"] for row in ascending] == [None, 1, 2]
     assert [row["k"] for row in descending] == [2, 1, None]
+
+
+def test_fake_group_on_a_compound_id_then_sums_a_field_path():
+    """The two-pass conversation count (#291) in the fake, including Mongo's
+    rule that a missing path drops out of an object but a stored null stays."""
+    collection = FakeCollection()
+    collection.insert_many(
+        [
+            {"h": "a", "s": "x"},
+            {"h": "a", "s": "x"},
+            {"h": "a", "s": "y"},
+            {"h": "a", "s": None},
+            {"h": "a"},
+            {"h": "b", "s": "x"},
+        ]
+    )
+
+    first = collection.aggregate([{"$group": {"_id": {"h": "$h", "s": "$s"}, "n": {"$sum": 1}}}])
+    both = collection.aggregate(
+        [
+            {"$group": {"_id": {"h": "$h", "s": "$s"}, "n": {"$sum": 1}}},
+            {"$group": {"_id": "$_id.h", "n": {"$sum": "$n"}, "groups": {"$sum": 1}}},
+        ]
+    )
+
+    assert [(row["_id"], row["n"]) for row in first] == [
+        ({"h": "a", "s": "x"}, 2),
+        ({"h": "a", "s": "y"}, 1),
+        ({"h": "a", "s": None}, 1),
+        ({"h": "a"}, 1),
+        ({"h": "b", "s": "x"}, 1),
+    ]
+    assert list(both) == [
+        {"_id": "a", "n": 5, "groups": 4},
+        {"_id": "b", "n": 1, "groups": 1},
+    ]
+
+
+def test_fake_group_on_a_missing_dotted_path_is_null():
+    collection = FakeCollection()
+    collection.insert_many([{"s": "x"}, {"s": "y"}])
+
+    rows = collection.aggregate(
+        [
+            {"$group": {"_id": {"h": "$h", "s": "$s"}}},
+            {"$group": {"_id": "$_id.h", "n": {"$sum": 1}}},
+        ]
+    )
+
+    assert list(rows) == [{"_id": None, "n": 2}]

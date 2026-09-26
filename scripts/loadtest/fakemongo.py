@@ -97,11 +97,31 @@ def _apply_update(doc: dict, update: dict, inserted: bool) -> None:
             doc.setdefault(field, value)
 
 
+_MISSING = object()
+
+
+def _field(doc: dict, path: str) -> Any:
+    """Follow a dotted path ("_id.hash"); _MISSING if any step is absent."""
+    value: Any = doc
+    for part in path.split("."):
+        if not isinstance(value, dict) or part not in value:
+            return _MISSING
+        value = value[part]
+    return value
+
+
+def _is_missing(doc: dict, expr: Any) -> bool:
+    """True when expr is a field path the document does not have."""
+    return isinstance(expr, str) and expr.startswith("$") and _field(doc, expr[1:]) is _MISSING
+
+
 def _resolve(doc: dict, expr: Any) -> Any:
-    """A field path ("$refused"), {"$eq": [a, b]}, {"$cond": [if, then, else]},
-    {"$size": array}, or a literal."""
+    """A field path ("$refused", "$_id.hash"), {"$eq": [a, b]},
+    {"$cond": [if, then, else]}, {"$size": array}, an object of expressions
+    ({"hash": "$question_hash"}), or a literal."""
     if isinstance(expr, str) and expr.startswith("$"):
-        return doc.get(expr[1:])
+        value = _field(doc, expr[1:])
+        return None if value is _MISSING else value
     if isinstance(expr, dict) and "$size" in expr:
         return len(_resolve(doc, expr["$size"]))
     if isinstance(expr, dict) and "$eq" in expr:
@@ -110,16 +130,34 @@ def _resolve(doc: dict, expr: Any) -> Any:
     if isinstance(expr, dict) and "$cond" in expr:
         condition, then, otherwise = expr["$cond"]
         return _resolve(doc, then if _resolve(doc, condition) else otherwise)
+    if isinstance(expr, dict) and not any(key.startswith("$") for key in expr):
+        # Mongo leaves a field out of the object when its path is missing,
+        # so {"s": "$absent"} is {} but {"s": "$stored_null"} is {"s": None}.
+        return {key: _resolve(doc, sub) for key, sub in expr.items() if not _is_missing(doc, sub)}
     return expr
 
 
+def _hashable(value: Any) -> Any:
+    """A dict key for a group _id. Field order counts, as it does in Mongo."""
+    if isinstance(value, dict):
+        return tuple((key, _hashable(sub)) for key, sub in value.items())
+    if isinstance(value, list):
+        return tuple(_hashable(item) for item in value)
+    return value
+
+
 def _group(rows: list[dict], spec: dict) -> list[dict]:
-    """$group with $sum, $first and $addToSet, the accumulators the coverage report uses."""
+    """$group with $sum, $first and $addToSet, the accumulators the coverage report uses.
+
+    _id may be a field path or an object of them, and groups come out in the
+    order their first row went in.
+    """
     groups: dict[Any, dict] = {}
     for row in rows:
         key = _resolve(row, spec["_id"])
-        is_new = key not in groups
-        group = groups.setdefault(key, {"_id": key})
+        slot = _hashable(key)
+        is_new = slot not in groups
+        group = groups.setdefault(slot, {"_id": key})
         for field, accumulator in spec.items():
             if field == "_id":
                 continue
@@ -135,9 +173,8 @@ def _group(rows: list[dict], spec: dict) -> list[dict]:
             elif op == "$addToSet":
                 members = group.setdefault(field, [])
                 # A missing field adds nothing; a stored null is a member, as in Mongo.
-                missing = isinstance(expr, str) and expr.startswith("$") and expr[1:] not in row
                 value = _resolve(row, expr)
-                if not missing and value not in members:
+                if not _is_missing(row, expr) and value not in members:
                     members.append(value)
             else:
                 raise NotImplementedError(f"FakeCollection $group does not implement {op}.")

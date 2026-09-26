@@ -22,6 +22,7 @@ from sourcebook.rag import query_log_reports as reports
 # still means two conversations in the fixtures below.
 _SESSIONS = itertools.count(1)
 _NEW_SESSION = object()
+_MISSING = object()
 
 SINCE = datetime(2026, 8, 1, tzinfo=UTC)
 UNTIL = datetime(2026, 9, 1, tzinfo=UTC)
@@ -143,7 +144,20 @@ class SyntheticQueryLogs:
 
     def _resolve(self, doc: dict[str, Any], expr: Any) -> Any:
         if isinstance(expr, str) and expr.startswith("$"):
-            return doc.get(expr[1:])
+            value = self._field(doc, expr[1:])
+            return None if value is _MISSING else value
+        if isinstance(expr, dict) and not any(key.startswith("$") for key in expr):
+            # An object of expressions, as in a compound $group _id. Mongo
+            # leaves out a field whose path is missing.
+            return {
+                key: self._resolve(doc, sub)
+                for key, sub in expr.items()
+                if not (
+                    isinstance(sub, str)
+                    and sub.startswith("$")
+                    and self._field(doc, sub[1:]) is _MISSING
+                )
+            }
         if isinstance(expr, dict):
             if "$eq" in expr:
                 left, right = expr["$eq"]
@@ -154,6 +168,16 @@ class SyntheticQueryLogs:
             if "$size" in expr:
                 return len(self._resolve(doc, expr["$size"]))
         return expr
+
+    @staticmethod
+    def _field(doc: dict[str, Any], path: str) -> Any:
+        """Follow a dotted path ("_id.hash"); _MISSING if any step is absent."""
+        value: Any = doc
+        for part in path.split("."):
+            if not isinstance(value, dict) or part not in value:
+                return _MISSING
+            value = value[part]
+        return value
 
     def _accumulate(self, current: Any, spec: Any, doc: dict[str, Any], *, first: bool) -> Any:
         if isinstance(spec, dict):
@@ -201,17 +225,19 @@ class SyntheticQueryLogs:
         order: list[Any] = []
         for doc in docs:
             key = self._resolve(doc, key_expr)
-            if key not in buckets:
-                buckets[key] = {"_id": key}
-                order.append(key)
+            # A compound _id resolves to a dict; its items in order are the key.
+            slot = tuple(key.items()) if isinstance(key, dict) else key
+            if slot not in buckets:
+                buckets[slot] = {"_id": key}
+                order.append(slot)
                 first = True
             else:
                 first = False
             for field, accumulator in spec.items():
                 if field == "_id":
                     continue
-                buckets[key][field] = self._accumulate(
-                    buckets[key].get(field),
+                buckets[slot][field] = self._accumulate(
+                    buckets[slot].get(field),
                     accumulator,
                     doc,
                     first=first,
