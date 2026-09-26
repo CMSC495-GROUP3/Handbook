@@ -46,13 +46,20 @@ def is_bcrypt_hash(value: str) -> bool:
     return _BCRYPT_HASH.fullmatch(value) is not None
 
 
-# The two environment variables that may hold an accepted password hash: the
-# team's, which is required, and an optional second so a reviewer's password
-# can be handed out and rotated without touching the team's. This is a pair,
-# not a list: a third password means editing this tuple, .env.example, and the
+# The environment variables that may hold an accepted password hash: the
+# team's, which is required; an optional second so a reviewer's password can
+# be handed out and rotated without touching the team's; and an optional one
+# for Human Resources, the only password that opens the HR Requests queue and
+# the What People Ask report (require_hr in deps.py). This is a fixed set, not
+# a list: another password means editing this tuple, .env.example, and the
 # README together. Separate variables rather than one delimited list because a
 # bcrypt hash is full of `$`, which makes a list painful to quote in .env.
-PASSWORD_HASH_VARS = ("APP_PASSWORD_HASH", "APP_PASSWORD_HASH_2")
+#
+# Order matters. Login takes the first match, so if the HR hash is made from
+# the shared password, the shared variable wins and nobody gets HR access by
+# accident.
+HR_PASSWORD_HASH_VAR = "HR_PASSWORD_HASH"
+PASSWORD_HASH_VARS = ("APP_PASSWORD_HASH", "APP_PASSWORD_HASH_2", HR_PASSWORD_HASH_VAR)
 PRIMARY_PASSWORD_HASH_VAR = PASSWORD_HASH_VARS[0]
 
 
@@ -75,8 +82,8 @@ def validate_password_hashes() -> list[tuple[str, str]]:
     newline in a mounted secret would lock everyone out and log it as failed
     logins. main.py runs this at import so that refuses to start instead;
     login runs it again so a value that changes under a live process fails
-    just as loudly. The first variable is required; the second, if set at
-    all, has to be right.
+    just as loudly. The first variable is required; the others, if set at
+    all, have to be right.
     """
     hashes = configured_password_hashes()
     if not any(name == PRIMARY_PASSWORD_HASH_VAR for name, _ in hashes):
@@ -180,10 +187,11 @@ def _authenticate(password: str, client_host: str) -> TokenResponse:
             detail="Incorrect password.",
         )
 
-    # Both passwords open the same door. Recording which one was used is the
-    # only way to tell a reviewer's session from the team's afterwards. cred is
-    # the variable name; fingerprint binds the session to that hash so rotating
-    # it revokes those sessions without touching JWT_SECRET_KEY.
+    # Every password opens the employee routes. Recording which one was used
+    # is the only way to tell a reviewer's session from the team's afterwards,
+    # and it is what require_hr checks for the HR pages. cred is the variable
+    # name; fingerprint binds the session to that hash so rotating it revokes
+    # those sessions without touching JWT_SECRET_KEY.
     cred, password_hash = matched
     logger.info("Login with %s from %s", cred, client_host)
     token = create_access_token(

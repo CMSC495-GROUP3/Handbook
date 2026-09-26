@@ -18,7 +18,9 @@ the parameter stays fixed, so a short TTL cannot turn every request into a 422.
 
 Question text is the logged ``question_condensed`` (the standalone rewrite that
 the hash groups on), falling back to the truncated ``question_raw``. Nothing
-here writes, and no session id leaves the server.
+here writes, and no session id leaves the server. Only a session opened with
+the HR password may read it (``require_hr``), because the text is what
+employees typed.
 """
 
 from datetime import UTC, datetime, timedelta
@@ -29,7 +31,7 @@ from pymongo.errors import ExecutionTimeout
 
 from sourcebook.api.db import query_logs_col
 from sourcebook.api.limiter import limiter
-from sourcebook.api.routes.deps import require_auth
+from sourcebook.api.routes.deps import HR_ONLY_RESPONSES, require_hr
 from sourcebook.rag.config import QUERY_LOG_TTL_SECONDS
 from sourcebook.rag.query_log_reports import (
     DEFAULT_MIN_REPEAT,
@@ -47,7 +49,7 @@ MAX_WINDOW_DAYS = 90
 # one day, or a TTL under a day would leave an empty window.
 TTL_DAYS = max(1, QUERY_LOG_TTL_SECONDS // 86400)
 # Per query. At the volume the TTL comment in config.py plans for, a 90-day
-# $group is not free, and any signed-in user can ask for one 30 times a minute.
+# $group is not free, and an HR session can ask for one 30 times a minute.
 QUERY_TIMEOUT_MS = 5000
 
 
@@ -69,7 +71,7 @@ def _group(row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-@router.get("/reports/gaps", dependencies=[Depends(require_auth)])
+@router.get("/reports/gaps", responses=HR_ONLY_RESPONSES, dependencies=[Depends(require_hr)])
 @limiter.limit("30/minute")
 def coverage_gaps(
     request: Request,

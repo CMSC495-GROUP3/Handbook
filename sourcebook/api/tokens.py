@@ -21,10 +21,10 @@ from fastapi.security.utils import get_authorization_scheme_param
 _ALGORITHM = "HS256"
 
 # ``cred`` names the environment variable holding the password hash a session
-# was opened with (APP_PASSWORD_HASH or APP_PASSWORD_HASH_2). Anything that is
-# not shaped like a variable name is not a cred, whatever signed it: the auth
-# dependency would reject it against its allowlist, and the 429 log line must
-# never receive a value that can carry a newline (issue #153).
+# was opened with (APP_PASSWORD_HASH, APP_PASSWORD_HASH_2, or HR_PASSWORD_HASH).
+# Anything not shaped like a variable name is not a cred, whatever signed it:
+# the auth dependency would reject it against its allowlist, and the 429 log
+# line must never receive a value that can carry a newline (issue #153).
 _CRED_SHAPE = re.compile(r"[A-Z][A-Z0-9_]{0,63}")
 
 
