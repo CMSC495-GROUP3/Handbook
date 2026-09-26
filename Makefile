@@ -19,8 +19,11 @@ UVICORN := $(VENV_BIN)/uvicorn
 RUFF    := $(VENV_BIN)/ruff
 WEB     := web
 
-# Password for the offline stub server. Override: make stub DEV_PASSWORD=hunter2
+# Passwords for the offline stub server. DEV_PASSWORD signs in as an employee;
+# DEV_HR_PASSWORD signs in as Human Resources and adds the HR Requests and What
+# People Ask pages. Override: make stub DEV_PASSWORD=hunter2 DEV_HR_PASSWORD=hr2
 DEV_PASSWORD ?= dev
+DEV_HR_PASSWORD ?= hr
 
 # make stub REFUSE=1 makes every question refuse at the similarity threshold,
 # to see the escalation card. REFUSE=judge clears the threshold and has the
@@ -49,6 +52,7 @@ endif
 	cd $(WEB) && npm install
 
 stub: export APP_PASSWORD_HASH = $(shell $(PY) -c "import bcrypt; print(bcrypt.hashpw(b'$(DEV_PASSWORD)', bcrypt.gensalt()).decode())")
+stub: export HR_PASSWORD_HASH = $(shell $(PY) -c "import bcrypt; print(bcrypt.hashpw(b'$(DEV_HR_PASSWORD)', bcrypt.gensalt()).decode())")
 stub: export FAKE_PASSAGE_SCORE = $(FAKE_SCORE)
 stub: export FAKE_COVERED = $(STUB_COVERED)
 stub: export FAKE_DB_LATENCY_MS = 0
