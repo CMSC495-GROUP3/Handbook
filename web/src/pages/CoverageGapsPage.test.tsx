@@ -193,4 +193,13 @@ describe('CoverageGapsPage', () => {
     expect(screen.queryByText(/Near-identical wordings share a row/)).not.toBeInTheDocument()
     expect(screen.getAllByText(/Each wording has its own row/)).toHaveLength(2)
   })
+
+  it('says so when rewordings were not checked', async () => {
+    vi.spyOn(client, 'get').mockResolvedValue(ok(report({ grouping: 'cosine' })))
+    renderPage()
+
+    expect(await screen.findByText(/Rewordings are not being checked/)).toBeInTheDocument()
+    expect(screen.getAllByText(/Near-identical wordings share a row/)).toHaveLength(2)
+    expect(screen.queryByText(/Grouping by meaning is unavailable/)).not.toBeInTheDocument()
+  })
 })

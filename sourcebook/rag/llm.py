@@ -380,6 +380,11 @@ class FakeProvider(LLMProvider):
         # ordinary utility prompts that mention those strings still rewrite.
         if system.startswith("You are a coverage judge"):
             return '{"covered": true}' if self.COVERED else '{"covered": false}'
+        # Stub embeddings are noise, so the stub never confirms a pair as one
+        # question (#293). It still answers in the judge's shape, so What
+        # People Ask reports "meaning" rather than a failure.
+        if system.startswith("You are a question matcher"):
+            return '{"same": []}'
         # Utility calls ask for three newline-separated questions.
         return (
             "How do I request time off?\n"

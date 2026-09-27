@@ -473,11 +473,13 @@ That log is how the system improves from evidence rather than intuition.
 The first two lists are on the What People Ask page in the web app, over the last
 7, 30, or 90 days. Like HR Requests, the page and its route need the HR
 password. The page also merges wordings whose embeddings are within
-`QUESTION_GROUP_THRESHOLD` cosine (default 0.85, #287). That catches a missing
-question mark or a close rewording, not most paraphrases: on 80 labelled pairs
-it merged 4 of 40 paraphrases and none of 40 different questions
-([measurement](docs/evaluation.md#question-grouping-threshold)). The terminal
-report below groups by exact wording only.
+`QUESTION_GROUP_THRESHOLD` cosine (default 0.85, #287). On 120 labelled pairs
+that merged 6 of 60 paraphrases and 2 of 60 different questions
+([measurement](docs/evaluation.md#question-grouping-threshold)). For pairs
+between 0.7 and 0.85 the utility model decides whether the two wordings are
+one question, in one call per page load (#293). If that call fails, the page
+groups on cosine alone and says so. The terminal report below groups by exact
+wording only.
 
 For the score histograms or an exact window, run the read-only report on the
 EC2 host. The cluster's IP access list admits that host, so anywhere else waits out
