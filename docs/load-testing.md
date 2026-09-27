@@ -270,6 +270,24 @@ without `maxTimeMS`. Where both sides finished, the ranked `_id`, `count`,
   merge. `report_timing.py` keeps a copy of it as the "after" pipeline so the
   comparison can be rerun.
 
+### The grouped report's session ids
+
+#288 grouped the page by meaning after these runs. Its `wording_pipeline`
+returned every session id of each wording so the route could union them
+across merged wordings. With the same seed (500k asks of one question over
+400k conversations, plus 100k noise), on the same local container:
+
+| Pipeline | All asks | Refused asks only |
+|---|---|---|
+| Every id returned (#288 as merged) | fails: `BSONObjectTooLarge` (code 10334), a 19.5 MB result document | 604 ms, 223,564 ids in one document |
+| At most 1,000 ids per wording | 1,368 ms, `session_count` 400,000 | 610 ms, `session_count` 223,564 |
+
+A result document is capped at 16 MB, so the full list fails at roughly
+370k conversations for one wording, and the route did not catch that error.
+`WORDING_SESSION_SAMPLE` now returns at most 1,000 ids with the exact
+`session_count`. A merged group reports the larger of the union and its
+biggest wording's count: exact below the cap, a lower bound above it.
+
 ### Reproducing
 
 ```bash
