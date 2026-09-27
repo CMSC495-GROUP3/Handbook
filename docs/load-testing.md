@@ -323,10 +323,63 @@ What changes:
 - **The terminal report is unchanged.** It still reads the raw rows. It has no
   timeout and is exact.
 
-**Not yet measured.** No MongoDB server was reachable where this was built.
-`scripts/loadtest/rollup_timing.py` seeds the rollup at planned volume and
-times the route's reads with its `maxTimeMS`. Distinct questions per day is a
-flag, because the pilot has not measured it:
+Measured on the same local `mongo:7` container as above (7.0.43, Apple M3,
+8 GB for Docker), so the absolute times are local ones.
+`scripts/loadtest/rollup_timing.py` seeds `query_log_daily` directly at 7M
+asks a day for 90 days: one hot question with 1% of the asks, the rest spread
+over N other questions a day, 80% of which come back every day. Distinct
+questions a day is a flag because the pilot has not measured it. Times are
+medians of five runs unless noted.
+
+**The rollup alone was not enough.** At 50k questions a day, the rollup's
+ranking as first written read 27.9 GB of day documents (each carries up to
+2,000 session ids) and took 52.9 s untimed for the gaps list alone. A
+covering index on `day`, `question_hash`, and the four counts, with sample
+text fetched afterwards for the listed wordings, cut one pass that builds all
+four lists and the totals to these times:
+
+| Distinct questions a day | Day documents | 7 days | 30 days | 90 days |
+|---|---|---|---|---|
+| 50,000 | 4.5M (27.9 GB) | 485 ms | 2,096 ms | 6.5 to 7.2 s in three runs without the limit |
+| 200,000 | 18M (30.4 GB) | 3,236 ms | over 5 s | over 5 s |
+
+**So the page reads snapshots.** The API recomputes the page's three
+windows every `REPORT_REFRESH_SECONDS` (300 by default) on a background
+thread, under a lease so only one worker does it, and the route reads the
+stored result (`sourcebook/rag/report_snapshots.py`). A window the page does
+not offer, or one whose snapshot is missing or stale, is still computed live,
+with the times above.
+
+| Distinct questions a day | Refresh, all three windows | Snapshot read | Session ids, per list |
+|---|---|---|---|
+| 50,000 | 8.4 s (one run) | 1 ms | 0 to 600 ms median, 1.5 s worst |
+| 200,000 | 56.2 s (one run) | 1 ms | 8 to 326 ms median, 4.4 s worst |
+
+"Session ids" is the route's other database read: the conversation ids of
+listed wordings with at most 1,000 conversations, for the union across
+grouped wordings. It depends on the window, so each list was timed at 7, 30,
+and 90 days; the table gives the range of medians and the slowest single run.
+
+What this says:
+
+- **The route now answers every window inside its 5 s budget at 7M asks a
+  day**, up to 200k distinct questions a day. Its snapshot read is 1 ms.
+- **The session-id read has the least headroom.** Its worst run, 4.4 s, was the
+  first 90-day gaps read at 200k questions a day, when the day documents were
+  not yet in memory; later runs took 61 to 326 ms. It is bounded by 1,000 ids
+  per wording and 200 wordings per list, but a cold cache on a smaller
+  server could push it past 5 s, which the route answers with a 503.
+- **The refresh costs about 56 s of database time every five minutes at 200k
+  questions a day**, about a fifth of the interval. Each window stops at
+  `REFRESH_TIMEOUT_MS` (120 s), and the lease is held long enough to cover
+  all three at that limit, so two workers never refresh at once.
+- **Counts on the page are up to one interval old.** `until` in the response
+  says when the snapshot was taken.
+
+**Not measured on Atlas.** The seed writes about 30 GB, which does not belong
+in the production cluster, so these runs used the local container. Point
+`--uri` at a scratch Atlas cluster to repeat them there. The `--db` guard
+stops the script from dropping a real collection:
 
 ```bash
 docker run -d --rm --name sourcebook-report-timing -p 27099:27017 mongo:7
@@ -335,18 +388,3 @@ docker run -d --rm --name sourcebook-report-timing -p 27099:27017 mongo:7
   --questions-per-day 200000
 docker stop sourcebook-report-timing
 ```
-
-To run it on Atlas, point `--uri` at a scratch cluster. The `--db` guard stops
-it from dropping a real collection, but it still writes a large scratch
-database.
-
-| Distinct questions a day | Day documents (90 days) | gaps ranking | FAQ ranking | Session ids | Totals | Where |
-|---|---|---|---|---|---|---|
-| 50,000 | about 4.5M | pending | pending | pending | pending | local `mongo:7` |
-| 200,000 | about 18M | pending | pending | pending | pending | local `mongo:7` |
-| 50,000 | about 4.5M | pending | pending | pending | pending | Atlas |
-
-If the rankings are slow because they read whole documents (each one carries
-up to 1,000 session ids), the next step is a covering index on `day`,
-`question_hash`, and the four counts, with sample text and ids fetched only
-for the top 200.

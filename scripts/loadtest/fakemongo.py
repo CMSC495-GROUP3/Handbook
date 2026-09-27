@@ -191,6 +191,23 @@ def _group(rows: list[dict], spec: dict) -> list[dict]:
     return list(groups.values())
 
 
+def _project_stage(row: dict, spec: dict) -> dict:
+    """$project as an exclusion (every value 0) or an inclusion (1 or an
+    expression). An inclusion keeps _id unless it says _id: 0."""
+    if all(value == 0 for value in spec.values()):
+        return {k: v for k, v in row.items() if k not in spec}
+    out = {} if spec.get("_id", 1) == 0 or "_id" not in row else {"_id": row["_id"]}
+    for field, expr in spec.items():
+        if field == "_id" and expr in (0, 1):
+            continue
+        if expr == 1:
+            if field in row:
+                out[field] = row[field]
+        elif not _is_missing(row, expr):
+            out[field] = _resolve(row, expr)
+    return out
+
+
 class _Cursor:
     def __init__(self, docs: list[dict]):
         self._docs = docs
@@ -262,6 +279,11 @@ class FakeCollection:
         if upsert:
             doc = {k: v for k, v in query.items() if not isinstance(v, dict)}
             doc.setdefault("_id", next(self._ids))
+            # As in Mongo: an upsert whose filter missed an existing _id
+            # inserts a duplicate, which fails. The report's refresh lease
+            # relies on this.
+            if any(existing["_id"] == doc["_id"] for existing in self._docs):
+                raise DuplicateKeyError(f"E11000 duplicate key error _id: {doc['_id']!r}")
             _apply_update(doc, update, inserted=True)
             self._docs.append(doc)
             return type("R", (), {"matched_count": 0, "modified_count": 0})()
@@ -310,13 +332,17 @@ class FakeCollection:
         return None
 
     def aggregate(self, pipeline, **kwargs):
-        """The $match / $group / $addFields / $project / $sort / $limit subset
-        the coverage report runs.
+        """The $match / $group / $addFields / $project / $sort / $limit /
+        $facet subset the coverage report runs. Options such as hint and
+        maxTimeMS are accepted and ignored.
 
         Any other stage raises. $vectorSearch in particular is Atlas-only and
         cannot be emulated meaningfully.
         """
-        rows = [copy.deepcopy(d) for d in self._docs]
+        return self._run([copy.deepcopy(d) for d in self._docs], pipeline)
+
+    def _run(self, rows: list[dict], pipeline) -> Any:
+        rows = copy.deepcopy(rows)
         for stage in pipeline:
             (op, spec), *_ = stage.items()
             if op == "$match":
@@ -333,9 +359,9 @@ class FakeCollection:
             elif op == "$addFields":
                 rows = [{**r, **{f: _resolve(r, e) for f, e in spec.items()}} for r in rows]
             elif op == "$project":
-                if any(v != 0 for v in spec.values()):
-                    raise NotImplementedError("FakeCollection $project supports exclusion only.")
-                rows = [{k: v for k, v in r.items() if k not in spec} for r in rows]
+                rows = [_project_stage(r, spec) for r in rows]
+            elif op == "$facet":
+                rows = [{name: list(self._run(rows, branch)) for name, branch in spec.items()}]
             elif op == "$limit":
                 rows = rows[:spec]
             else:

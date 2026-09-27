@@ -33,7 +33,7 @@ def test_the_rollup_timing_seeds_documents_the_route_can_rank(monkeypatch):
     from datetime import UTC, datetime
 
     from scripts.loadtest.fakemongo import FakeCollection
-    from sourcebook.rag.query_log_rollup import ranking_pipeline, window_start
+    from sourcebook.rag.query_log_rollup import read_report, window_start
 
     col = FakeCollection()
     col.drop = lambda: None
@@ -50,7 +50,7 @@ def test_the_rollup_timing_seeds_documents_the_route_can_rank(monkeypatch):
     now = datetime.now(UTC)
     rollup_timing.seed(col, args, now)
 
-    rows = list(col.aggregate(ranking_pipeline(window_start(now, 2), now, 10, refused_only=False)))
+    rows = read_report(col, window_start(now, 2), now, limit=10, min_sessions=3)["faq"]
     assert rows[0]["_id"] == rollup_timing.HOT_HASH
     assert rows[0]["count"] == 1000
     assert rows[0]["session_count"] == 800

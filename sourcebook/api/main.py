@@ -41,6 +41,7 @@ from sourcebook.api.routes.documents import router as documents_router  # noqa: 
 from sourcebook.api.routes.escalations import router as escalations_router  # noqa: E402
 from sourcebook.api.routes.projects import router as projects_router  # noqa: E402
 from sourcebook.api.routes.reports import router as reports_router  # noqa: E402
+from sourcebook.api.routes.reports import start_refresh as start_report_refresh  # noqa: E402
 from sourcebook.rag.config import (  # noqa: E402
     APP_NAME,
     SIMILARITY_THRESHOLD,
@@ -80,7 +81,12 @@ async def lifespan(_app: FastAPI):
     anyio.to_thread.current_default_thread_limiter().total_tokens = THREADPOOL_TOKENS
 
     ensure_indexes()
+    # Precomputes the What People Ask windows (#291). A daemon thread, so a
+    # refresh still running at shutdown does not hold the process open.
+    stop_report_refresh = start_report_refresh()
     yield
+    if stop_report_refresh is not None:
+        stop_report_refresh.set()
 
 
 app = FastAPI(

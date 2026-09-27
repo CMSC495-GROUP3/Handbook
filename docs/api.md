@@ -375,6 +375,13 @@ caps each list. A window longer than the log's TTL is shortened to it, and
 `days` in the response is the one used. The counts come from a per-question,
 per-day rollup kept as each ask is logged, not from the raw rows (#291).
 
+The page's windows, 7, 30, and 90 days, are read from snapshots that the API
+refreshes in the background every `REPORT_REFRESH_SECONDS` (default 300), so
+their counts can be up to that old. `until` in the response is when the
+snapshot was taken, and `since` is the UTC midnight its window starts at. Any
+other `days`, or a window whose snapshot is missing or more than three
+intervals old, is computed when it is asked for.
+
 - `gaps`: refused questions, most asks first. Every refusal is a gap, even one
   person's, so this list ranks on asks.
 - `faq`: questions asked in at least two conversations, most conversations
@@ -403,7 +410,9 @@ one), which is why the route is limited to manager and HR sessions and a
 manager's view drops rare wordings. It is the one place HR or a manager sees
 questions across browsers.
 
-Each query stops after five seconds. A report that runs longer returns HTTP
+Each query stops after five seconds. A snapshot read never comes near that. A
+window computed when asked can: a 90-day one at the planned volume does. A
+report that runs longer returns HTTP
 503 with `{"detail": "This report took too long. Try a shorter window."}`.
 One that passes MongoDB's per-stage memory limit returns 503 with
 `{"detail": "This report needs too much memory. Try a shorter window."}`. The

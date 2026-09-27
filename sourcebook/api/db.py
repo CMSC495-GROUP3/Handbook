@@ -29,10 +29,22 @@ from sourcebook.rag.config import (
 )
 from sourcebook.rag.mongo import get_collection
 from sourcebook.rag.query_log_rollup import (
+    COVERING_INDEX as QUERY_LOG_DAILY_COVERING_INDEX,
+)
+from sourcebook.rag.query_log_rollup import (
+    COVERING_INDEX_NAME as QUERY_LOG_DAILY_COVERING_INDEX_NAME,
+)
+from sourcebook.rag.query_log_rollup import (
     DAILY_COLLECTION as QUERY_LOG_DAILY_COLLECTION,
 )
 from sourcebook.rag.query_log_rollup import (
     SESSIONS_COLLECTION as QUERY_LOG_SESSIONS_COLLECTION,
+)
+from sourcebook.rag.report_snapshots import (
+    SNAPSHOT_COLLECTION as QUERY_LOG_REPORT_COLLECTION,
+)
+from sourcebook.rag.report_snapshots import (
+    SNAPSHOT_TTL_SECONDS as QUERY_LOG_REPORT_TTL_SECONDS,
 )
 
 logger = logging.getLogger(__name__)
@@ -62,6 +74,9 @@ query_logs_col = get_collection("query_logs")
 # See rag/query_log_rollup.py (issue #291).
 query_log_daily_col = get_collection(QUERY_LOG_DAILY_COLLECTION)
 query_log_sessions_col = get_collection(QUERY_LOG_SESSIONS_COLLECTION)
+# The report's 7, 30, and 90-day windows, precomputed in the background.
+# See rag/report_snapshots.py.
+query_log_report_col = get_collection(QUERY_LOG_REPORT_COLLECTION)
 
 # One record per hand-off to a person. See api/routes/escalations.py.
 escalations_col = get_collection("escalations")
@@ -156,8 +171,18 @@ def ensure_indexes() -> None:
         [("day", ASCENDING)], expireAfterSeconds=QUERY_LOG_TTL_SECONDS + 86400
     )
     query_log_daily_col.create_index([("question_hash", ASCENDING), ("day", ASCENDING)])
+    # The report sums a window's counts from this index alone, never reading
+    # the day documents and their session ids.
+    query_log_daily_col.create_index(
+        QUERY_LOG_DAILY_COVERING_INDEX, name=QUERY_LOG_DAILY_COVERING_INDEX_NAME
+    )
     query_log_sessions_col.create_index(
         [("created_at", ASCENDING)], expireAfterSeconds=QUERY_LOG_TTL_SECONDS
+    )
+    # Snapshots expire a day after they were taken. The refresh lease has no
+    # computed_at, so it stays.
+    query_log_report_col.create_index(
+        [("computed_at", ASCENDING)], expireAfterSeconds=QUERY_LOG_REPORT_TTL_SECONDS
     )
 
     # escalations — point lookup by id, the open queue newest first, and the

@@ -22,7 +22,10 @@ UTC day in ``query_log_daily``:
   groups by meaning. They never leave the server.
 
 The report reads these instead of the raw log, so its cost grows with the
-number of distinct questions per day, not with asks. That only helps if
+number of distinct questions per day, not with asks. At planned volume a
+90-day window is still too slow for a request, so the route reads the page's
+windows from snapshots ``sourcebook.rag.report_snapshots`` refreshes in the
+background; ``read_report`` computes both. That only helps if
 questions repeat, which is the product's premise (config.py, the answer
 cache) but has not been measured at volume.
 
@@ -74,6 +77,14 @@ SESSIONS_COLLECTION = "query_log_sessions"
 ROLLUP_SESSION_SAMPLE = 1000
 # query_logs rows handled per backfill batch before the progress line.
 BACKFILL_PROGRESS_EVERY = 10_000
+# The counts a day document keeps. The report sums only these, so an index on
+# day, question_hash, and all four answers its $group from index keys alone.
+COUNT_FIELDS = ("count", "refused_count", "session_count", "refused_session_count")
+COVERING_INDEX = [("day", 1), ("question_hash", 1), *((field, 1) for field in COUNT_FIELDS)]
+COVERING_INDEX_NAME = "day_question_counts"
+# The lists read_report returns: gaps and FAQ, each for HR (every wording) and
+# for a manager (only wordings asked in at least min_sessions conversations).
+REPORT_LISTS = ("gaps", "faq", "manager_gaps", "manager_faq")
 
 
 def utc_day(instant: datetime) -> datetime:
@@ -153,64 +164,144 @@ def _day_match(since: datetime, until: datetime) -> dict[str, Any]:
     return {"day": {"$gte": utc_day(since), "$lt": until}}
 
 
-def ranking_pipeline(
-    since: datetime,
-    until: datetime,
-    limit: int,
-    *,
-    refused_only: bool,
-    min_sessions: int = 1,
-) -> list[dict[str, Any]]:
-    """Every question in the window with its asks and conversations, ranked
-    and capped the way the route's list ranks.
+def _question_sums(since: datetime, until: datetime) -> list[dict[str, Any]]:
+    """Each question's four counts summed over the window's days.
+
+    The ``$project`` names only fields in ``COVERING_INDEX``, so with that
+    index hinted Mongo reads index keys and never the day documents, which
+    carry up to 2,000 session ids each. Without it a 90-day window at 50k
+    questions a day read 28 GB and took 53 s (docs/load-testing.md).
+    """
+    return [
+        {"$match": _day_match(since, until)},
+        {"$project": {"_id": 0, "question_hash": 1, **{field: 1 for field in COUNT_FIELDS}}},
+        {
+            "$group": {
+                "_id": "$question_hash",
+                **{field: {"$sum": f"${field}"} for field in COUNT_FIELDS},
+            }
+        },
+    ]
+
+
+def _ranking(limit: int, *, refused_only: bool, min_sessions: int) -> list[dict[str, Any]]:
+    """One list's rows from ``_question_sums``, ranked and capped.
 
     Refused wordings rank by refused asks, all wordings by conversations, so
     one person repeating a question cannot take a slot from a wording asked
     once each in several conversations. ``min_sessions`` drops wordings asked
     in fewer conversations before the sort and cap, for a manager's view.
-
-    The output matches the old raw-log ``wording_pipeline`` less its session
-    ids: ``_id`` (the hash), ``count``, ``refused_count``, ``session_count``,
-    ``sample_raw``, ``sample_condensed``. ``session_samples`` fetches the ids.
+    Rows come out as ``_id`` (the hash), ``count``, ``refused_count``, and
+    ``session_count``; for the refused list, ``count`` and ``session_count``
+    are its refused asks and refused conversations.
     """
-    match = _day_match(since, until)
     if refused_only:
-        match["refused_count"] = {"$gt": 0}
-    asks = "$refused_count" if refused_only else "$count"
-    conversations = "$refused_session_count" if refused_only else "$session_count"
-    order = (
-        {"count": -1, "_id": 1} if refused_only else {"session_count": -1, "count": -1, "_id": 1}
-    )
+        match: dict[str, Any] = {"refused_count": {"$gt": 0}}
+        if min_sessions > 1:
+            match["refused_session_count"] = {"$gte": min_sessions}
+        return [
+            {"$match": match},
+            {"$sort": {"refused_count": -1, "_id": 1}},
+            {"$limit": limit},
+            {
+                "$project": {
+                    "count": "$refused_count",
+                    "refused_count": 1,
+                    "session_count": "$refused_session_count",
+                }
+            },
+        ]
     return [
-        {"$match": match},
-        {
-            "$group": {
-                "_id": "$question_hash",
-                "count": {"$sum": asks},
-                "refused_count": {"$sum": "$refused_count"},
-                "session_count": {"$sum": conversations},
-                "sample_raw": {"$first": "$sample_raw"},
-                "sample_condensed": {"$first": "$sample_condensed"},
-            }
-        },
         *([{"$match": {"session_count": {"$gte": min_sessions}}}] if min_sessions > 1 else []),
-        {"$sort": order},
+        {"$sort": {"session_count": -1, "count": -1, "_id": 1}},
         {"$limit": limit},
+        {"$project": {"count": 1, "refused_count": 1, "session_count": 1}},
     ]
 
 
-def totals_pipeline(since: datetime, until: datetime) -> list[dict[str, Any]]:
-    """Asks and refused asks in the window, summed from the day documents."""
-    return [
-        {"$match": _day_match(since, until)},
+def report_pipeline(
+    since: datetime, until: datetime, limit: int, *, min_sessions: int
+) -> list[dict[str, Any]]:
+    """Both lists, each with and without the manager filter, and the
+    window's totals, from one pass over the window.
+
+    Returns one document keyed by ``REPORT_LISTS`` plus ``totals``. The
+    ``manager_`` lists apply ``min_sessions``; the others keep every wording.
+    """
+    lists = {
+        f"{prefix}{name}": _ranking(limit, refused_only=name == "gaps", min_sessions=minimum)
+        for prefix, minimum in (("", 1), ("manager_", min_sessions))
+        for name in ("gaps", "faq")
+    }
+    totals = [
         {
             "$group": {
                 "_id": None,
                 "total": {"$sum": "$count"},
                 "refused": {"$sum": "$refused_count"},
             }
-        },
+        }
     ]
+    return [*_question_sums(since, until), {"$facet": {**lists, "totals": totals}}]
+
+
+def _samples(
+    daily,
+    since: datetime,
+    until: datetime,
+    question_hashes: Iterable[str | None],
+    max_time_ms: int | None,
+) -> dict[str | None, dict[str, Any]]:
+    """Sample text for each hash, from its earliest day in the window.
+
+    One indexed lookup per hash on (``question_hash``, ``day``), reading one
+    day document each, so the cost is the number of listed wordings (at most
+    four lists of ``limit``), not the window.
+    """
+    kwargs = {"max_time_ms": max_time_ms} if max_time_ms is not None else {}
+    found = {}
+    for question_hash in dict.fromkeys(question_hashes):
+        query = {**_day_match(since, until), "question_hash": question_hash}
+        cursor = daily.find(query, {"sample_raw": 1, "sample_condensed": 1}, **kwargs)
+        for doc in cursor.sort("day", 1).limit(1):
+            found[question_hash] = {
+                "sample_raw": doc.get("sample_raw"),
+                "sample_condensed": doc.get("sample_condensed"),
+            }
+    return found
+
+
+def read_report(
+    daily,
+    since: datetime,
+    until: datetime,
+    *,
+    limit: int,
+    min_sessions: int,
+    max_time_ms: int | None = None,
+) -> dict[str, Any]:
+    """The report's lists and totals for a window, as ``report_pipeline``
+    ranks them, with sample text on every row.
+
+    Returns ``REPORT_LISTS`` (each a list of rows) plus ``total`` and
+    ``refused``, the window's asks and refused asks.
+    """
+    kwargs: dict[str, Any] = {"hint": COVERING_INDEX_NAME}
+    if max_time_ms is not None:
+        kwargs["maxTimeMS"] = max_time_ms
+    pipeline = report_pipeline(since, until, limit, min_sessions=min_sessions)
+    [facets] = list(daily.aggregate(pipeline, **kwargs))
+    hashes = [row["_id"] for name in REPORT_LISTS for row in facets[name]]
+    samples = _samples(daily, since, until, hashes, max_time_ms)
+    totals = next(iter(facets["totals"]), {})
+    return {
+        **{
+            name: [{**row, **samples.get(row["_id"], {})} for row in facets[name]]
+            for name in REPORT_LISTS
+        },
+        "total": int(totals.get("total") or 0),
+        "refused": int(totals.get("refused") or 0),
+    }
 
 
 def session_samples(

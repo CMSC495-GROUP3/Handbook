@@ -12,10 +12,9 @@ from sourcebook.rag.query_log_rollup import (
     DAILY_COLLECTION,
     SESSIONS_COLLECTION,
     backfill,
-    ranking_pipeline,
+    read_report,
     record_ask,
     session_samples,
-    totals_pipeline,
     utc_day,
     window_start,
 )
@@ -40,9 +39,16 @@ def ask(question_hash: str, session_id: str | None, *, at: datetime = NOW, refus
     )
 
 
-def ranked(since=NOW - timedelta(days=89), until=NOW, *, refused_only=False, **kwargs):
-    pipeline = ranking_pipeline(since, until, 10, refused_only=refused_only, **kwargs)
-    return [(row["_id"], row["count"], row["session_count"]) for row in daily().aggregate(pipeline)]
+def report(since=NOW - timedelta(days=89), until=NOW, *, min_sessions=2, limit=10):
+    return read_report(daily(), since, until, limit=limit, min_sessions=min_sessions)
+
+
+def ranked(since=NOW - timedelta(days=89), until=NOW, *, refused_only=False, min_sessions=1):
+    """(hash, asks, conversations) for one list: the manager's when
+    ``min_sessions`` is over 1, as the route picks it."""
+    name = ("manager_" if min_sessions > 1 else "") + ("gaps" if refused_only else "faq")
+    rows = report(since, until, min_sessions=max(min_sessions, 2))[name]
+    return [(row["_id"], row["count"], row["session_count"]) for row in rows]
 
 
 def test_window_start_is_whole_utc_days_including_today():
@@ -119,9 +125,54 @@ def test_rows_without_a_session_count_as_one_conversation():
 def test_totals_sum_the_days():
     ask("pto", "a", at=NOW - timedelta(days=2))
     ask("gap", "b", refused=True)
-    [row] = daily().aggregate(totals_pipeline(NOW - timedelta(days=89), NOW))
+    result = report()
 
-    assert (row["total"], row["refused"]) == (2, 1)
+    assert (result["total"], result["refused"]) == (2, 1)
+
+
+def test_an_empty_window_has_empty_lists_and_zero_totals():
+    ask("pto", "a", at=NOW - timedelta(days=20))
+
+    result = report(since=window_start(NOW, 7))
+    assert result == {
+        "gaps": [],
+        "faq": [],
+        "manager_gaps": [],
+        "manager_faq": [],
+        "total": 0,
+        "refused": 0,
+    }
+
+
+def test_lists_rank_and_cap_as_the_route_expects():
+    # "busy" is asked most in one conversation; "wide" in the most conversations.
+    for _ in range(4):
+        ask("busy", "a", refused=True)
+    for session in ("a", "b", "c"):
+        ask("wide", session, refused=True)
+    ask("rare", "z")
+
+    result = report(limit=1)
+    assert [row["_id"] for row in result["gaps"]] == ["busy"]
+    assert [row["_id"] for row in result["faq"]] == ["wide"]
+    assert [row["_id"] for row in result["manager_gaps"]] == ["wide"]
+
+
+def test_rows_carry_sample_text_from_the_earliest_day_in_the_window():
+    record_ask(
+        daily(),
+        FAKE_DB[SESSIONS_COLLECTION],
+        created_at=NOW - timedelta(days=3),
+        session_id="a",
+        question_hash="pto",
+        question_raw="first wording",
+        question_condensed="first condensed",
+        refused=False,
+    )
+    ask("pto", "b")
+
+    [row] = report()["faq"]
+    assert (row["sample_raw"], row["sample_condensed"]) == ("first wording", "first condensed")
 
 
 def test_session_ids_are_capped_per_day(monkeypatch):

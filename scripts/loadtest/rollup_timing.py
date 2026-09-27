@@ -2,9 +2,14 @@
 
 The report reads ``query_log_daily`` (``sourcebook.rag.query_log_rollup``), one
 document per question and UTC day, not the raw log. This seeds that
-collection directly at the shape the planned volume would leave, then runs the
-route's reads with its ``maxTimeMS``: both rankings, the session-id read for
-each, and the totals.
+collection directly at the shape the planned volume would leave, then times
+two things:
+
+- the background refresh (``read_report``) for each of the page's windows,
+  with the route's live ``maxTimeMS`` so the output says whether the live
+  fallback would fit, and
+- the route's reads once snapshots exist: the snapshot lookup, and the
+  session-id read for each list.
 
 The planned volume is 7M asks a day (``sourcebook/rag/config.py``). What
 matters to the rollup is how many *distinct* questions that is per day,
@@ -17,8 +22,9 @@ which has not been measured, so it is a flag. Run it at a few values:
     docker stop sourcebook-report-timing
 
 ``--skip-seed`` reuses the seeded documents, so change only timing flags with
-it. Point it at a throwaway database only: it drops ``query_log_daily`` there,
-and refuses a ``--db`` that does not start with ``report_timing``.
+it. Point it at a throwaway database only: it drops ``query_log_daily`` and
+``query_log_report`` there, and refuses a ``--db`` that does not start with
+``report_timing``.
 """
 
 from __future__ import annotations
@@ -34,21 +40,24 @@ from typing import Any
 from pymongo import ASCENDING, MongoClient
 from pymongo.errors import ExecutionTimeout, OperationFailure
 
+from sourcebook.rag import report_snapshots
 from sourcebook.rag.query_log_rollup import (
+    COVERING_INDEX,
+    COVERING_INDEX_NAME,
     DAILY_COLLECTION,
     ROLLUP_SESSION_SAMPLE,
-    ranking_pipeline,
+    read_report,
     session_samples,
-    totals_pipeline,
     window_start,
 )
 
 BATCH = 5_000
-# sourcebook.api.routes.reports.QUERY_TIMEOUT_MS and CANDIDATE_LIMIT. Importing
-# the route opens the app's Mongo client from MONGODB_URI, which this script
-# must not touch.
+# sourcebook.api.routes.reports.QUERY_TIMEOUT_MS and CANDIDATE_LIMIT, and
+# config.MANAGER_MIN_CONVERSATIONS. Importing the route opens the app's Mongo
+# client from MONGODB_URI, which this script must not touch.
 QUERY_TIMEOUT_MS = 5000
 CANDIDATE_LIMIT = 200
+MIN_SESSIONS = 3
 HOT_HASH = "hot-question"
 SCRATCH_DB_PREFIX = "report_timing"
 
@@ -84,6 +93,7 @@ def seed(col, args: argparse.Namespace, now: datetime) -> None:
     # The keys db.ensure_indexes builds, minus the TTL.
     col.create_index([("day", ASCENDING)])
     col.create_index([("question_hash", ASCENDING), ("day", ASCENDING)])
+    col.create_index(COVERING_INDEX, name=COVERING_INDEX_NAME)
 
     hot_asks = round(args.asks_per_day * args.hot_share)
     other_asks = max(1, (args.asks_per_day - hot_asks) // args.questions_per_day)
@@ -165,27 +175,43 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     until = datetime.now(UTC)
-    since = window_start(until, args.days)
-    limit = {"maxTimeMS": QUERY_TIMEOUT_MS}
-    for refused_only in (True, False):
-        name = "gaps" if refused_only else "faq"
-        pipeline = ranking_pipeline(since, until, CANDIDATE_LIMIT, refused_only=refused_only)
-        rows = list(col.aggregate(pipeline, **limit))  # warm-up, and the hashes to read
-        small = [r["_id"] for r in rows if r["session_count"] <= ROLLUP_SESSION_SAMPLE]
+    limits = {"limit": CANDIDATE_LIMIT, "min_sessions": MIN_SESSIONS}
+    snapshots = client[args.db][report_snapshots.SNAPSHOT_COLLECTION]
+    snapshots.drop()
+    windows = sorted({min(days, args.days) for days in report_snapshots.WINDOWS})
+    for days in windows:
+        since = window_start(until, days)
         print(
-            f"{name} ranking: {_timed(lambda p=pipeline: list(col.aggregate(p, **limit)), args.runs)}"
-        )
-        print(
-            f"{name} session ids ({len(small)} wordings): "
+            f"refresh {days}d (live fallback, {QUERY_TIMEOUT_MS} ms limit): "
             + _timed(
-                lambda s=small, r=refused_only: session_samples(
-                    col, since, until, s, refused_only=r, max_time_ms=QUERY_TIMEOUT_MS
-                ),
+                lambda s=since: read_report(col, s, until, max_time_ms=QUERY_TIMEOUT_MS, **limits),
                 args.runs,
             )
         )
-    totals = totals_pipeline(since, until)
-    print(f"totals: {_timed(lambda: list(col.aggregate(totals, **limit)), args.runs)}")
+    # The background refresh has no 5 s limit, only REFRESH_TIMEOUT_MS. One
+    # timed run of all windows, which also stores the snapshots read below.
+    start = time.perf_counter()
+    report_snapshots.refresh(col, snapshots, windows=windows, now=until, **limits)
+    print(f"background refresh, all windows: {(time.perf_counter() - start) * 1000:.0f} ms")
+
+    for days in windows:
+        since = window_start(until, days)
+        load = lambda d=days: report_snapshots.load(  # noqa: E731
+            snapshots, d, now=until, max_age=timedelta(hours=1), **limits
+        )
+        print(f"route {days}d snapshot read: {_timed(load, args.runs)}")
+        report = load()["report"]
+        for name, refused_only in (("gaps", True), ("faq", False)):
+            small = [r["_id"] for r in report[name] if r["session_count"] <= ROLLUP_SESSION_SAMPLE]
+            print(
+                f"route {days}d {name} session ids ({len(small)} wordings): "
+                + _timed(
+                    lambda s=since, h=small, r=refused_only: session_samples(
+                        col, s, until, h, refused_only=r, max_time_ms=QUERY_TIMEOUT_MS
+                    ),
+                    args.runs,
+                )
+            )
     return 0
 
 
