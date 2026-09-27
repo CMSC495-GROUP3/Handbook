@@ -346,6 +346,9 @@ this route adds ranking and counts, not new access.
 
 Each query stops after five seconds. A report that runs longer returns HTTP
 503 with `{"detail": "This report took too long. Try a shorter window."}`.
+One that passes MongoDB's per-stage memory limit (one question asked in about
+1.6M conversations, see [load testing](load-testing.md)) returns 503 with
+`{"detail": "This report needs too much memory. Try a shorter window."}`.
 
 ```http
 GET /api/reports/gaps?days=30

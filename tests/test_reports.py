@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from conftest import FAKE_DB, make_passages
-from pymongo.errors import ExecutionTimeout
+from pymongo.errors import ExecutionTimeout, OperationFailure
 
 from scripts.loadtest.fakemongo import FakeCollection
 from sourcebook.api.routes import reports
@@ -218,6 +218,30 @@ def test_a_slow_report_answers_503(client, auth, monkeypatch):
     assert response.status_code == 503
     assert "too long" in response.json()["detail"]
     assert calls == [{"maxTimeMS": reports.QUERY_TIMEOUT_MS}]
+
+
+def test_a_report_over_the_memory_limit_answers_503(client, auth, monkeypatch):
+    """$addToSet cannot spill, so one very common question can hit code 146 (#291)."""
+
+    def too_big(_pipeline, **_kwargs):
+        raise OperationFailure("$group exceeded memory limit", code=146)
+
+    monkeypatch.setattr(reports.query_logs_col, "aggregate", too_big)
+
+    response = client.get(URL, headers=auth)
+
+    assert response.status_code == 503
+    assert "shorter window" in response.json()["detail"]
+
+
+def test_other_mongo_failures_are_not_reported_as_slow(client, auth, monkeypatch):
+    def unauthorized(_pipeline, **_kwargs):
+        raise OperationFailure("not authorized", code=13)
+
+    monkeypatch.setattr(reports.query_logs_col, "aggregate", unauthorized)
+
+    with pytest.raises(OperationFailure):
+        client.get(URL, headers=auth)
 
 
 def test_fake_sort_puts_null_first_ascending_like_mongo():
