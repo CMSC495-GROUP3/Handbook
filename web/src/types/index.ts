@@ -93,21 +93,37 @@ export interface Escalation {
   delivery_retryable: boolean
 }
 
-/** One question_hash group in the coverage report. */
-export interface QuestionGroup {
-  question_hash: string
-  /** The logged question, or null when none was stored. */
+/** Another wording grouped under a question's most asked one. */
+export interface OtherWording {
   question: string | null
-  /** Every ask, including one person asking again. */
   count: number
-  /** Distinct conversations it was asked in; the closest the log gets to people. */
+}
+
+/** One question in the coverage report: wordings grouped by meaning (#287). */
+export interface QuestionGroup {
+  /** The most asked wording's hash, stable enough for a list key. */
+  question_hash: string
+  /** The most asked wording, or null when none was stored. */
+  question: string | null
+  /** Every ask across every wording, including one person asking again. */
+  count: number
+  /**
+   * Distinct conversations across every wording; the closest the log gets to
+   * people. A conversation that used two wordings counts once.
+   */
   conversations: number
+  /** Up to five other wordings, most asked first. */
+  other_wordings: OtherWording[]
+  /** Every other wording, including any not listed. */
+  other_wording_count: number
 }
 
 export interface CoverageReport {
   since: string
   until: string
   days: number
+  /** "exact" when grouping by meaning was unavailable and each wording is its own row. */
+  grouping: 'meaning' | 'exact'
   /** Every chat request in the window. */
   total: number
   refused: number

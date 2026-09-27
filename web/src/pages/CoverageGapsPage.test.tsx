@@ -4,22 +4,27 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import type { AxiosResponse } from 'axios'
 import client from '../api/client'
-import type { CoverageReport } from '../types'
+import type { CoverageReport, QuestionGroup } from '../types'
 import CoverageGapsPage from './CoverageGapsPage'
+
+function group(fields: Pick<QuestionGroup, 'question_hash' | 'question' | 'count'> & Partial<QuestionGroup>): QuestionGroup {
+  return { conversations: fields.count, other_wordings: [], other_wording_count: 0, ...fields }
+}
 
 function report(overrides: Partial<CoverageReport> = {}): CoverageReport {
   return {
     since: '2026-08-27T00:00:00+00:00',
     until: '2026-09-26T00:00:00+00:00',
     days: 30,
+    grouping: 'meaning',
     total: 412,
     refused: 37,
     gaps: [
-      { question_hash: 'pet', question: 'Does the company pay for pet insurance?', count: 6, conversations: 4 },
-      { question_hash: 'blank', question: null, count: 1, conversations: 1 },
+      group({ question_hash: 'pet', question: 'Does the company pay for pet insurance?', count: 6, conversations: 4 }),
+      group({ question_hash: 'blank', question: null, count: 1, conversations: 1 }),
     ],
     faq: [
-      { question_hash: 'pto', question: 'How much PTO do I get?', count: 19, conversations: 12, refused: 2 },
+      { ...group({ question_hash: 'pto', question: 'How much PTO do I get?', count: 19, conversations: 12 }), refused: 2 },
     ],
     ...overrides,
   }
@@ -127,5 +132,37 @@ describe('CoverageGapsPage', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(await screen.findByRole('list', { name: 'Not answered yet' })).toBeInTheDocument()
     expect(get).toHaveBeenCalledTimes(2)
+  })
+  it('lists the other wordings of a grouped question behind a disclosure', async () => {
+    const grouped = group({
+      question_hash: 'pto',
+      question: 'How much PTO do I get?',
+      count: 9,
+      other_wordings: [
+        { question: 'How many vacation days do I have?', count: 3 },
+        { question: 'what is my pto balance', count: 1 },
+      ],
+      other_wording_count: 4,
+    })
+    vi.spyOn(client, 'get').mockResolvedValue(ok(report({ gaps: [grouped], faq: [] })))
+    renderPage()
+
+    const summary = await screen.findByText('Also asked as 4 other wordings')
+    expect(screen.getByText('How many vacation days do I have?')).not.toBeVisible()
+
+    await userEvent.click(summary)
+
+    expect(screen.getByText('How many vacation days do I have?')).toBeVisible()
+    expect(screen.getByText('and 2 more')).toBeInTheDocument()
+  })
+
+  it('says so when grouping fell back to exact wording', async () => {
+    vi.spyOn(client, 'get').mockResolvedValue(ok(report({ grouping: 'exact' })))
+    renderPage()
+
+    expect(await screen.findByText(/Grouping by meaning is unavailable/)).toBeInTheDocument()
+    // The captions must not promise merged wordings while grouping is off.
+    expect(screen.queryByText(/Near-identical wordings share a row/)).not.toBeInTheDocument()
+    expect(screen.getAllByText(/Each wording has its own row/)).toHaveLength(2)
   })
 })

@@ -134,3 +134,47 @@ These are evaluation measurements, not guarantees of production correctness.
 If a result misses its target, preserve the result and use it to tune chunking,
 retrieval count, or the grounding threshold. Do not rewrite the expected answer
 to make the score look better.
+
+## Question grouping threshold
+
+The What People Ask page merges two wordings into one row when their question
+embeddings are within `QUESTION_GROUP_THRESHOLD` cosine (#287). The threshold
+was measured on `evaluation/question_pairs.json`: 40 pairs that are one
+question in two wordings ("same") and 40 pairs on one topic that need different
+answers ("different"), drawn from the sample policies.
+
+```bash
+OPENAI_API_KEY=... python scripts/measure_question_groups.py \
+  --out evaluation/question_pairs_results.json
+```
+
+Run on 2026-09-26 with `text-embedding-3-small`:
+
+| Pairs | Min | Median | Max |
+| --- | ---: | ---: | ---: |
+| same (40) | 0.468 | 0.712 | 0.973 |
+| different (40) | 0.321 | 0.640 | 0.833 |
+
+| Threshold | Paraphrases left apart | Different questions merged |
+| ---: | ---: | ---: |
+| 0.70 | 18 of 40 | 10 of 40 |
+| 0.76 | 29 | 4 |
+| 0.80 | 32 | 2 |
+| 0.84 | 35 | 0 |
+| 0.85 (default) | 36 | 0 |
+| 0.90 | 38 | 0 |
+
+The two distributions overlap from 0.47 to 0.83, so no cosine threshold
+separates them. "Do I get severance if I'm laid off?" and "Do I get severance
+if I resign?" score 0.833 and need opposite answers, while "How many days off
+do I get when a family member dies?" and "What is the bereavement leave
+policy?" score 0.468 and are one question. The default, 0.85, is the lowest
+round value above every different pair, with a margin of 0.017. At that
+setting grouping catches case, punctuation, and close rewordings (4 of 40
+paraphrases) and nothing else. Grouping most paraphrases would need a second
+check, such as a model judging the candidate pairs between 0.6 and 0.85, not a
+lower threshold.
+
+Forty pairs on a fictional corpus are evidence for this corpus's topics. Rerun
+the script after changing the embedding model.
+

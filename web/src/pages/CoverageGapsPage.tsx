@@ -39,15 +39,41 @@ function plural(count: number, word: string): string {
   return `${count.toLocaleString()} ${word}${count === 1 ? '' : 's'}`
 }
 
+/** "Asked once", "Asked 12 times". */
+function asked(count: number): string {
+  return count === 1 ? 'Asked once' : `Asked ${count.toLocaleString()} times`
+}
+
 /** "Asked once in 1 conversation", "Asked 12 times in 7 conversations". */
 function timesAsked(group: QuestionGroup): string {
-  const times = group.count === 1 ? 'Asked once' : `Asked ${group.count.toLocaleString()} times`
-  return `${times} in ${plural(group.conversations, 'conversation')}`
+  return `${asked(group.count)} in ${plural(group.conversations, 'conversation')}`
 }
 
 function QuestionText({ group }: { group: QuestionGroup }) {
   if (group.question) return <>{group.question}</>
   return <span className="text-ink-3 italic">No question text was logged</span>
+}
+
+/** The other wordings under a question, behind a disclosure. */
+function OtherWordings({ group }: { group: QuestionGroup }) {
+  if (group.other_wording_count === 0) return null
+  const unlisted = group.other_wording_count - group.other_wordings.length
+  return (
+    <details className="mt-2 text-[13px] text-ink-2">
+      <summary className="w-fit cursor-pointer rounded-sm text-ink-3 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+        Also asked as {plural(group.other_wording_count, 'other wording')}
+      </summary>
+      <ul className="mt-1.5 flex flex-col gap-1 border-l border-rule pl-3">
+        {group.other_wordings.map((wording, index) => (
+          <li key={index} className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+            <span>{wording.question ?? <span className="italic">No question text was logged</span>}</span>
+            <span className="tnum text-[12px] text-ink-3 sm:shrink-0">{asked(wording.count)}</span>
+          </li>
+        ))}
+        {unlisted > 0 && <li className="text-ink-3">and {unlisted.toLocaleString()} more</li>}
+      </ul>
+    </details>
+  )
 }
 
 /**
@@ -92,6 +118,7 @@ function RankedList({ rows, label }: { rows: Row[]; label: string }) {
               <span className="tnum text-[12.5px] text-ink-2 sm:shrink-0">{meta}</span>
             </div>
             <Bar size={size} max={max} count={group.count} refused={refused} />
+            <OtherWordings group={group} />
           </div>
         </li>
       ))}
@@ -142,6 +169,12 @@ function Summary({ report, requested }: { report: CoverageReport; requested: num
           ? `No questions were asked in the last ${report.days} days.`
           : `questions in the last ${report.days} days had no policy to answer them (${share}%).`}
       </p>
+      {report.grouping === 'exact' && (
+        <p className="mt-2 max-w-120 text-[13px] leading-normal text-ink-3">
+          Grouping by meaning is unavailable right now, so a question asked in other
+          words has a row for each wording.
+        </p>
+      )}
       {report.days < requested && (
         <p className="mt-2 max-w-120 text-[13px] leading-normal text-ink-3">
           The query log keeps {plural(report.days, 'day')} of questions, so this is the longest window there is.
@@ -208,13 +241,17 @@ export default function CoverageGapsPage() {
   } else if (!report) {
     body = <p className="text-[14px] text-ink-3">Loading…</p>
   } else {
+    const grouping =
+      report.grouping === 'meaning'
+        ? 'Near-identical wordings share a row, but a question asked in other words can still appear twice.'
+        : 'Each wording has its own row.'
     body = (
       <>
         <Summary report={report} requested={days} />
         <div className="pt-10">
           <Section
             title="Not answered yet"
-            caption="Questions no policy answered, most asked first. Each one points to a policy to write or make clearer. Rows group by exact wording, so a rephrased question gets its own row."
+            caption={`Questions no policy answered, most asked first. Each one points to a policy to write or make clearer. ${grouping}`}
             empty="Every question in this window had a policy to answer it."
             rows={report.gaps.map((group) => ({
               group,
@@ -225,7 +262,7 @@ export default function CoverageGapsPage() {
           />
           <Section
             title="Asked most"
-            caption="Questions asked in at least two conversations, most conversations first. Rows group by exact wording, so a rephrased question gets its own row. The ochre end of each bar is the share no policy answered."
+            caption={`Questions asked in at least two conversations, most conversations first. ${grouping} The ochre end of each bar is the share no policy answered.`}
             empty="No question came up in more than one conversation in this window."
             rows={report.faq.map((group) => ({
               group,

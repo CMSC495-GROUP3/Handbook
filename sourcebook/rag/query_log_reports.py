@@ -181,6 +181,45 @@ def faq_pipeline(
     ]
 
 
+def wording_pipeline(
+    since: datetime,
+    until: datetime,
+    limit: int,
+    *,
+    refused_only: bool,
+) -> list[dict[str, Any]]:
+    """Aggregation: every hash group in the window, for grouping by meaning.
+
+    Singletons are kept, because two wordings asked once each can be one
+    question asked twice. The session ids stay in the result, unlike the other
+    rankings, because merging wordings means taking the union of their
+    sessions; the web route counts them and returns only the counts.
+
+    The cap picks candidates the way each list ranks: refused wordings by asks,
+    all wordings by conversations, so one person repeating a question cannot
+    take a slot from a wording asked once each in several conversations.
+    """
+    match = {**_time_match(since, until), **({"refused": True} if refused_only else {})}
+    order = (
+        {"count": -1, "_id": 1} if refused_only else {"session_count": -1, "count": -1, "_id": 1}
+    )
+    return [
+        {"$match": match},
+        {
+            "$group": {
+                "_id": "$question_hash",
+                **_group_fields(),
+                "refused_count": {
+                    "$sum": {"$cond": [{"$eq": ["$refused", True]}, 1, 0]},
+                },
+            }
+        },
+        {"$addFields": {"session_count": {"$size": "$sessions"}}},
+        {"$sort": order},
+        {"$limit": limit},
+    ]
+
+
 def score_distribution_pipeline(since: datetime, until: datetime) -> list[dict[str, Any]]:
     """Aggregation: answered vs refused ``best_score`` summaries and histogram bins.
 
