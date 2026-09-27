@@ -181,8 +181,11 @@ the script after changing the embedding model.
 
 Pairs from `QUESTION_JUDGE_FLOOR` up to 0.85 go to the utility model, which
 decides whether they are one question (#293). `--judge` scores that combined
-rule on the same pairs, sending them in batches the size of
-`QUESTION_JUDGE_MAX_PAIRS`, closest first, as the page does:
+rule on the same pairs. Each floor is judged on its own: its band goes to the
+model in batches the size of `QUESTION_JUDGE_MAX_PAIRS`, closest first, as the
+page would send them at that floor. A pair's neighbours in a batch can change
+its verdict, so one floor's verdicts are never reused for another. The output
+records each floor's verdicts and how many replies did not parse:
 
 ```bash
 OPENAI_API_KEY=... python scripts/measure_question_groups.py --judge \

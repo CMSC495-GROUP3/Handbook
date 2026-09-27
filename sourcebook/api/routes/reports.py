@@ -120,8 +120,9 @@ VECTOR_MEMO_SIZE = 5000
 _vector_memo: OrderedDict[str, array] = OrderedDict()
 _vector_memo_lock = threading.Lock()
 # Utility-model verdicts on wording pairs, keyed by model, prompt version, and
-# both texts, so a model or prompt change cannot reuse an old verdict. A few
-# hundred bytes each. Off with CACHE_ENABLED=0 like the vector memo.
+# both texts, so a model or prompt change cannot reuse an old verdict. Logged
+# questions run to 500 characters, so an entry is up to about 1 to 2 KB and a
+# full memo 20 to 40 MB per worker. Off with CACHE_ENABLED=0 like the vector memo.
 VERDICT_MEMO_SIZE = 20000
 _verdict_memo: OrderedDict[tuple[str, str, str, str], bool] = OrderedDict()
 _verdict_memo_lock = threading.Lock()
