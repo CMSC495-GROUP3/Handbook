@@ -404,8 +404,8 @@ stay apart on that load and are judged on a later one. Verdicts are memoized
 per process (20,000 entries, off when `CACHE_ENABLED=0`) and never stored, so
 a repeat load with nothing new makes no call. At 50 pairs the call is about
 2,000 input tokens and 200 output tokens, under $0.001 on `gpt-4o-mini`. If it
-fails or the reply does not parse, those pairs stay apart and `grouping` is
-`"cosine"`. `QUESTION_JUDGE_MAX_PAIRS=0` turns the check off and also reports
+fails or the reply does not parse, no pair below the threshold merges on that
+load, not even one confirmed earlier, and `grouping` is `"cosine"`. `QUESTION_JUDGE_MAX_PAIRS=0` turns the check off and also reports
 `"cosine"`.
 
 | `grouping` | Rows merge when |

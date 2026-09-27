@@ -700,3 +700,35 @@ def test_a_wording_past_the_sample_cap_reports_its_exact_conversations(
     [row] = client.get(URL, headers=hr_auth).json()["faq"]
 
     assert row["conversations"] == 3
+
+
+def test_a_failed_judge_merges_nothing_below_the_threshold(client, hr_auth, monkeypatch):
+    # A pair confirmed on an earlier load must not merge on a load whose call
+    # fails, or the page would say "cosine" while showing a band merge.
+    from sourcebook.rag.llm import ProviderBusyError
+
+    vectors(
+        monkeypatch,
+        {
+            "How much PTO do I get?": PTO,
+            "What is my annual paid time off allowance?": PTO_REWORDED,
+            "Does unused PTO carry over?": PTO_CARRYOVER,
+        },
+    )
+    verdicts(
+        monkeypatch,
+        same={frozenset({"How much PTO do I get?", "What is my annual paid time off allowance?"})},
+    )
+    log("How much PTO do I get?", refused=True)
+    log("What is my annual paid time off allowance?", refused=True)
+    first = client.get(URL, headers=hr_auth).json()
+    assert (first["grouping"], len(first["gaps"])) == ("meaning", 1)
+
+    def busy(*_args, **_kwargs):
+        raise ProviderBusyError("busy")
+
+    monkeypatch.setattr(reports.get_provider(), "complete", busy)
+    log("Does unused PTO carry over?", refused=True)  # a new pair, so the judge is called
+    second = client.get(URL, headers=hr_auth).json()
+
+    assert (second["grouping"], len(second["gaps"])) == ("cosine", 3)
