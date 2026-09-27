@@ -335,6 +335,16 @@ class FakeProvider(LLMProvider):
 
     def embed(self, text: str) -> list[float]:
         self._sleep(self.EMBED_DELAY_MS)
+        return self._vector(text)
+
+    def embed_many(self, texts: list[str]) -> list[list[float]]:
+        """One delay for the batch: the OpenAI provider makes one request, not N."""
+        if not texts:
+            return []
+        self._sleep(self.EMBED_DELAY_MS)
+        return [self._vector(text) for text in texts]
+
+    def _vector(self, text: str) -> list[float]:
         # Deterministic pseudo-random unit vector seeded by the text, so repeated
         # calls agree with each other and runs are reproducible.
         seed = int.from_bytes(hashlib.sha256(text.encode()).digest()[:8], "big")

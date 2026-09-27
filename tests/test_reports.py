@@ -17,6 +17,14 @@ _SESSIONS = itertools.count(1)
 
 
 @pytest.fixture(autouse=True)
+def empty_vector_memo():
+    """The route memoizes vectors per process; tests below swap them per test."""
+    reports._vector_memo.clear()
+    yield
+    reports._vector_memo.clear()
+
+
+@pytest.fixture(autouse=True)
 def full_ttl(monkeypatch):
     """Tests below assume the default 90-day log TTL, whatever the environment sets."""
     monkeypatch.setattr(reports, "TTL_DAYS", MAX_WINDOW_DAYS)
@@ -90,6 +98,8 @@ def test_faq_counts_repeats_and_their_refusals(client, hr_auth):
             "question": "How much PTO do I get?",
             "count": 2,
             "conversations": 2,
+            "other_wordings": [],
+            "other_wording_count": 0,
             "refused": 1,
         }
     ]
@@ -242,3 +252,155 @@ def test_fake_sort_puts_null_first_ascending_like_mongo():
 
     assert [row["k"] for row in ascending] == [None, 1, 2]
     assert [row["k"] for row in descending] == [2, 1, None]
+
+
+# ── Grouping by meaning (#287) ────────────────────────────────────────────────
+
+PTO = [1.0, 0.0, 0.0]
+PTO_REPHRASED = [0.95, 0.312, 0.0]  # cosine 0.95 with PTO
+PTO_CARRYOVER = [0.8, 0.0, 0.6]  # cosine 0.80: close, but a different question
+PARKING = [0.0, 1.0, 0.0]
+
+
+def vectors(monkeypatch, table: dict[str, list[float]]) -> list[list[str]]:
+    """Serve `table` through the provider; return the batches it was asked for."""
+    calls: list[list[str]] = []
+
+    def embed_many(texts):
+        calls.append(list(texts))
+        return [table[text] for text in texts]
+
+    monkeypatch.setattr(reports.get_provider(), "embed_many", embed_many)
+    return calls
+
+
+def test_rephrasings_share_a_row_with_summed_counts(client, hr_auth, monkeypatch):
+    vectors(
+        monkeypatch,
+        {"How much PTO do I get?": PTO, "How many vacation days do I have?": PTO_REPHRASED},
+    )
+    log("How much PTO do I get?", refused=True, session_id="a")
+    log("How much PTO do I get?", refused=True, session_id="b")
+    log("How many vacation days do I have?", refused=True, session_id="c")
+    log("How many vacation days do I have?", refused=False, session_id="a")
+
+    body = client.get(URL, headers=hr_auth).json()
+
+    assert body["grouping"] == "meaning"
+    [row] = body["faq"]
+    # Tied at two asks each, so the hash order picks the leader.
+    assert row["question"] == "How many vacation days do I have?"
+    assert (row["count"], row["refused"], row["conversations"]) == (4, 3, 3)
+    assert row["other_wordings"] == [{"question": "How much PTO do I get?", "count": 2}]
+    assert row["other_wording_count"] == 1
+    [gap] = body["gaps"]
+    assert (gap["question"], gap["count"]) == ("How much PTO do I get?", 3)
+
+
+def test_two_single_asks_in_other_words_reach_asked_most(client, hr_auth, monkeypatch):
+    """Neither wording repeats on its own; together they are asked twice."""
+    vectors(
+        monkeypatch,
+        {"How much PTO do I get?": PTO, "How many vacation days do I have?": PTO_REPHRASED},
+    )
+    log("How much PTO do I get?", refused=False, session_id="a")
+    log("How many vacation days do I have?", refused=False, session_id="b")
+
+    faq = client.get(URL, headers=hr_auth).json()["faq"]
+
+    assert [(row["count"], row["other_wording_count"]) for row in faq] == [(2, 1)]
+
+
+def test_a_near_miss_below_the_threshold_stays_apart(client, hr_auth, monkeypatch):
+    vectors(
+        monkeypatch,
+        {"How much PTO do I get?": PTO, "Does unused PTO carry over?": PTO_CARRYOVER},
+    )
+    log("How much PTO do I get?", refused=True)
+    log("Does unused PTO carry over?", refused=True)
+
+    gaps = client.get(URL, headers=hr_auth).json()["gaps"]
+
+    assert sorted(g["question"] for g in gaps) == [
+        "Does unused PTO carry over?",
+        "How much PTO do I get?",
+    ]
+
+
+def test_cached_vectors_are_used_and_nothing_is_written(client, hr_auth, monkeypatch):
+    from sourcebook.rag import cache
+
+    cache.put_cached_embedding("How much PTO do I get?", PTO)
+    calls = vectors(monkeypatch, {"Where do I park?": PARKING})
+    log("How much PTO do I get?", refused=True)
+    log("Where do I park?", refused=True)
+    before = FAKE_DB["embedding_cache"].count_documents({})
+
+    client.get(URL, headers=hr_auth)
+
+    assert calls == [["Where do I park?"]]
+    assert FAKE_DB["embedding_cache"].count_documents({}) == before
+
+
+def test_a_provider_failure_falls_back_to_exact_wording(client, hr_auth, monkeypatch):
+    from sourcebook.rag.llm import ProviderBusyError
+
+    def busy(_texts):
+        raise ProviderBusyError("busy")
+
+    monkeypatch.setattr(reports.get_provider(), "embed_many", busy)
+    log("How much PTO do I get?", refused=True)
+    log("How many vacation days do I have?", refused=True)
+
+    response = client.get(URL, headers=hr_auth)
+
+    assert response.status_code == 200
+    assert response.json()["grouping"] == "exact"
+    assert len(response.json()["gaps"]) == 2
+
+
+def test_a_repeat_load_makes_no_provider_call(client, hr_auth, monkeypatch):
+    calls = vectors(monkeypatch, {"Where do I park?": PARKING, "How much PTO do I get?": PTO})
+    log("Where do I park?", refused=True)
+    log("How much PTO do I get?", refused=True)
+
+    client.get(URL, headers=hr_auth)
+    client.get(URL, headers=hr_auth)
+
+    assert calls == [["How much PTO do I get?", "Where do I park?"]]
+
+
+def test_asked_most_candidates_are_picked_by_conversations(client, hr_auth, monkeypatch):
+    """One person asking five times must not take the only slot from a
+    question asked once each in three conversations."""
+    monkeypatch.setattr(reports, "CANDIDATE_LIMIT", 1)
+    vectors(monkeypatch, {"Repeated by one": PTO, "Asked by three": PARKING})
+    for _ in range(5):
+        log("Repeated by one", refused=False, session_id="solo")
+    for session in ("a", "b", "c"):
+        log("Asked by three", refused=False, session_id=session)
+
+    faq = client.get(URL, headers=hr_auth).json()["faq"]
+
+    assert [row["question"] for row in faq] == ["Asked by three"]
+
+
+def test_the_vector_memo_evicts_the_least_recently_used(monkeypatch):
+    monkeypatch.setattr(reports, "VECTOR_MEMO_SIZE", 2)
+    reports._remember({"a": PTO, "b": PARKING})
+    reports._recall(["a"])  # "a" is now the most recently used
+    reports._remember({"c": PTO_REPHRASED})
+
+    assert set(reports._recall(["a", "b", "c"])) == {"a", "c"}
+
+
+def test_cache_disabled_turns_the_vector_memo_off(client, hr_auth, monkeypatch):
+    monkeypatch.setattr(reports, "CACHE_ENABLED", False)
+    calls = vectors(monkeypatch, {"Where do I park?": PARKING})
+    log("Where do I park?", refused=True)
+
+    client.get(URL, headers=hr_auth)
+    client.get(URL, headers=hr_auth)
+
+    assert calls == [["Where do I park?"], ["Where do I park?"]]
+    assert len(reports._vector_memo) == 0
