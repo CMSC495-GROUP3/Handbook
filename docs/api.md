@@ -407,7 +407,7 @@ One that passes MongoDB's per-stage memory limit (one question asked in about
 
 Both lists merge near-identical wordings of one question into one row (#287). The log's
 `question_hash` groups identical text. The route then merges hash groups whose
-question embeddings are within `QUESTION_GROUP_THRESHOLD` cosine, default 0.85.
+question embeddings are within `QUESTION_GROUP_THRESHOLD` cosine, default 0.91.
 Each wording joins the most asked group it is close to, compared with that
 group's first wording only, so a chain of near neighbours cannot drift into one
 row. `question` is the most asked wording. `count`, `refused`, and
@@ -453,10 +453,11 @@ a stalled provider costs a load about 16 seconds at most before it falls back
 
 Merging two different questions ("How does PTO accrue?" and "Does unused PTO
 carry over?") hides a gap behind a covered neighbour, which is worse than
-splitting one question into two rows. On 120 labelled pairs 0.85 merges 2 of
-60 different questions, both one word apart ("HSA" and "FSA"), and only 6 of
-60 paraphrases: a missing question mark, a change of case, and close
-rewordings. The model check brings paraphrases merged to 29 of 60. The
+splitting one question into two rows. On 120 labelled pairs the closest two
+different questions are one word apart ("HSA" and "FSA", a sick employee and a
+sick child) and score up to 0.907, so 0.91 merges none of them, but cosine
+alone merges only 3 of 60 paraphrases: a missing question mark and a change
+of case. The model check brings paraphrases merged to 16 to 18 of 60. The
 measurements are in [evaluation.md](evaluation.md#question-grouping-threshold).
 
 ```http

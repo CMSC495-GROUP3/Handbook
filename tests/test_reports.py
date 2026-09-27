@@ -623,8 +623,9 @@ def test_a_judge_failure_falls_back_to_cosine_and_says_so(client, hr_auth, monke
 
     assert response.status_code == 200
     assert response.json()["grouping"] == "cosine"
-    # The pair the failed call was asked about still has no verdict.
-    assert response.json()["unjudged"] == 1
+    # The pairs the failed call was asked about still have no verdict: the
+    # rewording with each spelling of the PTO question (0.70 and 0.89).
+    assert response.json()["unjudged"] == 2
     # Cosine still merges what clears the threshold on its own.
     assert [g["count"] for g in response.json()["gaps"]] == [3, 1]
 

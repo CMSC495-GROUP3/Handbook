@@ -22,7 +22,7 @@ SCORED = [
     _pair("mid", "different", 0.70),
     _pair("edge", "same", 0.62),
     _pair("low", "same", 0.50),
-    _pair("above", "same", 0.90),
+    _pair("above", "same", 0.95),
 ]
 
 

@@ -194,12 +194,13 @@ QUERY_LOG_TTL_SECONDS = int(os.getenv("QUERY_LOG_TTL_SECONDS", str(90 * 86400)))
 # report page treats two wordings as one question. Merging two different
 # questions hides a gap behind a covered neighbour, which is worse than showing
 # one question twice. Measured with text-embedding-3-small on 120 labelled
-# pairs (evaluation/question_pairs_results.json, issues #287 and #293): 0.85
-# merges 6 of 60 paraphrases, which score as low as 0.47, and 2 of 60 different
-# questions one word apart (HSA versus FSA, 0.862; sick versus a sick child,
-# 0.907). 0.91 would stop both and merge 3 paraphrases. Lowering it trades
-# false merges for recall; see docs/evaluation.md.
-QUESTION_GROUP_THRESHOLD = float(os.getenv("QUESTION_GROUP_THRESHOLD", "0.85"))
+# pairs (evaluation/question_pairs_results.json, issues #287 and #293): the
+# closest different questions are one word apart (sick versus a sick child,
+# 0.907; HSA versus FSA, 0.862), so 0.91 merges none of them on cosine alone
+# and 3 of 60 paraphrases. Pairs below it go to the question judge, which
+# turned both of those down. Lowering it trades false merges for recall; see
+# docs/evaluation.md.
+QUESTION_GROUP_THRESHOLD = float(os.getenv("QUESTION_GROUP_THRESHOLD", "0.91"))
 
 # Pairs between this floor and QUESTION_GROUP_THRESHOLD go to the utility model,
 # which decides whether they are one question (issue #293). Below the floor a
