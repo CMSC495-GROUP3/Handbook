@@ -98,7 +98,7 @@ Every code change on the candidate:
 | Answer quality, full tier, against the beta's run as the before ([#213](https://github.com/CMSC495-GROUP3/Sourcebook/issues/213)) | Done on `7d3c779`: 95.9% (47 of 49) on the three answer metrics and 100% on both refusal metrics, the same as the beta, with the same two cases citing a sibling policy | [live-evaluation.md](live-evaluation.md), run [36325113964](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36325113964) |
 | Real-service latency and error rate on the pilot | Done on `7d3c779`: all five targets pass, 0 errors in 7 requests | [live-benchmark.md](live-benchmark.md), run `e6615d05` |
 | Load run against the deployed pilot ([#212](https://github.com/CMSC495-GROUP3/Sourcebook/issues/212)) | Pending | [docs/load-testing-pilot.md](../../load-testing-pilot.md), Pending |
-| Lighthouse, both themes, phone and desktop ([#214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214)) | Pending: run `scripts/lighthouse` (#280) against the pilot on the candidate | [docs/quality.md](../../quality.md), Pending |
+| Lighthouse, both themes, phone and desktop ([#214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214)) | Done on `7d3c779`: accessibility and best practices 100 on all 12 runs; performance 100 on desktop and 87 to 96 on mobile; SEO 91, from `robots-txt` only | [evidence/lighthouse.md](evidence/lighthouse.md) |
 | End-to-end pass by hand | Done on `7d3c779`: 18 of 18 steps pass | [below](#end-to-end-pass-by-hand), screenshots in [evidence/](evidence/README.md) |
 | What People Ask on the pilot's query log, 30-day window, signed in with the HR password and with the reviewer password | Done: 15 of 87 questions unanswered (17%), `grouping` `meaning`, nothing left unjudged; the reviewer sees the same headline with only rows from at least 3 conversations | [evidence/16](evidence/16-what-people-ask-hr.png) and [evidence/19](evidence/19-what-people-ask-reviewer.png), question text blurred |
 | Screenshots of green CI, Security, and auto-deploy runs ([#207](https://github.com/CMSC495-GROUP3/Sourcebook/issues/207)) | Pending | [evidence/](evidence/README.md) |
@@ -194,6 +194,6 @@ README, `docs/README.md`, and `portfolio.md`. That pull request closes
 | Bounded benchmark against the pilot, recorded in [live-benchmark.md](live-benchmark.md) | Done |
 | End-to-end pass by hand, recorded above with screenshots | Done |
 | Coverage for the candidate in [evidence/coverage.md](evidence/coverage.md) | Done |
-| Load run and Lighthouse, or recorded as not measured | Pending |
+| Load run and Lighthouse, or recorded as not measured | Lighthouse done; load run Pending |
 | `docs/user-guide.md` and `docs/team.md` on `main` | Pending: #259, #231 |
 | Release pull request merged, with its CI and Security runs green and linked in the table at the top of this page | Pending |
