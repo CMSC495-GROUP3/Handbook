@@ -2,8 +2,9 @@
 
 How to use Sourcebook: asking a policy question, checking where the answer came
 from, and handing a question to Human Resources when Sourcebook can't answer
-it. The last two parts are for Human Resources: working those requests on the
-**HR Requests** page, and reading the **What People Ask** report.
+it. The last two parts are for Human Resources and managers: working those
+requests on the **HR Requests** page, and reading the **What People Ask**
+report.
 
 To run your own copy, see [install.md](install.md). Scripts and integrations
 use the HTTP API in [api.md](api.md).
@@ -20,14 +21,17 @@ refusal wording. Provenance is in
 
 Open the pilot at <https://sourcebook.duckdns.org>. If you're running it
 locally with the stub, the address is <http://localhost:5173> and the password
-is `dev`.
+is `dev` (`manager` for a manager, `hr` for Human Resources).
 
 Sourcebook uses a shared password, not personal accounts. Ask Human
 Resources for it, type it in **Password**, and select **Sign in**.
 
-Human Resources staff sign in with a separate HR password instead. It does
-everything the shared password does and also opens the **HR Requests** and
-**What People Ask** pages.
+Two other passwords open more. Each does everything the shared password does:
+
+- **Managers and supervisors** sign in with the manager password. It also
+  opens the **What People Ask** page.
+- **Human Resources** staff sign in with the HR password. It also opens the
+  **HR Requests** and **What People Ask** pages.
 
 ![Sign-in page after a wrong password](releases/v0.2.0/evidence/01-wrong-password.png)
 
@@ -135,7 +139,7 @@ If it says the conversation is out of sync, reload the page and send again.
 
 Every question you ask starts or continues a conversation. Conversations are
 kept on the server and listed in the sidebar under **Recent**, so they're
-still there after a reload or on another device.
+still there after a reload or after you sign out and back in.
 
 - **New question** starts a fresh conversation.
 - Select a conversation to reopen it. Answers, sources, and follow-ups come
@@ -145,15 +149,22 @@ still there after a reload or on another device.
   button (the folder with a plus), then use a conversation's **Move to
   project** button to file it.
 
-Everyone who can sign in, with either the team password or a reviewer
-password, sees the same conversations and projects. Don't put anything in a
-question that you wouldn't want colleagues to read.
+Your conversations and projects belong to the browser you asked them in, not
+to the password you signed in with. Nobody signed in on another browser can
+see them, and you can't see theirs. That also means:
+
+- Signing out keeps them. Sign in again on the same browser and they're back.
+- Clearing the browser's site data, or switching to another browser or
+  device, starts with an empty list. The earlier conversations stay on the
+  first browser.
+- A link to a conversation opened on a different browser starts a new
+  conversation and says "That conversation isn't available in this browser."
 
 ## Sign out and sessions
 
 Select **Sign out** at the bottom of the sidebar. Sign-in lasts 24 hours on
 that browser. After that, Sourcebook returns you to the sign-in page the next
-time you open it or ask something. Your conversations are unaffected.
+time you open it or ask something. Your conversations stay with this browser.
 
 The sidebar also has a light/dark theme switch. On a phone, open the sidebar
 with the menu button at the top left. On a wide screen, you can collapse it to
@@ -168,14 +179,15 @@ a narrow strip of icons.
 | "Could not load this source right now." in the Source pane | Close the pane and open the source again. |
 | "Could not load the document library." | Reload the page. |
 | You're suddenly back at the sign-in page | Your sign-in expired. Sign in again; your conversations are still there. |
+| "That conversation isn't available in this browser." | The link points to a conversation started on another browser. You're in a new conversation instead; ask your question there. |
 
 ## For Human Resources: the HR Requests page
 
 Select **HR Requests** in the sidebar. Every escalated question lands here.
 Only someone signed in with the HR password can open this page. With the
-shared password, the sidebar doesn't show it. If you signed in with the HR
-password before this page was limited to it and don't see the link, sign out
-and sign in again.
+shared or manager password, the sidebar doesn't show it, and opening a link to
+it says "This page is for Human Resources. Sign out and sign in with the HR
+password to see it."
 
 ![HR Requests with an open request](releases/v0.2.0/evidence/12-hr-requests-open.png)
 
@@ -230,11 +242,12 @@ server allows.
 - "That request was not found." The link you followed points to a request that
   doesn't exist.
 
-## For Human Resources: What People Ask
+## For Human Resources and managers: What People Ask
 
-Select **What People Ask** in the sidebar, under **HR Requests**. Like HR
-Requests, it needs the HR password. It shows what employees asked Sourcebook,
-so you can see which policies to write or make clearer.
+Select **What People Ask** in the sidebar. It needs the manager or HR
+password. It shows what employees asked Sourcebook, so Human Resources can see
+which policies to write or make clearer, and managers can see what to cover in
+training and orientation before new hires have to ask.
 
 The page lists questions as employees typed them. It doesn't say who asked,
 but a question can still identify someone, so keep what you read there inside
@@ -250,11 +263,26 @@ what share of all questions that was. Below it are two lists:
   many. Each bar is green for the times a policy answered and orange for the
   times none did.
 
-Close rewordings of one question share a row. **Also asked as _N_ other
-wordings** opens the other ways people put it. A question asked in quite
-different words can still appear as two rows, so the counts are a floor.
+Rewordings of one question share a row: nearly identical wordings merge on
+their own, and Sourcebook checks closer calls with its language model. **Also
+asked as _N_ other wordings** opens the other ways people put it. A question
+asked in quite different words can still appear as two rows, so the counts are
+a floor. Two notes under the headline can appear:
+
+- "Rewordings are not being checked right now, so only near-identical
+  wordings share a row." The check is unavailable; more rewordings get their
+  own row until it's back.
+- "_N_ pairs of close wordings are still waiting to be checked, so some
+  rewordings may have their own row. Reload to check the next batch." Each
+  load checks a limited number of pairs. Reload the page to check more.
+
+**What a manager sees.** A question typed once can point to the person who
+typed it, and a manager isn't a confidential channel the way Human Resources
+is. So when you sign in with the manager password, both lists leave out any
+question asked in fewer than 3 separate conversations. The headline counts
+still include every question. The page says this at the top.
 
 | What you see | What to do |
 | --- | --- |
-| "This page is for Human Resources. Sign out and sign in with the HR password to see it." | You signed in with the shared password. Sign out and sign in with the HR password. |
+| "This page is for managers and Human Resources. Sign out and sign in with the manager or HR password to see it." | You signed in with the shared password. Sign out and sign in with the manager or HR password. |
 | "Unable to load this report." | Select **Try again**. If it keeps failing on 90 days, choose a shorter window. |
