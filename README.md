@@ -100,6 +100,7 @@ its handoff, release notes, live benchmark, live evaluation, and evidence.
 
 | Release | Handoff | Notes | Measured |
 | --- | --- | --- | --- |
+| [v1.0.0](https://github.com/CMSC495-GROUP3/Sourcebook/releases/tag/v1.0.0) | [handoff](docs/releases/v1.0.0/handoff.md) | [release notes](docs/releases/v1.0.0/release-notes.md), [portfolio](docs/releases/v1.0.0/portfolio.md) | [benchmark](docs/releases/v1.0.0/live-benchmark.md), [evaluation](docs/releases/v1.0.0/live-evaluation.md), [load](docs/load-testing-pilot.md), [Lighthouse](docs/releases/v1.0.0/evidence/lighthouse.md) |
 | [v0.2.0](https://github.com/CMSC495-GROUP3/Sourcebook/releases/tag/v0.2.0) | [handoff](docs/releases/v0.2.0/handoff.md) | [release notes](docs/releases/v0.2.0/release-notes.md) | [benchmark](docs/releases/v0.2.0/live-benchmark.md), [evaluation](docs/releases/v0.2.0/live-evaluation.md) |
 | [v0.1.0-alpha.1](https://github.com/CMSC495-GROUP3/Sourcebook/releases/tag/v0.1.0-alpha.1) | [handoff](docs/releases/v0.1.0-alpha.1/handoff.md) | [release notes](docs/releases/v0.1.0-alpha.1/release-notes.md) | [benchmark](docs/releases/v0.1.0-alpha.1/live-benchmark.md), [evaluation](docs/releases/v0.1.0-alpha.1/live-evaluation.md) |
 
