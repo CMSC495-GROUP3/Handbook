@@ -116,7 +116,8 @@ Carried from the beta unless fixed before the freeze. Update at the freeze.
 | Issue | What a pilot user would see | Mitigation |
 | --- | --- | --- |
 | Vague questions on covered topics | "Can I expense this trip?" is refused where the alpha answered in general terms ([beta evaluation](../v0.2.0/live-evaluation.md#manual-review)) | the refusal card now says to ask the full question again with the details it depends on (#281); or use Ask Human Resources |
-| Conversations are not scoped to their owner | anyone with a password can list and open every conversation through `GET /api/conversations`, including the question text the HR pages show (README [Known limitations](../../../README.md#known-limitations)) | a pilot with a few reviewers; draft PR #299 scopes conversations to the browser that made them, and would move this row to the changes above if it merges before the freeze |
+| Conversations are not scoped to their owner | anyone with a password can list and open every conversation through `GET /api/conversations`, including the question text the HR pages show (README [Known limitations](../../../README.md#known-limitations)) | a pilot with a few reviewers; draft PR #299 scopes conversations to the browser that made them, and would move this row to the changes above if it merges before the freeze. Its deploy signs everyone out, and conversations from before it have no owner, so the app can no longer reach them; their retention is item 3 of [#300](https://github.com/CMSC495-GROUP3/Sourcebook/issues/300) |
+| Any signed-in session can rebuild the document index | `POST /api/documents/reindex` needs only the shared password, and a rebuild bumps the corpus version, which empties the answer cache | the route is rate-limited; who may call it is item 5 of [#300](https://github.com/CMSC495-GROUP3/Sourcebook/issues/300) |
 | What People Ask merges few paraphrases | at 0.85 cosine it merged 4 of 40 labelled paraphrases and none of 40 different questions ([measurement](../../evaluation.md#question-grouping-threshold)), so "Asked most" undercounts a question asked in different words | the caption says so; draft PR #298 ([#293](https://github.com/CMSC495-GROUP3/Sourcebook/issues/293)) confirms candidate pairs with the utility model |
 | README known limitations | shared passwords plus an HR password, a threshold set by judgement, non-atomic re-ingestion, one instance, a fictional corpus | documented in the README |
 
@@ -125,8 +126,11 @@ Carried from the beta unless fixed before the freeze. Update at the freeze.
 Pending: rewrite at the freeze from what was measured. Start from the beta's
 list: load (#212), full-tier quality (#213), accessibility and web performance
 (#214), `CustomerDataProvider` not written, a fictional corpus, one instance
-with no failover. Remove only the items the measurements above actually
-settle.
+with no failover. Add the What People Ask report at volume: #296 timed it on
+a local `mongo:7`, not Atlas, and neither query shape answers a 90-day window
+within the route's 5 s limit at the 7M rows a day planned in `config.py`
+([#291](https://github.com/CMSC495-GROUP3/Sourcebook/issues/291)). Remove
+only the items the measurements above actually settle.
 
 ## The tag
 

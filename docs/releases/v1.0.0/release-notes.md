@@ -96,6 +96,7 @@ Pending: confirm at the freeze.
 | --- | --- | --- | --- |
 | Vague questions on covered topics | "Can I expense this trip?" is refused where the alpha answered in general terms | the user gets the refusal card instead of a pointer to the travel policy | the card says to ask the full question again with the details it depends on (PR #281), or use Ask Human Resources |
 | Conversations are not private to the person who had them | anyone with a password can list and open every conversation through the API | the HR password protects two pages, not the question text in conversations | a pilot with a handful of reviewers; draft PR #299 scopes conversations to the browser that made them |
+| Any signed-in session can rebuild the document index | an employee session can call the reindex route | a rebuild empties the answer cache, so the next answers are slower and cost more | the route is rate-limited; #300 tracks limiting it to HR or an admin |
 | What People Ask misses most paraphrases | "How much PTO do I get?" and "How many vacation days do I have?" can still be two rows | the "Asked most" counts undercount a question asked in different words | the page says so under the list; on 80 labelled pairs it merged 4 of 40 paraphrases and none of 40 different questions; draft PR #298 adds a model check |
 
 ## What this release does not establish
