@@ -21,8 +21,10 @@ _SESSIONS = itertools.count(1)
 def empty_vector_memo():
     """The route memoizes vectors per process; tests below swap them per test."""
     reports._vector_memo.clear()
+    reports._verdict_memo.clear()
     yield
     reports._vector_memo.clear()
+    reports._verdict_memo.clear()
 
 
 @pytest.fixture(autouse=True)
@@ -481,6 +483,191 @@ def test_cache_disabled_turns_the_vector_memo_off(client, hr_auth, monkeypatch):
     assert len(reports._vector_memo) == 0
 
 
+# ── The utility-model check on the band below the threshold (#293) ───────────
+
+PTO_REWORDED = [0.7, 0.714, 0.0]  # cosine 0.70 with PTO: in the judged band
+SEVERANCE_LAID_OFF = [0.0, 0.0, 1.0]
+SEVERANCE_RESIGN = [0.0, 0.6, 0.8]  # cosine 0.80 with SEVERANCE_LAID_OFF
+
+
+def verdicts(monkeypatch, *, same: set[frozenset[str]] = frozenset(), reply=None):
+    """Answer the question judge; return the pairs it was asked about, per call."""
+    import json
+    import re
+
+    calls: list[list[tuple[str, str]]] = []
+
+    def complete(messages, **_kwargs):
+        texts = re.findall(r'^\s*\d+\. A: (".*")\n\s+B: (".*")$', messages[1]["content"], re.M)
+        pairs = [(json.loads(a), json.loads(b)) for a, b in texts]
+        calls.append(pairs)
+        if reply is not None:
+            return reply(pairs)
+        return json.dumps(
+            {"same": [n for n, pair in enumerate(pairs, start=1) if frozenset(pair) in same]}
+        )
+
+    monkeypatch.setattr(reports.get_provider(), "complete", complete)
+    return calls
+
+
+def test_a_rewording_the_model_confirms_shares_a_row(client, hr_auth, monkeypatch):
+    vectors(
+        monkeypatch,
+        {"How much PTO do I get?": PTO, "What is my annual paid time off allowance?": PTO_REWORDED},
+    )
+    calls = verdicts(
+        monkeypatch,
+        same={frozenset({"How much PTO do I get?", "What is my annual paid time off allowance?"})},
+    )
+    log("How much PTO do I get?", refused=True)
+    log("How much PTO do I get?", refused=True)
+    log("What is my annual paid time off allowance?", refused=True)
+
+    body = client.get(URL, headers=hr_auth).json()
+
+    assert body["grouping"] == "meaning"
+    [gap] = body["gaps"]
+    assert (gap["question"], gap["count"], gap["other_wording_count"]) == (
+        "How much PTO do I get?",
+        3,
+        1,
+    )
+    # Both lists hold the same pair, and it is judged once.
+    assert len(calls) == 1 and len(calls[0]) == 1
+
+
+def test_a_pair_the_model_calls_different_stays_apart(client, hr_auth, monkeypatch):
+    vectors(
+        monkeypatch,
+        {
+            "Do I get severance if I'm laid off?": SEVERANCE_LAID_OFF,
+            "Do I get severance if I resign?": SEVERANCE_RESIGN,
+        },
+    )
+    calls = verdicts(monkeypatch)
+    log("Do I get severance if I'm laid off?", refused=True)
+    log("Do I get severance if I resign?", refused=True)
+
+    body = client.get(URL, headers=hr_auth).json()
+
+    assert body["grouping"] == "meaning"
+    assert len(body["gaps"]) == 2
+    assert calls == [[("Do I get severance if I resign?", "Do I get severance if I'm laid off?")]]
+
+
+def test_a_pair_below_the_floor_is_never_sent(client, hr_auth, monkeypatch):
+    vectors(monkeypatch, {"How much PTO do I get?": PTO, "Where do I park?": PARKING})
+    calls = verdicts(monkeypatch)
+    log("How much PTO do I get?", refused=True)
+    log("Where do I park?", refused=True)
+
+    body = client.get(URL, headers=hr_auth).json()
+
+    assert (body["grouping"], len(body["gaps"]), calls) == ("meaning", 2, [])
+
+
+def test_a_judge_failure_falls_back_to_cosine_and_says_so(client, hr_auth, monkeypatch):
+    from sourcebook.rag.llm import ProviderBusyError
+
+    def busy(*_args, **_kwargs):
+        raise ProviderBusyError("busy")
+
+    vectors(
+        monkeypatch,
+        {
+            "How much PTO do I get?": PTO,
+            "How much PTO do I get": PTO_REPHRASED,
+            "What is my annual paid time off allowance?": PTO_REWORDED,
+        },
+    )
+    monkeypatch.setattr(reports.get_provider(), "complete", busy)
+    log("How much PTO do I get?", refused=True)
+    log("How much PTO do I get?", refused=True)
+    log("How much PTO do I get", refused=True)
+    log("What is my annual paid time off allowance?", refused=True)
+
+    response = client.get(URL, headers=hr_auth)
+
+    assert response.status_code == 200
+    assert response.json()["grouping"] == "cosine"
+    # Cosine still merges what clears the threshold on its own.
+    assert [g["count"] for g in response.json()["gaps"]] == [3, 1]
+
+
+def test_a_reply_that_does_not_parse_falls_back_to_cosine(client, hr_auth, monkeypatch):
+    vectors(
+        monkeypatch,
+        {"How much PTO do I get?": PTO, "What is my annual paid time off allowance?": PTO_REWORDED},
+    )
+    verdicts(monkeypatch, reply=lambda _pairs: '{"same": true}')
+    log("How much PTO do I get?", refused=True)
+    log("What is my annual paid time off allowance?", refused=True)
+
+    body = client.get(URL, headers=hr_auth).json()
+
+    assert (body["grouping"], len(body["gaps"])) == ("cosine", 2)
+    # A failed reply is not remembered, so the next load asks again.
+    assert len(reports._verdict_memo) == 0
+
+
+def test_a_repeat_load_reuses_verdicts(client, hr_auth, monkeypatch):
+    vectors(
+        monkeypatch,
+        {"How much PTO do I get?": PTO, "What is my annual paid time off allowance?": PTO_REWORDED},
+    )
+    calls = verdicts(
+        monkeypatch,
+        same={frozenset({"How much PTO do I get?", "What is my annual paid time off allowance?"})},
+    )
+    log("How much PTO do I get?", refused=True)
+    log("What is my annual paid time off allowance?", refused=True)
+
+    first = client.get(URL, headers=hr_auth).json()
+    second = client.get(URL, headers=hr_auth).json()
+
+    assert len(calls) == 1
+    assert first["gaps"] == second["gaps"] and len(second["gaps"]) == 1
+
+
+def test_only_the_closest_pairs_go_in_one_call(client, hr_auth, monkeypatch):
+    monkeypatch.setattr(reports, "QUESTION_JUDGE_MAX_PAIRS", 1)
+    vectors(
+        monkeypatch,
+        {
+            "How much PTO do I get?": PTO,
+            "What is my annual paid time off allowance?": PTO_REWORDED,  # 0.70 with PTO
+            "Does unused PTO carry over?": PTO_CARRYOVER,  # 0.80 with PTO
+        },
+    )
+    calls = verdicts(monkeypatch)
+    log("How much PTO do I get?", refused=True)
+    log("What is my annual paid time off allowance?", refused=True)
+    log("Does unused PTO carry over?", refused=True)
+
+    client.get(URL, headers=hr_auth)
+    client.get(URL, headers=hr_auth)
+
+    assert [len(batch) for batch in calls] == [1, 1]
+    assert calls[0] == [("Does unused PTO carry over?", "How much PTO do I get?")]
+    assert calls[1] != calls[0]
+
+
+def test_a_zero_pair_cap_turns_the_judge_off(client, hr_auth, monkeypatch):
+    monkeypatch.setattr(reports, "QUESTION_JUDGE_MAX_PAIRS", 0)
+    vectors(
+        monkeypatch,
+        {"How much PTO do I get?": PTO, "What is my annual paid time off allowance?": PTO_REWORDED},
+    )
+    calls = verdicts(monkeypatch)
+    log("How much PTO do I get?", refused=True)
+    log("What is my annual paid time off allowance?", refused=True)
+
+    body = client.get(URL, headers=hr_auth).json()
+
+    assert (body["grouping"], len(body["gaps"]), calls) == ("cosine", 2, [])
+
+
 def test_wording_pipeline_returns_a_capped_sample_of_session_ids(monkeypatch):
     """A popular wording's full id list would pass the 16 MB result document
     limit at about 370k conversations (#291). The count stays exact."""
@@ -515,3 +702,35 @@ def test_a_wording_past_the_sample_cap_reports_its_exact_conversations(
     [row] = client.get(URL, headers=hr_auth).json()["faq"]
 
     assert row["conversations"] == 3
+
+
+def test_a_failed_judge_merges_nothing_below_the_threshold(client, hr_auth, monkeypatch):
+    # A pair confirmed on an earlier load must not merge on a load whose call
+    # fails, or the page would say "cosine" while showing a band merge.
+    from sourcebook.rag.llm import ProviderBusyError
+
+    vectors(
+        monkeypatch,
+        {
+            "How much PTO do I get?": PTO,
+            "What is my annual paid time off allowance?": PTO_REWORDED,
+            "Does unused PTO carry over?": PTO_CARRYOVER,
+        },
+    )
+    verdicts(
+        monkeypatch,
+        same={frozenset({"How much PTO do I get?", "What is my annual paid time off allowance?"})},
+    )
+    log("How much PTO do I get?", refused=True)
+    log("What is my annual paid time off allowance?", refused=True)
+    first = client.get(URL, headers=hr_auth).json()
+    assert (first["grouping"], len(first["gaps"])) == ("meaning", 1)
+
+    def busy(*_args, **_kwargs):
+        raise ProviderBusyError("busy")
+
+    monkeypatch.setattr(reports.get_provider(), "complete", busy)
+    log("Does unused PTO carry over?", refused=True)  # a new pair, so the judge is called
+    second = client.get(URL, headers=hr_auth).json()
+
+    assert (second["grouping"], len(second["gaps"])) == ("cosine", 3)

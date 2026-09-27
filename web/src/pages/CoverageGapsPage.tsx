@@ -180,6 +180,12 @@ function Summary({ report, requested }: { report: CoverageReport; requested: num
           words has a row for each wording.
         </p>
       )}
+      {report.grouping === 'cosine' && (
+        <p className="mt-2 max-w-120 text-[13px] leading-normal text-ink-3">
+          Rewordings are not being checked right now, so only near-identical
+          wordings share a row.
+        </p>
+      )}
       {report.days < requested && (
         <p className="mt-2 max-w-120 text-[13px] leading-normal text-ink-3">
           The query log keeps {plural(report.days, 'day')} of questions, so this is the longest window there is.
@@ -255,10 +261,13 @@ export default function CoverageGapsPage() {
   } else if (!report) {
     body = <p className="text-[14px] text-ink-3">Loading…</p>
   } else {
-    const grouping =
-      report.grouping === 'meaning'
-        ? 'Near-identical wordings share a row, but a question asked in other words can still appear twice.'
-        : 'Each wording has its own row.'
+    const grouping = {
+      meaning:
+        'Wordings of one question share a row, but a rewording the check missed can still appear twice.',
+      cosine:
+        'Near-identical wordings share a row, but a question asked in other words can still appear twice.',
+      exact: 'Each wording has its own row.',
+    }[report.grouping]
     body = (
       <>
         <Summary report={report} requested={days} />

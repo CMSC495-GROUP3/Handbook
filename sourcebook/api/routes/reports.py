@@ -20,6 +20,14 @@ never writes. If that call fails, the lists fall back to exact wording and
 ``grouping`` in the response says ``"exact"``: a busy provider must not take
 the report down.
 
+Cosine cannot tell a paraphrase from a near neighbour, so pairs between
+``QUESTION_JUDGE_FLOOR`` and the threshold go to the utility model in one call
+per load (issue #293, ``sourcebook.rag.question_judge``). At most
+``QUESTION_JUDGE_MAX_PAIRS`` new pairs go per call, closest first, and each
+verdict is memoized per process, so a repeat load judges only pairs it has not
+seen. If that call fails or its reply does not parse, those pairs stay apart
+and ``grouping`` says ``"cosine"``, as it does when the cap is 0.
+
 Only the ``CANDIDATE_LIMIT`` top hash groups per list are grouped, picked the
 way each list ranks. A wording outside that cap cannot join a group, which at
 pilot volume is every wording there is. Vectors fetched or embedded here are
@@ -56,6 +64,8 @@ from sourcebook.rag.config import (
     CACHE_ENABLED,
     QUERY_LOG_TTL_SECONDS,
     QUESTION_GROUP_THRESHOLD,
+    QUESTION_JUDGE_FLOOR,
+    QUESTION_JUDGE_MAX_PAIRS,
 )
 from sourcebook.rag.llm import get_provider
 from sourcebook.rag.query_log_reports import (
@@ -67,9 +77,11 @@ from sourcebook.rag.query_log_reports import (
 from sourcebook.rag.question_groups import (
     QuestionGroup,
     Wording,
+    candidate_pairs,
     exact_groups,
     group_by_meaning,
 )
+from sourcebook.rag.question_judge import QUESTION_JUDGE_PROMPT_VERSION, judge_pairs
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +102,9 @@ QUERY_TIMEOUT_MS = 5000
 # that and the server default is true, so add it if that ever changes.
 EXCEEDED_MEMORY_LIMIT = 146
 # Hash groups per list that go into grouping. Two lists of 200 is at most 400
-# texts in one embed_many call and about 0.7 s of similarity math.
+# texts in one embed_many call. Listing the judge's candidates checks every pair
+# in each list and grouping checks each wording against the leaders, so the
+# worst case is about 80,000 dot products, roughly 1.4 s.
 CANDIDATE_LIMIT = 200
 # Other wordings listed under each group's leader.
 MAX_OTHER_WORDINGS = 5
@@ -104,6 +118,13 @@ MAX_OTHER_WORDINGS = 5
 VECTOR_MEMO_SIZE = 5000
 _vector_memo: OrderedDict[str, array] = OrderedDict()
 _vector_memo_lock = threading.Lock()
+# Utility-model verdicts on wording pairs, keyed by model, prompt version, and
+# both texts, so a model or prompt change cannot reuse an old verdict. Logged
+# questions run to 500 characters, so an entry is up to about 1 to 2 KB and a
+# full memo 20 to 40 MB per worker. Off with CACHE_ENABLED=0 like the vector memo.
+VERDICT_MEMO_SIZE = 20000
+_verdict_memo: OrderedDict[tuple[str, str, str, str], bool] = OrderedDict()
+_verdict_memo_lock = threading.Lock()
 
 
 def _question(row: dict[str, Any]) -> str | None:
@@ -176,6 +197,87 @@ def _vectors(texts: list[str]) -> dict[str, Sequence[float]] | None:
     return {**known, **cached, **fresh}
 
 
+def _verdict_key(pair: tuple[str, str]) -> tuple[str, str, str, str]:
+    return (get_provider().utility_fingerprint(), QUESTION_JUDGE_PROMPT_VERSION, *pair)
+
+
+def _same_pairs(candidates: dict[tuple[str, str], float]) -> tuple[set[tuple[str, str]], bool]:
+    """The candidate pairs the utility model says are one question, and
+    whether every pair it was asked about got a verdict.
+
+    Memoized verdicts are free. Of the rest, the closest
+    ``QUESTION_JUDGE_MAX_PAIRS`` go in one call; pairs past the cap count as
+    different on this load and are judged on a later one.
+    """
+    known: dict[tuple[str, str], bool] = {}
+    if CACHE_ENABLED:
+        with _verdict_memo_lock:
+            for pair in candidates:
+                key = _verdict_key(pair)
+                if key in _verdict_memo:
+                    _verdict_memo.move_to_end(key)
+                    known[pair] = _verdict_memo[key]
+    pending = sorted(
+        (pair for pair in candidates if pair not in known),
+        key=lambda pair: (-candidates[pair], pair),
+    )[:QUESTION_JUDGE_MAX_PAIRS]
+    same = {pair for pair, verdict in known.items() if verdict}
+    if not pending:
+        return same, True
+    try:
+        verdicts = judge_pairs(pending)
+    except Exception:
+        # Deliberately broad, as in _vectors: any provider or transport error
+        # means "group on cosine alone", never a failed report.
+        logger.warning("Question judge failed; grouping on cosine alone.", exc_info=True)
+        # Drop the memoized merges too, so "cosine" describes what the page
+        # shows: nothing below the threshold merges on a failed load.
+        return set(), False
+    if verdicts is None:
+        logger.warning("Question judge reply did not parse; grouping on cosine alone.")
+        return set(), False
+    fresh = dict(zip(pending, verdicts, strict=True))
+    if CACHE_ENABLED:
+        with _verdict_memo_lock:
+            for pair, verdict in fresh.items():
+                key = _verdict_key(pair)
+                _verdict_memo[key] = verdict
+                _verdict_memo.move_to_end(key)
+            while len(_verdict_memo) > VERDICT_MEMO_SIZE:
+                _verdict_memo.popitem(last=False)
+    return same | {pair for pair, verdict in fresh.items() if verdict}, True
+
+
+def _grouped(
+    refused_wordings: list[Wording],
+    all_wordings: list[Wording],
+    vectors: dict[str, Sequence[float]] | None,
+) -> tuple[list[QuestionGroup], list[QuestionGroup], str]:
+    """Both lists' groups and the ``grouping`` value that describes them."""
+    if vectors is None:
+        return exact_groups(refused_wordings), exact_groups(all_wordings), "exact"
+    same: set[tuple[str, str]] = set()
+    # With the judge off, grouping is cosine alone, and the page says so.
+    judged = False
+    if QUESTION_JUDGE_MAX_PAIRS > 0:
+        candidates = {
+            **candidate_pairs(
+                refused_wordings, vectors, QUESTION_JUDGE_FLOOR, QUESTION_GROUP_THRESHOLD
+            ),
+            **candidate_pairs(
+                all_wordings, vectors, QUESTION_JUDGE_FLOOR, QUESTION_GROUP_THRESHOLD
+            ),
+        }
+        same, judged = _same_pairs(candidates)
+
+    def group(wordings: list[Wording]) -> list[QuestionGroup]:
+        return group_by_meaning(
+            wordings, vectors, QUESTION_GROUP_THRESHOLD, floor=QUESTION_JUDGE_FLOOR, same=same
+        )
+
+    return group(refused_wordings), group(all_wordings), "meaning" if judged else "cosine"
+
+
 def _serialize(group: QuestionGroup) -> dict[str, Any]:
     others = group.members[1:]
     return {
@@ -246,19 +348,14 @@ def coverage_gaps(
     refused_wordings = [_wording(row) for row in refused_rows]
     all_wordings = [_wording(row) for row in all_rows]
     texts = sorted({w.question for w in refused_wordings + all_wordings if w.question})
-    vectors = _vectors(texts)
-    if vectors is None:
-        gap_groups, faq_groups = exact_groups(refused_wordings), exact_groups(all_wordings)
-    else:
-        gap_groups = group_by_meaning(refused_wordings, vectors, QUESTION_GROUP_THRESHOLD)
-        faq_groups = group_by_meaning(all_wordings, vectors, QUESTION_GROUP_THRESHOLD)
+    gap_groups, faq_groups, grouping = _grouped(refused_wordings, all_wordings, _vectors(texts))
 
     repeated = [group for group in faq_groups if group.conversations >= DEFAULT_MIN_REPEAT]
     return {
         "since": since.isoformat(),
         "until": until.isoformat(),
         "days": days,
-        "grouping": "exact" if vectors is None else "meaning",
+        "grouping": grouping,
         "total": total,
         "refused": refused,
         "gaps": [_serialize(group) for group in _by_count(gap_groups)[:top]],
