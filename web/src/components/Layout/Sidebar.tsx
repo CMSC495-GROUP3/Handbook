@@ -44,9 +44,10 @@ export default function Sidebar({ open, isDesktop, onToggle, onNavigate }: Sideb
 
   const { conversations, fetchConversations, renameConversation, assignToProject, deleteConversation } = useConversations()
   const { projects, fetchProjects, createProject, deleteProject } = useProjects()
-  // Only an HR session sees the HR pages. The API refuses everyone else, so
-  // this saves employees a click into a 403; it is not the access check.
-  const { logout, isHr } = useAuth()
+  // Only an HR session sees HR Requests, and only a manager or HR session sees
+  // What People Ask. The API refuses everyone else, so this saves employees a
+  // click into a 403; it is not the access check.
+  const { logout, isHr, canReadReport } = useAuth()
 
   // Rename state
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -174,28 +175,28 @@ export default function Sidebar({ open, isDesktop, onToggle, onNavigate }: Sideb
             <BookOpen size={18} aria-hidden="true" />
           </button>
           {isHr && (
-            <>
-              <button
-                type="button"
-                onClick={() => navigate('/escalations')}
-                title="HR Requests"
-                aria-label="HR Requests"
-                aria-current={onEscalations ? 'page' : undefined}
-                className={`${RAIL_BUTTON} ${onEscalations ? 'bg-accent-soft text-accent' : 'text-ink-2 hover:bg-paper-3 hover:text-ink'}`}
-              >
-                <ClipboardList size={18} aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate('/gaps')}
-                title="What People Ask"
-                aria-label="What People Ask"
-                aria-current={onGaps ? 'page' : undefined}
-                className={`${RAIL_BUTTON} ${onGaps ? 'bg-accent-soft text-accent' : 'text-ink-2 hover:bg-paper-3 hover:text-ink'}`}
-              >
-                <BookDashed size={18} aria-hidden="true" />
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={() => navigate('/escalations')}
+              title="HR Requests"
+              aria-label="HR Requests"
+              aria-current={onEscalations ? 'page' : undefined}
+              className={`${RAIL_BUTTON} ${onEscalations ? 'bg-accent-soft text-accent' : 'text-ink-2 hover:bg-paper-3 hover:text-ink'}`}
+            >
+              <ClipboardList size={18} aria-hidden="true" />
+            </button>
+          )}
+          {canReadReport && (
+            <button
+              type="button"
+              onClick={() => navigate('/gaps')}
+              title="What People Ask"
+              aria-label="What People Ask"
+              aria-current={onGaps ? 'page' : undefined}
+              className={`${RAIL_BUTTON} ${onGaps ? 'bg-accent-soft text-accent' : 'text-ink-2 hover:bg-paper-3 hover:text-ink'}`}
+            >
+              <BookDashed size={18} aria-hidden="true" />
+            </button>
           )}
         </div>
         <div className="mt-auto flex flex-col items-center gap-1 pb-3">
@@ -257,26 +258,26 @@ export default function Sidebar({ open, isDesktop, onToggle, onNavigate }: Sideb
           Policy Library
         </button>
         {isHr && (
-          <>
-            <button
-              type="button"
-              onClick={() => navigate('/escalations')}
-              aria-current={onEscalations ? 'page' : undefined}
-              className={`${ROW} h-[34px] px-2.5 ${onEscalations ? ROW_ACTIVE : ROW_IDLE}`}
-            >
-              <ClipboardList size={15} aria-hidden="true" className={onEscalations ? 'text-accent' : 'text-ink-3'} />
-              HR Requests
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/gaps')}
-              aria-current={onGaps ? 'page' : undefined}
-              className={`${ROW} h-[34px] px-2.5 ${onGaps ? ROW_ACTIVE : ROW_IDLE}`}
-            >
-              <BookDashed size={15} aria-hidden="true" className={onGaps ? 'text-accent' : 'text-ink-3'} />
-              What People Ask
-            </button>
-          </>
+          <button
+            type="button"
+            onClick={() => navigate('/escalations')}
+            aria-current={onEscalations ? 'page' : undefined}
+            className={`${ROW} h-[34px] px-2.5 ${onEscalations ? ROW_ACTIVE : ROW_IDLE}`}
+          >
+            <ClipboardList size={15} aria-hidden="true" className={onEscalations ? 'text-accent' : 'text-ink-3'} />
+            HR Requests
+          </button>
+        )}
+        {canReadReport && (
+          <button
+            type="button"
+            onClick={() => navigate('/gaps')}
+            aria-current={onGaps ? 'page' : undefined}
+            className={`${ROW} h-[34px] px-2.5 ${onGaps ? ROW_ACTIVE : ROW_IDLE}`}
+          >
+            <BookDashed size={15} aria-hidden="true" className={onGaps ? 'text-accent' : 'text-ink-3'} />
+            What People Ask
+          </button>
         )}
       </div>
 

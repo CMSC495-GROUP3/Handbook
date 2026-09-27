@@ -124,6 +124,11 @@ export interface CoverageReport {
   days: number
   /** "exact" when grouping by meaning was unavailable and each wording is its own row. */
   grouping: 'meaning' | 'exact'
+  /**
+   * Set on a manager's report: only wordings asked in at least this many
+   * conversations are listed. Null on HR's, which lists every wording.
+   */
+  min_conversations: number | null
   /** Every chat request in the window. */
   total: number
   refused: number

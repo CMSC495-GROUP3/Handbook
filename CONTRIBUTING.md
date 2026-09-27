@@ -64,8 +64,9 @@ Needed for anything touching retrieval quality, ingestion, or the provider.
    A bcrypt hash contains `$`. Paste it into `.env` with an editor, not `echo`.
    An optional second password goes in `APP_PASSWORD_HASH_2`, hashed the same
    way; the README's Configure section, under the hash one-liner, says what that
-   implies before you hand one out. The HR Requests and What People Ask pages
-   open only for the password in `HR_PASSWORD_HASH`, also hashed the same way.
+   implies before you hand one out. The HR Requests page opens only for the
+   password in `HR_PASSWORD_HASH`, and What People Ask for that one or the
+   manager password in `MANAGER_PASSWORD_HASH`, both hashed the same way.
 3. Load the corpus, then create the vector index in the Atlas UI (the README's
    "Load the corpus" section has the exact JSON). The driver cannot create a
    search index; this step is manual and it is the one people forget.

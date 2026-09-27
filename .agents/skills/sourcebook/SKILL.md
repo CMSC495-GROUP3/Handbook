@@ -208,4 +208,5 @@ cost someone time.
   click Authorize, paste the token.
 - SSE by hand: `curl -N -X POST localhost:8000/api/chat/stream -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{"question":"How much PTO do I get?"}'`
 - Open escalations: `GET /api/escalations?status=open`, with a token from the HR password (`hr` under `make stub`). The web UI is the HR Requests page.
+- What People Ask: `GET /api/reports/gaps`, with a token from the manager password (`manager` under `make stub`, filtered to questions asked in 3+ conversations) or the HR password (unfiltered).
 - API logs go to stdout; in Compose, `docker compose logs -f api`.

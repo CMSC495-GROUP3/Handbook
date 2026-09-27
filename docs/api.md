@@ -37,25 +37,31 @@ Missing bearer → `{"detail": "Not authenticated"}`. Bad or rotated token →
 `{"detail": "Invalid or expired token."}`. Wrong password →
 `{"detail": "Incorrect password."}`. A valid token that was not issued for the
 HR password, on an HR-only route → HTTP 403,
-`{"detail": "Human Resources sign-in required."}`.
+`{"detail": "Human Resources sign-in required."}`. On the coverage report, a
+token from neither the manager nor the HR password → HTTP 403,
+`{"detail": "Manager or Human Resources sign-in required."}`.
 
 ## HR-only routes
 
-Login accepts up to three passwords. The token's `cred` claim names the
-variable whose hash matched: `APP_PASSWORD_HASH`, `APP_PASSWORD_HASH_2`, or
-`HR_PASSWORD_HASH`. Every signed-in route takes any of them except these
-five, which take only an `HR_PASSWORD_HASH` session:
+Login accepts up to four passwords. The token's `cred` claim names the
+variable whose hash matched: `APP_PASSWORD_HASH`, `APP_PASSWORD_HASH_2`,
+`HR_PASSWORD_HASH`, or `MANAGER_PASSWORD_HASH`. Every signed-in route takes
+any of them except these four, which take only an `HR_PASSWORD_HASH` session:
 
 - `GET /api/escalations`
 - `GET /api/escalations/{escalation_id}`
 - `PATCH /api/escalations/{escalation_id}`
 - `POST /api/escalations/{escalation_id}/retry-delivery`
-- `GET /api/reports/gaps`
+
+and `GET /api/reports/gaps`, which takes an `HR_PASSWORD_HASH` or a
+`MANAGER_PASSWORD_HASH` session and filters what a manager sees (see
+[Coverage report](#coverage-report)).
 
 `POST /api/escalations` is not one of them; employees file escalations from
-the chat. When `HR_PASSWORD_HASH` is unset, the five answer 403 to everyone.
-The web app decodes the token's payload to decide whether to show the HR
-links, but the server check above is the only gate. The conversation routes
+the chat. When `HR_PASSWORD_HASH` is unset, the four escalation routes answer
+403 to everyone, and when both it and `MANAGER_PASSWORD_HASH` are unset, so
+does the report. The web app decodes the token's payload to decide which
+links to show, but the server check above is the only gate. The conversation routes
 are not HR-only and have no owner filter.
 
 Both chat routes answer HTTP 503 when the model provider is at its
@@ -346,7 +352,7 @@ sources, cache hit, latency). How that log is used is in the README section
 [Learning from the query log](../README.md#learning-from-the-query-log).
 
 `GET /api/reports/gaps` ranks that log for the What People Ask page. It needs
-an HR session ([HR-only routes](#hr-only-routes)). `days`
+a manager or HR session ([HR-only routes](#hr-only-routes)). `days`
 (1–90, default 30) sets the window back from now; `top` (1–100, default 20)
 caps each list. A window longer than the log's TTL is shortened to it, and
 `days` in the response is the one used.
@@ -356,6 +362,13 @@ caps each list. A window longer than the log's TTL is shortened to it, and
 - `faq`: questions asked in at least two conversations, most conversations
   first, with how many of the asks were refused.
 
+On a manager's session the route first drops every wording asked in fewer
+than `MANAGER_MIN_CONVERSATIONS` conversations (default 3), then groups what is
+left, so no question text a manager sees, row or other wording, was typed in
+fewer conversations than that. `min_conversations` in the response is that
+number, or `null` on an HR session, which sees every wording. `total` and
+`refused` count every row either way.
+
 Each row carries `count` (every ask, including one person asking again) and
 `conversations` (distinct `session_id` values). A conversation is not a
 person, but it is the closest the log gets. Near-identical wordings share a
@@ -364,9 +377,10 @@ row; see [Grouping by meaning](#grouping-by-meaning) below.
 `question` is the logged condensed question, or the truncated raw one, or
 `null` when neither was logged. No session ids are returned, but the question
 text comes from what the employee typed (the condensed rewrite when there is
-one), and any signed-in user can call this route: sign-in has no roles.
-`GET /api/conversations` already lists every conversation to every user, so
-this route adds ranking and counts, not new access.
+one), which is why the route is limited to manager and HR sessions and a
+manager's view drops rare wordings. `GET /api/conversations` still lists
+every conversation to every user, so this route adds ranking and counts, not
+new access.
 
 Each query stops after five seconds. A report that runs longer returns HTTP
 503 with `{"detail": "This report took too long. Try a shorter window."}`.
@@ -413,6 +427,7 @@ Authorization: Bearer <hr_access_token>
   "until": "2026-09-26T14:00:00+00:00",
   "days": 30,
   "grouping": "meaning",
+  "min_conversations": null,
   "total": 412,
   "refused": 37,
   "gaps": [

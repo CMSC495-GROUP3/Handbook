@@ -3,6 +3,10 @@
  * policy answered, and what they ask most. Both lists come from the query log
  * through GET /api/reports/gaps; nothing here identifies who asked.
  *
+ * It is for managers and supervisors, who can see what their people keep
+ * asking and get ahead of it in training and orientation, and for HR, who
+ * writes the policies the first list says are missing.
+ *
  * The copy says "not answered", as the chat's refusal card does ("Not answered
  * by any policy"), never "refused": the cause is a missing document, which HR
  * can write. The not-answered list is ochre, the refusal card's color. The
@@ -11,14 +15,17 @@
  *
  * ?days= picks the window (30 by default) so a link reproduces the view.
  *
- * Only an HR session can load it (require_hr, #290). The header says so, and a
- * 403 explains who the page is for instead of offering a retry that cannot
- * work. The sidebar already hides the link from other sessions.
+ * Only a manager or HR session can load it (require_report_reader). The
+ * header says so, and a 403 explains who the page is for instead of offering a
+ * retry that cannot work. The sidebar already hides the link from other
+ * sessions. A manager's report lists only wordings asked in at least
+ * `min_conversations` conversations, and the copy says so.
  */
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { isAxiosError } from 'axios'
 import { getCoverageReport } from '../api/reports'
+import { useAuth } from '../hooks/useAuth'
 import { READING_COLUMN, READING_GUTTER } from '../lib/layout'
 import type { CoverageReport, QuestionGroup } from '../types'
 
@@ -160,6 +167,32 @@ function Section({
   )
 }
 
+/**
+ * The lead paragraph: who the page is for, and what this reader sees. Chosen
+ * by the session, not the report, so a manager never reads HR's copy while the
+ * report loads.
+ */
+function Audience({ isHr, threshold }: { isHr: boolean; threshold: number | null | undefined }) {
+  if (isHr) {
+    return (
+      <>
+        Only managers, supervisors, and Human Resources can open this page. It lists questions as
+        employees typed them. Nothing here says who asked, but a question can still identify
+        someone, so keep what you read here inside HR. Managers see only questions asked in
+        several separate conversations.
+      </>
+    )
+  }
+  const often = threshold ? `at least ${plural(threshold, 'separate conversation')}` : 'several separate conversations'
+  return (
+    <>
+      See what your people keep asking, so you can cover it in training and orientation before
+      they have to ask. To protect privacy, you see only questions asked in {often}. Nothing here
+      says who asked, and it is not meant to find out.
+    </>
+  )
+}
+
 function Summary({ report, requested }: { report: CoverageReport; requested: number }) {
   const share = report.total ? Math.round((report.refused / report.total) * 100) : 0
   return (
@@ -196,6 +229,7 @@ export default function CoverageGapsPage() {
   const [failedDays, setFailedDays] = useState<number | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
   const [forbidden, setForbidden] = useState(false)
+  const { isHr } = useAuth()
 
   useEffect(() => {
     let cancelled = false
@@ -233,7 +267,8 @@ export default function CoverageGapsPage() {
   if (forbidden) {
     body = (
       <p role="alert" className="text-[14px] text-ink-2">
-        This page is for Human Resources. Sign out and sign in with the HR password to see it.
+        This page is for managers and Human Resources. Sign out and sign in with the manager or HR
+        password to see it.
       </p>
     )
   } else if (failed) {
@@ -255,6 +290,9 @@ export default function CoverageGapsPage() {
   } else if (!report) {
     body = <p className="text-[14px] text-ink-3">Loading…</p>
   } else {
+    const threshold = report.min_conversations
+    // Asked most always needs two conversations; a manager's view needs more.
+    const repeats = Math.max(2, threshold ?? 0)
     const grouping =
       report.grouping === 'meaning'
         ? 'Near-identical wordings share a row, but a question asked in other words can still appear twice.'
@@ -266,7 +304,11 @@ export default function CoverageGapsPage() {
           <Section
             title="Not answered yet"
             caption={`Questions no policy answered, most asked first. Each one points to a policy to write or make clearer. ${grouping}`}
-            empty="Every question in this window had a policy to answer it."
+            empty={
+              threshold == null
+                ? 'Every question in this window had a policy to answer it.'
+                : `Every question asked in ${plural(threshold, 'conversation')} or more had a policy to answer it.`
+            }
             rows={report.gaps.map((group) => ({
               group,
               size: group.count,
@@ -276,8 +318,12 @@ export default function CoverageGapsPage() {
           />
           <Section
             title="Asked most"
-            caption={`Questions asked in at least two conversations, ranked by how many. ${grouping} Each bar is green for the asks a policy answered and orange for the asks none did.`}
-            empty="No question came up in more than one conversation in this window."
+            caption={`Questions asked in at least ${plural(repeats, 'conversation')}, ranked by how many. ${grouping} Each bar is green for the asks a policy answered and orange for the asks none did.`}
+            empty={
+              repeats === 2
+                ? 'No question came up in more than one conversation in this window.'
+                : `No question came up in ${plural(repeats, 'conversation')} or more in this window.`
+            }
             rows={report.faq.map((group) => ({
               group,
               size: group.conversations,
@@ -300,7 +346,7 @@ export default function CoverageGapsPage() {
             What People Ask
           </h1>
           <span className="rounded-full border border-rule-strong px-2 py-0.5 text-[11px] font-medium tracking-wide text-ink-2 uppercase">
-            HR only
+            Managers &amp; HR
           </span>
         </div>
         {!forbidden && (
@@ -328,9 +374,7 @@ export default function CoverageGapsPage() {
           <div className={READING_COLUMN} aria-busy={!report && !failed && !forbidden}>
             {!forbidden && (
               <p className="mb-8 text-[13.5px] leading-normal text-ink-2">
-                Only Human Resources can open this page. It lists questions as employees typed
-                them. Nothing here says who asked, but a question can still identify someone, so
-                keep what you read here inside HR.
+                <Audience isHr={isHr} threshold={report?.min_conversations} />
               </p>
             )}
             {body}

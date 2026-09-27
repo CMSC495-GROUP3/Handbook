@@ -56,13 +56,15 @@ def test_loadtest_stub_refuses_real_provider():
     assert "requires LLM_PROVIDER=fake" in result.stderr
 
 
-def test_loadtest_stub_accepts_an_hr_password():
-    """Run without make, the stub still lets a developer open the HR pages."""
+def test_loadtest_stub_accepts_hr_and_manager_passwords():
+    """Run without make, the stub still lets a developer open the restricted pages."""
     code = (
         "import os, bcrypt, scripts.loadtest.server; "
-        "assert bcrypt.checkpw(b'loadtest-hr', os.environ['HR_PASSWORD_HASH'].encode())"
+        "assert bcrypt.checkpw(b'loadtest-hr', os.environ['HR_PASSWORD_HASH'].encode()); "
+        "assert bcrypt.checkpw(b'loadtest-manager', os.environ['MANAGER_PASSWORD_HASH'].encode())"
     )
-    env = {k: v for k, v in os.environ.items() if k != "HR_PASSWORD_HASH"}
+    restricted = {"HR_PASSWORD_HASH", "MANAGER_PASSWORD_HASH"}
+    env = {k: v for k, v in os.environ.items() if k not in restricted}
     env.update(APP_ENV="development", LLM_PROVIDER="fake")
     result = subprocess.run(
         [sys.executable, "-c", code],

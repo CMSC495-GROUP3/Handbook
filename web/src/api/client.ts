@@ -11,7 +11,7 @@
  * must show "Incorrect password." instead of being navigated away.
  */
 import axios from 'axios'
-import { HR_CRED, TOKEN_KEY } from '../config'
+import { HR_CRED, MANAGER_CRED, TOKEN_KEY } from '../config'
 
 export { TOKEN_KEY }
 
@@ -61,8 +61,20 @@ export function isTokenExpired(token: string): boolean {
  * routes, whatever the client shows.
  */
 export function isHrSession(): boolean {
+  return storedCred() === HR_CRED
+}
+
+/**
+ * True when the stored token was issued for the manager password. Like
+ * isHrSession, this only decides which links to show.
+ */
+export function isManagerSession(): boolean {
+  return storedCred() === MANAGER_CRED
+}
+
+function storedCred(): unknown {
   const token = localStorage.getItem(TOKEN_KEY)
-  return token !== null && readClaims(token)?.cred === HR_CRED
+  return token === null ? undefined : readClaims(token)?.cred
 }
 
 function isLoginRequest(url: string | undefined): boolean {

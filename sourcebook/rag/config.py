@@ -198,6 +198,13 @@ QUERY_LOG_TTL_SECONDS = int(os.getenv("QUERY_LOG_TTL_SECONDS", str(90 * 86400)))
 # Lowering it trades false merges for recall; see docs/evaluation.md.
 QUESTION_GROUP_THRESHOLD = float(os.getenv("QUESTION_GROUP_THRESHOLD", "0.85"))
 
+# A manager's view of the What People Ask report lists only wordings asked in at
+# least this many conversations. A question typed once can point at the one
+# person who typed it ("how do I report my manager for harassment?"), and a
+# manager, unlike HR, is not the confidential channel. Repeated questions are
+# the ones worth covering in training anyway. HR sees every wording.
+MANAGER_MIN_CONVERSATIONS = max(1, int(os.getenv("MANAGER_MIN_CONVERSATIONS", "3")))
+
 # ── Conversation limits ───────────────────────────────────────────────────────
 # Turns of history replayed to the model, and turns used to rewrite a follow-up
 # into a standalone retrieval query.

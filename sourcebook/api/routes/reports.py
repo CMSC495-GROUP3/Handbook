@@ -2,8 +2,10 @@
 
 Every chat request writes a ``query_logs`` row (see ``sourcebook.api.analytics``).
 ``sourcebook.rag.query_log_reports`` already ranks those rows for an operator at
-a terminal on the EC2 host. This route ranks them for the web app, so Human
-Resources can see which questions the corpus does not cover without a shell:
+a terminal on the EC2 host. This route ranks them for the web app, so managers
+can see what their people keep asking and fold it into training and
+orientation, and Human Resources can see which questions the corpus does not
+cover, without a shell:
 
 - ``gaps``: refused questions, most asked first. Each is a candidate for a new
   or clearer policy.
@@ -33,8 +35,15 @@ the parameter stays fixed, so a short TTL cannot turn every request into a 422.
 Question text is the logged ``question_condensed`` (the standalone rewrite that
 the hash groups on), falling back to the truncated ``question_raw``. No
 session id leaves the server; sessions are only counted. Only a session opened
-with the HR password may read it (``require_hr``), because the text is what
-employees typed.
+with the manager or HR password may read it (``require_report_reader``),
+because the text is what employees typed.
+
+A manager session sees only wordings asked in at least
+``MANAGER_MIN_CONVERSATIONS`` conversations. The rest are dropped before
+grouping, so no text on a manager's page, leader or other wording, was typed in
+fewer conversations than that; ``min_conversations`` in the response says the
+filter was applied. ``total`` and ``refused`` still count every row, since a
+number names nobody. HR sees every wording.
 """
 
 import logging
@@ -50,10 +59,15 @@ from pymongo.errors import ExecutionTimeout, OperationFailure
 
 from sourcebook.api.db import query_logs_col
 from sourcebook.api.limiter import limiter
-from sourcebook.api.routes.deps import HR_ONLY_RESPONSES, require_hr
+from sourcebook.api.routes.auth import MANAGER_PASSWORD_HASH_VAR
+from sourcebook.api.routes.deps import (
+    REPORT_READER_RESPONSES,
+    require_report_reader,
+)
 from sourcebook.rag.cache import embedding_cache_key, get_cached_embeddings
 from sourcebook.rag.config import (
     CACHE_ENABLED,
+    MANAGER_MIN_CONVERSATIONS,
     QUERY_LOG_TTL_SECONDS,
     QUESTION_GROUP_THRESHOLD,
 )
@@ -81,7 +95,8 @@ MAX_WINDOW_DAYS = 90
 # one day, or a TTL under a day would leave an empty window.
 TTL_DAYS = max(1, QUERY_LOG_TTL_SECONDS // 86400)
 # Per query. At the volume the TTL comment in config.py plans for, a 90-day
-# $group is not free, and an HR session can ask for one 30 times a minute.
+# $group is not free, and a manager or HR session can ask for one 30 times a
+# minute.
 QUERY_TIMEOUT_MS = 5000
 # MongoDB's ExceededMemoryLimit. An $addToSet accumulator cannot spill to disk,
 # so one question asked in about 1.6M conversations stops the pipeline with it
@@ -201,12 +216,13 @@ def _by_conversations(groups: list[QuestionGroup]) -> list[QuestionGroup]:
     return sorted(groups, key=lambda g: (-g.conversations, -g.count, g.leader.question_hash or ""))
 
 
-@router.get("/reports/gaps", responses=HR_ONLY_RESPONSES, dependencies=[Depends(require_hr)])
+@router.get("/reports/gaps", responses=REPORT_READER_RESPONSES)
 @limiter.limit("30/minute")
 def coverage_gaps(
     request: Request,
     days: int = Query(DEFAULT_WINDOW_DAYS, ge=1, le=MAX_WINDOW_DAYS),
     top: int = Query(DEFAULT_TOP, ge=1, le=MAX_TOP),
+    cred: str = Depends(require_report_reader),
 ):
     """Refused and repeated questions over the last ``days`` days, grouped by meaning."""
     days = min(days, TTL_DAYS)
@@ -245,6 +261,10 @@ def coverage_gaps(
 
     refused_wordings = [_wording(row) for row in refused_rows]
     all_wordings = [_wording(row) for row in all_rows]
+    min_conversations = MANAGER_MIN_CONVERSATIONS if cred == MANAGER_PASSWORD_HASH_VAR else None
+    if min_conversations is not None:
+        refused_wordings = [w for w in refused_wordings if w.session_count >= min_conversations]
+        all_wordings = [w for w in all_wordings if w.session_count >= min_conversations]
     texts = sorted({w.question for w in refused_wordings + all_wordings if w.question})
     vectors = _vectors(texts)
     if vectors is None:
@@ -259,6 +279,7 @@ def coverage_gaps(
         "until": until.isoformat(),
         "days": days,
         "grouping": "exact" if vectors is None else "meaning",
+        "min_conversations": min_conversations,
         "total": total,
         "refused": refused,
         "gaps": [_serialize(group) for group in _by_count(gap_groups)[:top]],

@@ -3,7 +3,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { AxiosError, type AxiosResponse } from 'axios'
-import client from '../api/client'
+import client, { TOKEN_KEY } from '../api/client'
 import type { CoverageReport, QuestionGroup } from '../types'
 import CoverageGapsPage from './CoverageGapsPage'
 
@@ -17,6 +17,7 @@ function report(overrides: Partial<CoverageReport> = {}): CoverageReport {
     until: '2026-09-26T00:00:00+00:00',
     days: 30,
     grouping: 'meaning',
+    min_conversations: null,
     total: 412,
     refused: 37,
     gaps: [
@@ -54,6 +55,14 @@ function renderPage(url = '/gaps') {
 }
 
 const ok = (data: CoverageReport) => ({ data }) as AxiosResponse
+
+/** An unsigned JWT with the given claims. The client only reads, never verifies. */
+function tokenWith(claims: Record<string, unknown>): string {
+  const encode = (value: object) =>
+    btoa(JSON.stringify(value)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  const exp = Math.floor(Date.now() / 1000) + 3600
+  return `${encode({ alg: 'HS256', typ: 'JWT' })}.${encode({ sub: 'user', exp, ...claims })}.sig`
+}
 
 describe('CoverageGapsPage', () => {
   beforeEach(() => {
@@ -122,17 +131,39 @@ describe('CoverageGapsPage', () => {
     expect(screen.getByText('No question came up in more than one conversation in this window.')).toBeInTheDocument()
   })
 
-  it('marks the page as Human Resources only', async () => {
+  it('marks the page as for managers and HR', async () => {
+    localStorage.setItem(TOKEN_KEY, tokenWith({ cred: 'HR_PASSWORD_HASH' }))
     vi.spyOn(client, 'get').mockResolvedValue(ok(report()))
     renderPage()
 
     const heading = screen.getByRole('heading', { level: 1, name: 'What People Ask' })
-    expect(heading.parentElement).toHaveTextContent('HR only')
-    expect(screen.getByText(/Only Human Resources can open this page/)).toBeInTheDocument()
+    expect(heading.parentElement).toHaveTextContent('Managers & HR')
+    expect(screen.getByText(/Only managers, supervisors, and Human Resources can open this page/)).toBeInTheDocument()
     expect(await screen.findByRole('list', { name: 'Not answered yet' })).toBeInTheDocument()
   })
 
-  it('tells a session without the HR password who the page is for', async () => {
+  it('tells a manager what they see and why rare questions are left out', async () => {
+    localStorage.setItem(TOKEN_KEY, tokenWith({ cred: 'MANAGER_PASSWORD_HASH' }))
+    vi.spyOn(client, 'get').mockResolvedValue(
+      ok(report({ min_conversations: 3, gaps: [], faq: [] })),
+    )
+    renderPage()
+
+    // Before the report arrives: the manager copy, never HR's.
+    expect(screen.getByText(/cover it in training and orientation/)).toHaveTextContent(
+      'questions asked in several separate conversations',
+    )
+    expect(screen.queryByText(/keep what you read here inside HR/)).not.toBeInTheDocument()
+
+    expect(await screen.findByText(/at least 3 separate conversations/)).toBeInTheDocument()
+    expect(screen.getByText(/Questions asked in at least 3 conversations, ranked/)).toBeInTheDocument()
+    expect(
+      screen.getByText('Every question asked in 3 conversations or more had a policy to answer it.'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('No question came up in 3 conversations or more in this window.')).toBeInTheDocument()
+  })
+
+  it('tells a session without the manager or HR password who the page is for', async () => {
     const forbidden = new AxiosError('Forbidden', 'ERR_BAD_REQUEST', undefined, undefined, {
       status: 403,
     } as AxiosResponse)
@@ -140,11 +171,12 @@ describe('CoverageGapsPage', () => {
     renderPage()
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'This page is for Human Resources. Sign out and sign in with the HR password to see it.',
+      'This page is for managers and Human Resources. Sign out and sign in with the manager or HR password to see it.',
     )
     expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
     expect(screen.queryByRole('group', { name: 'Time window' })).not.toBeInTheDocument()
-    expect(screen.queryByText(/Only Human Resources can open this page/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/can open this page/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/cover it in training/)).not.toBeInTheDocument()
   })
 
   it('offers a retry after a failed load', async () => {
