@@ -112,7 +112,7 @@ def test_body_is_served_whole_and_only_to_signed_in_users(client, auth):
     )
 
 
-def test_reingestion_rebuilds_the_library_once(client, auth):
+def test_reingestion_rebuilds_the_library_once(client, auth, hr_auth):
     _seed_passages(("documents/pto.md", "PTO", "Leave", 1))
     assert client.get("/api/documents", headers=auth).json()["total"] == 1
 
@@ -124,31 +124,41 @@ def test_reingestion_rebuilds_the_library_once(client, auth):
     ]
 
     before = get_corpus_version()
-    result = client.post("/api/documents/reindex", headers=auth).json()
+    result = client.post("/api/documents/reindex", headers=hr_auth).json()
     assert result["documents"] == 1 and result["corpus_version"] != before
     assert [d["title"] for d in client.get("/api/documents", headers=auth).json()["items"]] == [
         "New"
     ]
 
 
-def test_empty_corpus(client, auth):
+def test_empty_corpus(client, auth, hr_auth):
     _seed_passages(("documents/pto.md", "PTO", "Leave", 1))
     assert client.get("/api/documents", headers=auth).json()["total"] == 1
 
     FAKE_DB["passages"].delete_many({})
     before = get_corpus_version()
-    result = client.post("/api/documents/reindex", headers=auth).json()
+    result = client.post("/api/documents/reindex", headers=hr_auth).json()
 
     assert result["ok"] is True
     assert result["documents"] == 0
     assert result["corpus_version"] != before
     assert client.get("/api/documents", headers=auth).json() == {"items": [], "total": 0}
     assert client.get("/api/documents/categories", headers=auth).json() == []
-    assert client.post("/api/documents/reindex", headers=auth).json()["documents"] == 0
+    assert client.post("/api/documents/reindex", headers=hr_auth).json()["documents"] == 0
 
 
-def test_reindex_rate_limited_per_client(client, auth):
+def test_reindex_rate_limited_per_client(client, hr_auth):
     limiter.enabled = True
     limiter.reset()
-    statuses = [client.post("/api/documents/reindex", headers=auth).status_code for _ in range(3)]
+    statuses = [
+        client.post("/api/documents/reindex", headers=hr_auth).status_code for _ in range(3)
+    ]
     assert statuses == [200, 200, 429]
+
+
+def test_reindex_is_for_hr_only(client, auth):
+    # A rebuild drops every cached answer, so an employee session cannot start one.
+    before = get_corpus_version()
+    response = client.post("/api/documents/reindex", headers=auth)
+    assert response.status_code == 403
+    assert get_corpus_version() == before

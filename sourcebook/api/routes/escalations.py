@@ -12,7 +12,9 @@ Two callers:
 - The chat UI creates one from the refusal card, or from under an answer that
   did not help. `reason` records which.
 - Human Resources lists the open ones and marks them resolved, from the HR
-  Requests page in the web app or from a script or webhook-fed channel.
+  Requests page in the web app or from a script or webhook-fed channel. Those
+  routes (list, get, resolve, retry) take a session opened with the HR
+  password (`require_hr`); filing one takes any signed-in session.
 
 Escalating the same message twice returns the first record rather than
 creating a second. A double click should not file two tickets. The check on
@@ -44,7 +46,7 @@ from pymongo.errors import DuplicateKeyError
 from sourcebook.api import notify
 from sourcebook.api.db import conversations_col, escalations_col
 from sourcebook.api.limiter import limiter
-from sourcebook.api.routes.deps import require_auth
+from sourcebook.api.routes.deps import HR_ONLY_RESPONSES, Principal, require_auth, require_hr
 from sourcebook.rag.config import (
     ESCALATION_CONTACT,
     ESCALATION_NOTE_MAX_LENGTH,
@@ -226,7 +228,7 @@ def _deliver_in_background(record: dict) -> None:
 
 
 def _escalated_turn(
-    session_id: str, message_id: str | None, message_index: int | None
+    session_id: str, owner: str, message_id: str | None, message_index: int | None
 ) -> tuple[dict, dict, int]:
     """Return (user turn, assistant turn, position) for the message being escalated.
 
@@ -234,8 +236,14 @@ def _escalated_turn(
     list has drifted still names the turn the user clicked. Position is the
     fallback for messages stored before ids, and the resolved position is
     returned either way because the record and its unique index are keyed on it.
+
+    Only the caller's own conversation is found. Filing is open to every
+    session, and a repeat returns the stored record with HR's resolution, so
+    without the owner filter anyone could read that for someone else's message.
     """
-    conversation = conversations_col.find_one({"session_id": session_id}, {"_id": 0, "messages": 1})
+    conversation = conversations_col.find_one(
+        {"session_id": session_id, "owner": owner}, {"_id": 0, "messages": 1}
+    )
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found.")
 
@@ -291,11 +299,16 @@ def _retry_conflict(existing: dict) -> HTTPException:
     return HTTPException(status_code=409, detail=detail)
 
 
-@router.post("/escalations", dependencies=[Depends(require_auth)])
+@router.post("/escalations")
 @limiter.limit("5/minute")
-def create_escalation(request: Request, body: CreateEscalationRequest, background: BackgroundTasks):
+def create_escalation(
+    request: Request,
+    body: CreateEscalationRequest,
+    background: BackgroundTasks,
+    principal: Principal = Depends(require_auth),
+):
     asked, assistant, position = _escalated_turn(
-        body.session_id, body.message_id, body.message_index
+        body.session_id, principal.owner, body.message_id, body.message_index
     )
 
     existing = _existing_escalation(assistant, body.session_id, position)
@@ -344,7 +357,7 @@ def create_escalation(request: Request, body: CreateEscalationRequest, backgroun
     # Mark the message so the UI can show "already sent" when the conversation
     # is reopened, and so a repeat request finds the record above.
     conversations_col.update_one(
-        {"session_id": body.session_id},
+        {"session_id": body.session_id, "owner": principal.owner},
         {"$set": {f"messages.{position}.escalation_id": record["escalation_id"]}},
     )
 
@@ -353,7 +366,11 @@ def create_escalation(request: Request, body: CreateEscalationRequest, backgroun
     return _present(dict(record))
 
 
-@router.post("/escalations/{escalation_id}/retry-delivery", dependencies=[Depends(require_auth)])
+@router.post(
+    "/escalations/{escalation_id}/retry-delivery",
+    responses=HR_ONLY_RESPONSES,
+    dependencies=[Depends(require_hr)],
+)
 @limiter.limit("5/minute")
 def retry_delivery(request: Request, escalation_id: str):
     """Re-attempt webhook delivery for a failed escalation.
@@ -384,7 +401,7 @@ def retry_delivery(request: Request, escalation_id: str):
     return _present(current or claimed)
 
 
-@router.get("/escalations", dependencies=[Depends(require_auth)])
+@router.get("/escalations", responses=HR_ONLY_RESPONSES, dependencies=[Depends(require_hr)])
 def list_escalations(
     status: EscalationStatus | None = None,
     session_id: str | None = None,
@@ -402,7 +419,9 @@ def list_escalations(
     return {"items": items, "total": escalations_col.count_documents(query)}
 
 
-@router.get("/escalations/{escalation_id}", dependencies=[Depends(require_auth)])
+@router.get(
+    "/escalations/{escalation_id}", responses=HR_ONLY_RESPONSES, dependencies=[Depends(require_hr)]
+)
 def get_escalation(escalation_id: str):
     doc = escalations_col.find_one({"escalation_id": escalation_id}, {"_id": 0})
     if not doc:
@@ -410,7 +429,9 @@ def get_escalation(escalation_id: str):
     return _present(doc)
 
 
-@router.patch("/escalations/{escalation_id}", dependencies=[Depends(require_auth)])
+@router.patch(
+    "/escalations/{escalation_id}", responses=HR_ONLY_RESPONSES, dependencies=[Depends(require_hr)]
+)
 def update_escalation(escalation_id: str, body: UpdateEscalationRequest):
     now = datetime.now(UTC)
     updates: dict = {

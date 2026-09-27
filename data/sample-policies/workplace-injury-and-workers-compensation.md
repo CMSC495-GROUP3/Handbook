@@ -19,8 +19,8 @@ incident form). Then complete the workers' compensation steps below.
 1. Get medical attention for any serious injury (call 911 when appropriate, then
    notify building security so responders can be directed).
 2. Notify your manager or Human Resources as soon as practical, and no later
-   than the end of the shift when possible, consistent with the Workplace Health
-   and Safety Policy reporting window.
+   than 24 hours after the incident, the reporting window in the Workplace
+   Health and Safety Policy.
 3. Complete the safety incident form and the Workday Workplace Injury report so
    Human Resources can open the carrier claim.
 

@@ -40,6 +40,7 @@ from sourcebook.api.routes.conversations import router as conversations_router  
 from sourcebook.api.routes.documents import router as documents_router  # noqa: E402
 from sourcebook.api.routes.escalations import router as escalations_router  # noqa: E402
 from sourcebook.api.routes.projects import router as projects_router  # noqa: E402
+from sourcebook.api.routes.reports import router as reports_router  # noqa: E402
 from sourcebook.rag.config import (  # noqa: E402
     APP_NAME,
     SIMILARITY_THRESHOLD,
@@ -47,7 +48,7 @@ from sourcebook.rag.config import (  # noqa: E402
 )
 
 # A malformed hash refuses to start rather than locking everyone out; see
-# validate_password_hashes for why. Both variables get the same treatment.
+# validate_password_hashes for why. Every hash variable gets the same treatment.
 try:
     validate_password_hashes()
 except PasswordHashError as exc:
@@ -112,6 +113,7 @@ app.include_router(conversations_router, prefix="/api")
 app.include_router(documents_router, prefix="/api")
 app.include_router(escalations_router, prefix="/api")
 app.include_router(projects_router, prefix="/api")
+app.include_router(reports_router, prefix="/api")
 
 
 @app.get("/api/health")

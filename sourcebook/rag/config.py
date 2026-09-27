@@ -34,6 +34,8 @@ PASSAGE_IDENTITY_KEYS = [("source", 1), ("chunk_index", 1)]
 # MongoDB's IndexOptionsConflict code, raised when an index with these keys
 # already exists under other options (non-unique, or another name).
 INDEX_OPTIONS_CONFLICT = 85
+# MongoDB's IndexNotFound code, raised when dropping an index that is not there.
+INDEX_NOT_FOUND = 27
 
 # MongoDB collection holding one record per source document: its metadata and
 # the full parsed body. Passages are what retrieval sees; this is what a person
@@ -187,6 +189,40 @@ COVERAGE_PROMPT_VERSION = os.getenv("COVERAGE_PROMPT_VERSION", "v2")
 # At the 83 req/s target this collection grows by roughly 7M documents a day,
 # so the TTL is mandatory rather than tidy-up.
 QUERY_LOG_TTL_SECONDS = int(os.getenv("QUERY_LOG_TTL_SECONDS", str(90 * 86400)))
+
+# Cosine similarity (raw, -1 to 1, not Atlas's mapped score) at which the
+# report page treats two wordings as one question. Merging two different
+# questions hides a gap behind a covered neighbour, which is worse than showing
+# one question twice. Measured with text-embedding-3-small on 120 labelled
+# pairs (evaluation/question_pairs_results.json, issues #287 and #293): the
+# closest different questions are one word apart (sick versus a sick child,
+# 0.907; HSA versus FSA, 0.862), so 0.91 merges none of them on cosine alone
+# and 3 of 60 paraphrases. Pairs below it go to the question judge, which
+# turned both of those down. Lowering it trades false merges for recall; see
+# docs/evaluation.md.
+QUESTION_GROUP_THRESHOLD = float(os.getenv("QUESTION_GROUP_THRESHOLD", "0.91"))
+
+# Pairs between this floor and QUESTION_GROUP_THRESHOLD go to the utility model,
+# which decides whether they are one question (issue #293). Below the floor a
+# pair never merges. Below 0.7 the model merged the same few different pairs in
+# every measured run ("How does PTO accrue?" with "Does unused PTO carry
+# over?"); at 0.7 it merged 29 of 60 paraphrases in each of four runs, and one
+# different pair in two of them. See docs/evaluation.md.
+QUESTION_JUDGE_FLOOR = float(os.getenv("QUESTION_JUDGE_FLOOR", "0.7"))
+# Pairs judged per page load, in one utility call, closest first. The rest wait
+# for a later load. 0 turns the judge off.
+QUESTION_JUDGE_MAX_PAIRS = int(os.getenv("QUESTION_JUDGE_MAX_PAIRS", "50"))
+# Seconds each provider call on What People Ask may take, with no retries. The
+# page falls back to coarser grouping rather than wait out the chat timeouts
+# (30 s plus a retry). The embed call and the judge call each get this, so a
+# load waits at most about twice it on the provider (#300).
+REPORT_PROVIDER_TIMEOUT_SECONDS = float(os.getenv("REPORT_PROVIDER_TIMEOUT_SECONDS", "8"))
+# A manager's view of the What People Ask report lists only wordings asked in at
+# least this many conversations. A question typed once can point at the one
+# person who typed it ("how do I report my manager for harassment?"), and a
+# manager, unlike HR, is not the confidential channel. Repeated questions are
+# the ones worth covering in training anyway. HR sees every wording.
+MANAGER_MIN_CONVERSATIONS = max(1, int(os.getenv("MANAGER_MIN_CONVERSATIONS", "3")))
 
 # ── Conversation limits ───────────────────────────────────────────────────────
 # Turns of history replayed to the model, and turns used to rewrite a follow-up

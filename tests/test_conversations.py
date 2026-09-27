@@ -3,6 +3,7 @@
 import threading
 
 import pytest
+from conftest import OWNER
 
 from sourcebook.api.db import conversations_col, projects_col
 from sourcebook.api.routes import conversations as conversations_routes
@@ -95,6 +96,7 @@ def test_deleting_unknown_project_does_not_unassign_orphaned_conversation(client
     conversations_col.insert_one(
         {
             "session_id": "legacy-orphan",
+            "owner": OWNER,
             "title": "Legacy orphan",
             "project_id": "missing",
             "messages": [],
@@ -115,6 +117,7 @@ def test_list_conversations_treats_unresolved_project_ids_as_ungrouped(client, a
     conversations_col.insert_one(
         {
             "session_id": "visible-orphan",
+            "owner": OWNER,
             "title": "Still visible",
             "project_id": "deleted-project",
             "messages": [],
@@ -266,3 +269,63 @@ def test_assignment_can_interleave_with_project_delete(client, auth, monkeypatch
         ]
         is None
     )
+
+
+# ── One browser's conversations (issue #290, item 4) ──────────────────────────
+
+
+def test_another_browser_cannot_list_or_open_a_conversation(client, auth, other_auth):
+    sid = client.post("/api/conversations", json={"title": "Mine"}, headers=auth).json()[
+        "session_id"
+    ]
+
+    assert client.get("/api/conversations", headers=other_auth).json() == []
+    assert client.get(f"/api/conversations/{sid}", headers=other_auth).status_code == 404
+    assert [c["session_id"] for c in client.get("/api/conversations", headers=auth).json()] == [sid]
+
+
+def test_another_browser_cannot_rename_or_delete_a_conversation(client, auth, other_auth):
+    sid = client.post("/api/conversations", json={"title": "Mine"}, headers=auth).json()[
+        "session_id"
+    ]
+
+    renamed = client.patch(f"/api/conversations/{sid}", json={"title": "x"}, headers=other_auth)
+    deleted = client.delete(f"/api/conversations/{sid}", headers=other_auth)
+
+    assert (renamed.status_code, deleted.status_code) == (404, 404)
+    assert client.get(f"/api/conversations/{sid}", headers=auth).json()["title"] == "Mine"
+
+
+def test_responses_do_not_carry_the_owner_id(client, auth):
+    created = client.post("/api/conversations", json={"title": "Mine"}, headers=auth).json()
+    opened = client.get(f"/api/conversations/{created['session_id']}", headers=auth).json()
+    project = client.post("/api/projects", json={"name": "P"}, headers=auth).json()
+
+    assert "owner" not in created and "owner" not in opened and "owner" not in project
+    assert conversations_col.find_one({"session_id": created["session_id"]})["owner"] == OWNER
+
+
+def test_conversations_stored_before_owners_are_hidden_from_everyone(client, auth, hr_auth):
+    conversations_col.insert_one({"session_id": "before-owners", "title": "Old", "messages": []})
+
+    for headers in (auth, hr_auth):
+        assert client.get("/api/conversations", headers=headers).json() == []
+        assert client.get("/api/conversations/before-owners", headers=headers).status_code == 404
+
+
+def test_another_browser_cannot_see_use_or_delete_a_project(client, auth, other_auth):
+    project_id = client.post("/api/projects", json={"name": "Mine"}, headers=auth).json()[
+        "project_id"
+    ]
+    sid = client.post(
+        "/api/conversations", json={"title": "Filed", "project_id": project_id}, headers=auth
+    ).json()["session_id"]
+
+    filed = client.post(
+        "/api/conversations", json={"title": "x", "project_id": project_id}, headers=other_auth
+    )
+    deleted = client.delete(f"/api/projects/{project_id}", headers=other_auth)
+
+    assert client.get("/api/projects", headers=other_auth).json() == []
+    assert (filed.status_code, deleted.status_code) == (404, 404)
+    assert client.get(f"/api/conversations/{sid}", headers=auth).json()["project_id"] == project_id

@@ -92,3 +92,57 @@ export interface Escalation {
   /** True when the retry-delivery endpoint would send right now. */
   delivery_retryable: boolean
 }
+
+/** Another wording grouped under a question's most asked one. */
+export interface OtherWording {
+  question: string | null
+  count: number
+}
+
+/** One question in the coverage report: wordings grouped by meaning (#287). */
+export interface QuestionGroup {
+  /** The most asked wording's hash, stable enough for a list key. */
+  question_hash: string
+  /** The most asked wording, or null when none was stored. */
+  question: string | null
+  /** Every ask across every wording, including one person asking again. */
+  count: number
+  /**
+   * Distinct conversations across every wording; the closest the log gets to
+   * people. A conversation that used two wordings counts once.
+   */
+  conversations: number
+  /** Up to five other wordings, most asked first. */
+  other_wordings: OtherWording[]
+  /** Every other wording, including any not listed. */
+  other_wording_count: number
+}
+
+export interface CoverageReport {
+  since: string
+  until: string
+  days: number
+  /**
+   * "meaning": close wordings merge, and the model checked the rewordings.
+   * "cosine": the model check was off or failed, so only near-identical wordings merge.
+   * "exact": embeddings were unavailable and each wording is its own row.
+   */
+  grouping: 'meaning' | 'cosine' | 'exact'
+  /**
+   * Close pairs of wordings this load left without a verdict: past the
+   * per-load cap, or in a check that failed. A later load judges the next batch.
+   */
+  unjudged: number
+  /**
+   * Set on a manager's report: only wordings asked in at least this many
+   * conversations are listed. Null on HR's, which lists every wording.
+   */
+  min_conversations: number | null
+  /** Every chat request in the window. */
+  total: number
+  refused: number
+  /** Refused questions, most frequent first. */
+  gaps: QuestionGroup[]
+  /** Questions asked at least twice, with how many of those asks were refused. */
+  faq: (QuestionGroup & { refused: number })[]
+}

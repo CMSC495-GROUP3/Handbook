@@ -9,6 +9,7 @@ import { useSidebar } from './hooks/useSidebar'
 import ChatPage from './pages/ChatPage'
 import DocumentLibraryPage from './pages/DocumentLibraryPage'
 import EscalationsPage from './pages/EscalationsPage'
+import CoverageGapsPage from './pages/CoverageGapsPage'
 
 /** True when localStorage holds a JWT that has not yet expired. */
 function readIsAuthenticated(): boolean {
@@ -90,6 +91,14 @@ export default function App() {
           element={
             <ProtectedLayout>
               <EscalationsPage />
+            </ProtectedLayout>
+          }
+        />
+        <Route
+          path="/gaps"
+          element={
+            <ProtectedLayout>
+              <CoverageGapsPage />
             </ProtectedLayout>
           }
         />
