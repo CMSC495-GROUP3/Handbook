@@ -2,35 +2,41 @@
 
 CMSC 495 Group 3. This page is the per-person record that the README [Team](../README.md#team) section summarizes.
 
-Counts below are a snapshot against canonical `origin/main` at
-[`88e8a13`](https://github.com/CMSC495-GROUP3/Sourcebook/commit/88e8a134d16e092b2307c51b4e2a5fd7a9af39be)
-(commit date 2026-09-15), taken on 2026-09-17. Work merged after that commit is
-noted in the rows below but is not in the counts.
+Counts below are a snapshot against `main` at the `v1.0.0` candidate,
+[`7d3c779`](https://github.com/CMSC495-GROUP3/Sourcebook/commit/7d3c7795c197c5be56b15aebc650576760fd75d1)
+(the merge of #303, 2026-09-27). Commit counts come from that commit; pull
+request and review counts are GitHub search totals taken at 2026-09-27 14:57
+UTC, when no code had merged after it.
+
+Each member confirmed their own row on
+[PR #231](https://github.com/CMSC495-GROUP3/Sourcebook/pull/231), except Gavin
+and Dominick, who had not replied by the 27 September deadline. Their rows are
+marked unconfirmed.
 
 | How counted | Command or query |
 | --- | --- |
-| Author commits | `git log --no-merges --format='%an <%ae>'` on `88e8a13`, grouped by person |
+| Author commits | `git log --no-merges --format='%an <%ae>'` on `7d3c779`, grouped by person |
 | Merged pull requests authored | `gh` search `repo:CMSC495-GROUP3/Sourcebook type:pr author:<login> is:merged` |
-| Pull requests reviewed | `gh` search `repo:CMSC495-GROUP3/Sourcebook type:pr reviewed-by:<login>` |
+| Others' pull requests reviewed | `gh` search `repo:CMSC495-GROUP3/Sourcebook type:pr reviewed-by:<login> -author:<login>`. GitHub records a reply in a review thread on your own pull request as a review, so the `-author:` filter leaves those out. It counts other people's pull requests with at least one review, not review events |
 | Issues assigned | `gh issue list --assignee <login> --state all` on this repository |
 
 Several people commit under more than one Git name. Author commits are grouped by person: `t-shahan`, `Taylor`, `Taylor Shahan`, and `Claude` under **Taylor Shahan**; `Lokias` under **Chris**; `RoNUO` under **Rob**; `DanielTsang26` and `Daniel Tsang` under **Daniel Tsang**. `dependabot[bot]` is not grouped with anyone.
 
 ## Roster
 
-| Member | GitHub | Role (Unit 5 pitch) | Author commits | Merged PRs authored | PRs reviewed |
+| Member | GitHub | Role (Unit 5 pitch) | Author commits | Merged PRs authored | Others' PRs reviewed |
 | --- | --- | --- | ---: | ---: | ---: |
-| Taylor Shahan | [@t-shahan](https://github.com/t-shahan) | Lead Architect | 140 [^claude] | 57 | 55 |
-| Chris | [@threshi-art](https://github.com/threshi-art) | Integration Lead | 94 | 41 | 6 |
+| Taylor Shahan | [@t-shahan](https://github.com/t-shahan) | Lead Architect | 240 [^claude] | 88 | 59 |
+| Chris | [@threshi-art](https://github.com/threshi-art) | Integration Lead | 118 | 50 | 1 |
 | Daniel Tsang | [@DanielTsang26](https://github.com/DanielTsang26) | Interface Designer | 4 | 1 | 1 |
-| George Struder | [@Lazzy-dev](https://github.com/Lazzy-dev) | Administration, locks, MongoDB | 11 | 3 | 3 |
-| Rob | [@RoNUO](https://github.com/RoNUO) | Corpus availability and passage index | 2 | 2 | 2 |
-| Gavin | [@gavinwathen](https://github.com/gavinwathen) | React components, design and styling | 0 | 0 | 0 |
-| Dominick | [@fudgepop01](https://github.com/fudgepop01) | React components, design and styling | 0 | 0 | 0 |
+| George Struder | [@Lazzy-dev](https://github.com/Lazzy-dev) | Administration (EC2, S3, Atlas), locks, MongoDB | 11 | 3 | 4 |
+| Rob | [@RoNUO](https://github.com/RoNUO) | Corpus availability and passage index | 4 | 3 | 2 |
+| Gavin (unconfirmed) | [@gavinwathen](https://github.com/gavinwathen) | React components, design and styling | 2 | 1 | 0 |
+| Dominick (unconfirmed) | [@fudgepop01](https://github.com/fudgepop01) | React components, design and styling | 0 | 0 | 0 |
 
-`dependabot[bot]` has 18 author commits and 18 merged PRs on the same snapshot. It is not a team member.
+`dependabot[bot]` has 20 author commits and 20 merged PRs on the same snapshot. It is not a team member.
 
-Grouped this way, that commit shows five people plus Dependabot. Gavin and Dominick had no author commits on `main` at the snapshot; Gavin's first commits landed later (see his row).
+Grouped this way, `7d3c779` shows six people plus Dependabot. Dominick has no author commits on `main`.
 
 ## Taylor Shahan
 
@@ -45,8 +51,11 @@ Grouped this way, that commit shows five people plus Dependabot. Gavin and Domin
 - Alpha measurement and release writing: [PR #186](https://github.com/CMSC495-GROUP3/Sourcebook/pull/186), [PR #190](https://github.com/CMSC495-GROUP3/Sourcebook/pull/190), [PR #191](https://github.com/CMSC495-GROUP3/Sourcebook/pull/191), [PR #198](https://github.com/CMSC495-GROUP3/Sourcebook/pull/198).
 - httpx lock-outage fix, [PR #163](https://github.com/CMSC495-GROUP3/Sourcebook/pull/163); pip-compile `.in` / `.txt` names, [PR #178](https://github.com/CMSC495-GROUP3/Sourcebook/pull/178); Atlas evaluation access list, [PR #197](https://github.com/CMSC495-GROUP3/Sourcebook/pull/197).
 - Follow-up grounding on the question as asked, [PR #245](https://github.com/CMSC495-GROUP3/Sourcebook/pull/245), which closed [issue #189](https://github.com/CMSC495-GROUP3/Sourcebook/issues/189).
+- Finished and merged the HR escalation queue Gavin started, [PR #250](https://github.com/CMSC495-GROUP3/Sourcebook/pull/250).
+- The What People Ask report: the page, [PR #286](https://github.com/CMSC495-GROUP3/Sourcebook/pull/286), grouping by meaning, [PR #288](https://github.com/CMSC495-GROUP3/Sourcebook/pull/288), and its caption, [PR #297](https://github.com/CMSC495-GROUP3/Sourcebook/pull/297); counting conversations at volume, [PR #296](https://github.com/CMSC495-GROUP3/Sourcebook/pull/296); the question judge, [PR #298](https://github.com/CMSC495-GROUP3/Sourcebook/pull/298), and its 0.91 threshold, [PR #303](https://github.com/CMSC495-GROUP3/Sourcebook/pull/303).
+- Access: the HR password, [PR #295](https://github.com/CMSC495-GROUP3/Sourcebook/pull/295); conversations scoped to the browser that started them, [PR #299](https://github.com/CMSC495-GROUP3/Sourcebook/pull/299); the manager password, [PR #302](https://github.com/CMSC495-GROUP3/Sourcebook/pull/302); and the review follow-ups for both, [PR #301](https://github.com/CMSC495-GROUP3/Sourcebook/pull/301).
 
-The 16 `Claude`-authored commits at the `88e8a13` snapshot (JWT `exp` work from [PR #154](https://github.com/CMSC495-GROUP3/Sourcebook/pull/154), facing-page icon fix [PR #202](https://github.com/CMSC495-GROUP3/Sourcebook/pull/202), lock-check follow-up on [PR #157](https://github.com/CMSC495-GROUP3/Sourcebook/pull/157), second-password and auto-deploy follow-ups) are counted with Taylor, as [issue #201](https://github.com/CMSC495-GROUP3/Sourcebook/issues/201) asked; Taylor directed that work and is accountable for it.
+The 48 `Claude`-authored commits at `7d3c779` (among them the JWT `exp` work from [PR #154](https://github.com/CMSC495-GROUP3/Sourcebook/pull/154), facing-page icon fix [PR #202](https://github.com/CMSC495-GROUP3/Sourcebook/pull/202), lock-check follow-up on [PR #157](https://github.com/CMSC495-GROUP3/Sourcebook/pull/157), second-password and auto-deploy follow-ups, and review fixes on the What People Ask and access pull requests above) are counted with Taylor, as [issue #201](https://github.com/CMSC495-GROUP3/Sourcebook/issues/201) asked; Taylor directed that work and is accountable for it.
 
 ## Chris
 
@@ -61,8 +70,9 @@ The 16 `Claude`-authored commits at the `88e8a13` snapshot (JWT `exp` work from 
 - Clarify-and-escalate prompt, [PR #138](https://github.com/CMSC495-GROUP3/Sourcebook/pull/138); lifecycle corpus, [PR #139](https://github.com/CMSC495-GROUP3/Sourcebook/pull/139).
 - Empty-corpus library cleanup, [PR #132](https://github.com/CMSC495-GROUP3/Sourcebook/pull/132); prompt-injection hygiene for retrieved text, [PR #155](https://github.com/CMSC495-GROUP3/Sourcebook/pull/155).
 - Query-log analysis reports, [PR #171](https://github.com/CMSC495-GROUP3/Sourcebook/pull/171) / [issue #160](https://github.com/CMSC495-GROUP3/Sourcebook/issues/160).
+- The grounding-gate fix for [issue #192](https://github.com/CMSC495-GROUP3/Sourcebook/issues/192), [PR #253](https://github.com/CMSC495-GROUP3/Sourcebook/pull/253), merged on 2026-09-22.
 
-After the snapshot: the grounding-gate fix for [issue #192](https://github.com/CMSC495-GROUP3/Sourcebook/issues/192), [PR #253](https://github.com/CMSC495-GROUP3/Sourcebook/pull/253), merged on 2026-09-22 and is not in the counts above. [Issue #189](https://github.com/CMSC495-GROUP3/Sourcebook/issues/189) is closed; it was completed by Taylor's [PR #245](https://github.com/CMSC495-GROUP3/Sourcebook/pull/245), so it is not counted as Chris's merged authorship.
+[Issue #189](https://github.com/CMSC495-GROUP3/Sourcebook/issues/189) is closed; it was completed by Taylor's [PR #245](https://github.com/CMSC495-GROUP3/Sourcebook/pull/245), so it is not counted as Chris's merged authorship.
 
 ## Daniel Tsang
 
@@ -87,7 +97,7 @@ Interface-contract work on `main` also appears in PRs Taylor or Chris authored; 
 - [PR #170](https://github.com/CMSC495-GROUP3/Sourcebook/pull/170) escalation contact rename.
 - [PR #244](https://github.com/CMSC495-GROUP3/Sourcebook/pull/244) disable embedding cache in the live evaluation workflow.
 
-Reviews: [PR #173](https://github.com/CMSC495-GROUP3/Sourcebook/pull/173) (Dependabot Python group), [PR #197](https://github.com/CMSC495-GROUP3/Sourcebook/pull/197) (Atlas access-list admission), and [PR #219](https://github.com/CMSC495-GROUP3/Sourcebook/pull/219) (Atlas admin API access-list notes; [issue #218](https://github.com/CMSC495-GROUP3/Sourcebook/issues/218) is closed). After the snapshot he also approved [PR #253](https://github.com/CMSC495-GROUP3/Sourcebook/pull/253) before merging it; that review is not in the count of 3.
+Reviews: [PR #173](https://github.com/CMSC495-GROUP3/Sourcebook/pull/173) (Dependabot Python group), [PR #197](https://github.com/CMSC495-GROUP3/Sourcebook/pull/197) (Atlas access-list admission), and [PR #219](https://github.com/CMSC495-GROUP3/Sourcebook/pull/219) (Atlas admin API access-list notes; [issue #218](https://github.com/CMSC495-GROUP3/Sourcebook/issues/218) is closed), and he approved [PR #253](https://github.com/CMSC495-GROUP3/Sourcebook/pull/253) before merging it.
 
 **Infrastructure and configuration recorded in issues.** Most of George's operations work happened on the EC2 instance and in the Atlas and GitHub settings, so it shows up in issue comments rather than commits:
 
@@ -96,9 +106,9 @@ Reviews: [PR #173](https://github.com/CMSC495-GROUP3/Sourcebook/pull/173) (Depen
 - Added the three evaluation secrets to the repository for [PR #197](https://github.com/CMSC495-GROUP3/Sourcebook/pull/197#issuecomment-5641222971).
 - Confirmed that the runner's IP is added to and removed from the Atlas access list during an evaluation run, and checked the roles on the organization and project API keys ([issue #218](https://github.com/CMSC495-GROUP3/Sourcebook/issues/218#issuecomment-5657834042)).
 - Reported that the read-only evaluation database user could not write the embedding cache ([issue #243](https://github.com/CMSC495-GROUP3/Sourcebook/issues/243)), then fixed it in [PR #244](https://github.com/CMSC495-GROUP3/Sourcebook/pull/244).
-- Merged [PR #197](https://github.com/CMSC495-GROUP3/Sourcebook/pull/197), [PR #219](https://github.com/CMSC495-GROUP3/Sourcebook/pull/219), and, after the snapshot, [PR #253](https://github.com/CMSC495-GROUP3/Sourcebook/pull/253) into `main`.
+- Merged [PR #197](https://github.com/CMSC495-GROUP3/Sourcebook/pull/197), [PR #219](https://github.com/CMSC495-GROUP3/Sourcebook/pull/219), and [PR #253](https://github.com/CMSC495-GROUP3/Sourcebook/pull/253) into `main`.
 
-George also lists EC2 and S3 setup and administration in his [comment on PR #231](https://github.com/CMSC495-GROUP3/Sourcebook/pull/231#issuecomment-5782718490). The items above are the parts of that work with a GitHub record.
+George set up and administered the EC2 instance and the S3 storage ([comment on PR #231](https://github.com/CMSC495-GROUP3/Sourcebook/pull/231#issuecomment-5782718490)). The items above, including [issue #79](https://github.com/CMSC495-GROUP3/Sourcebook/issues/79) and [issue #80](https://github.com/CMSC495-GROUP3/Sourcebook/issues/80), are the parts of that work with a GitHub record.
 
 ## Rob
 
@@ -109,30 +119,30 @@ George also lists EC2 and S3 setup and administration in his [comment on PR #231
 - Merged: [PR #150](https://github.com/CMSC495-GROUP3/Sourcebook/pull/150) / [issue #89](https://github.com/CMSC495-GROUP3/Sourcebook/issues/89), keep the live corpus available during re-ingestion (`8e8c36e`).
 - Merged: [PR #176](https://github.com/CMSC495-GROUP3/Sourcebook/pull/176) / [issue #158](https://github.com/CMSC495-GROUP3/Sourcebook/issues/158), unique `(source, chunk_index)` index (`a724d38`).
 - Reviews: [PR #181](https://github.com/CMSC495-GROUP3/Sourcebook/pull/181) (requested the NaN rejection, then approved) and [PR #171](https://github.com/CMSC495-GROUP3/Sourcebook/pull/171).
-- Merged after the snapshot: [PR #279](https://github.com/CMSC495-GROUP3/Sourcebook/pull/279) / [issue #142](https://github.com/CMSC495-GROUP3/Sourcebook/issues/142), transactions for project assignment and deletion (`d2ae7ba`, 2026-09-26). It is not in the counts above.
+- Merged: [PR #279](https://github.com/CMSC495-GROUP3/Sourcebook/pull/279) / [issue #142](https://github.com/CMSC495-GROUP3/Sourcebook/issues/142), transactions for project assignment and deletion (`d2ae7ba`, 2026-09-26).
 
 ## Gavin
 
+Unconfirmed: Gavin had not confirmed this row by the 27 September deadline.
+
 **Owns, per the README.** React components, design, and styling, with Dominick.
 
-**What GitHub shows on this snapshot.** Zero author commits, zero merged pull requests, zero `reviewed-by` results. Assigned on the design and frontend issues [#41](https://github.com/CMSC495-GROUP3/Sourcebook/issues/41) through [#53](https://github.com/CMSC495-GROUP3/Sourcebook/issues/53), plus [#82](https://github.com/CMSC495-GROUP3/Sourcebook/issues/82), [#83](https://github.com/CMSC495-GROUP3/Sourcebook/issues/83), [#159](https://github.com/CMSC495-GROUP3/Sourcebook/issues/159), [#174](https://github.com/CMSC495-GROUP3/Sourcebook/issues/174), [#175](https://github.com/CMSC495-GROUP3/Sourcebook/issues/175), [#189](https://github.com/CMSC495-GROUP3/Sourcebook/issues/189), and [#192](https://github.com/CMSC495-GROUP3/Sourcebook/issues/192). All 20 of those issues are now closed. One issue comment, on [#41](https://github.com/CMSC495-GROUP3/Sourcebook/issues/41).
-
-**After the snapshot.** Gavin's [PR #250](https://github.com/CMSC495-GROUP3/Sourcebook/pull/250) (`feat: add HR escalation queue`) merged on 2026-09-22 and resolved [issue #159](https://github.com/CMSC495-GROUP3/Sourcebook/issues/159). It put his first two author commits on `main`: `0b4c34f` (HR escalation queue) and `8fd1cf6` (escalation page lint fix). They are not in the counts above.
+**What GitHub shows.** Gavin opened [PR #250](https://github.com/CMSC495-GROUP3/Sourcebook/pull/250) (`feat: add HR escalation queue`) and wrote the first version of the HR queue; Taylor finished it and merged it on 2026-09-22, resolving [issue #159](https://github.com/CMSC495-GROUP3/Sourcebook/issues/159). Gavin's two author commits on `main` are from it: `0b4c34f` (HR escalation queue) and `8fd1cf6` (escalation page lint fix). Zero reviews of others' pull requests. Assigned on the design and frontend issues [#41](https://github.com/CMSC495-GROUP3/Sourcebook/issues/41) through [#53](https://github.com/CMSC495-GROUP3/Sourcebook/issues/53), plus [#82](https://github.com/CMSC495-GROUP3/Sourcebook/issues/82), [#83](https://github.com/CMSC495-GROUP3/Sourcebook/issues/83), [#159](https://github.com/CMSC495-GROUP3/Sourcebook/issues/159), [#174](https://github.com/CMSC495-GROUP3/Sourcebook/issues/174), [#175](https://github.com/CMSC495-GROUP3/Sourcebook/issues/175), [#189](https://github.com/CMSC495-GROUP3/Sourcebook/issues/189), and [#192](https://github.com/CMSC495-GROUP3/Sourcebook/issues/192). All 20 of those issues are now closed. One issue comment, on [#41](https://github.com/CMSC495-GROUP3/Sourcebook/issues/41).
 
 Assigned [#82](https://github.com/CMSC495-GROUP3/Sourcebook/issues/82) is ownership, not merged credit; the merged streaming-blank fix is [PR #126](https://github.com/CMSC495-GROUP3/Sourcebook/pull/126) (Taylor). The merged open-book implementation on `main` is [PR #161](https://github.com/CMSC495-GROUP3/Sourcebook/pull/161) (Taylor) and is credited to Taylor.
 
 ## Dominick
 
+Unconfirmed: Dominick had not confirmed this row by the 27 September deadline.
+
 **Owns, per the README.** React components, design, and styling, with Gavin.
 
-**What GitHub shows on this snapshot.** Zero author commits, zero pull requests, zero reviews, and no issue comments found under `fudgepop01`. Assigned on the same design and frontend cluster ([#41](https://github.com/CMSC495-GROUP3/Sourcebook/issues/41)–[#53](https://github.com/CMSC495-GROUP3/Sourcebook/issues/53), [#82](https://github.com/CMSC495-GROUP3/Sourcebook/issues/82), [#84](https://github.com/CMSC495-GROUP3/Sourcebook/issues/84), [#159](https://github.com/CMSC495-GROUP3/Sourcebook/issues/159), [#174](https://github.com/CMSC495-GROUP3/Sourcebook/issues/174), [#175](https://github.com/CMSC495-GROUP3/Sourcebook/issues/175)), plus [#214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214) (Lighthouse accessibility and performance per theme, still open). Assigned [#175](https://github.com/CMSC495-GROUP3/Sourcebook/issues/175) is ownership, not merged authorship; the merged facing-page fix on `main` (`c00b30c`) is Daniel's commit and is recorded on his row. No author commits under Dominick's name appear on `main` as of `origin/main` `5b35d3c`.
-
-**After the snapshot.** Dominick opened [PR #292](https://github.com/CMSC495-GROUP3/Sourcebook/pull/292) (`docs: add lighthouse metrics to quality.md`, for [#214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214)) on 2026-09-26. It is open, with changes requested, and not in the counts above.
+**What GitHub shows.** Zero author commits, zero merged pull requests, and zero reviews of others' pull requests under `fudgepop01`. Assigned on the same design and frontend cluster ([#41](https://github.com/CMSC495-GROUP3/Sourcebook/issues/41)–[#53](https://github.com/CMSC495-GROUP3/Sourcebook/issues/53), [#82](https://github.com/CMSC495-GROUP3/Sourcebook/issues/82), [#84](https://github.com/CMSC495-GROUP3/Sourcebook/issues/84), [#159](https://github.com/CMSC495-GROUP3/Sourcebook/issues/159), [#174](https://github.com/CMSC495-GROUP3/Sourcebook/issues/174), [#175](https://github.com/CMSC495-GROUP3/Sourcebook/issues/175)), plus [#214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214) (Lighthouse accessibility and performance per theme, still open). Assigned [#175](https://github.com/CMSC495-GROUP3/Sourcebook/issues/175) is ownership, not merged authorship; the merged facing-page fix on `main` (`c00b30c`) is Daniel's commit and is recorded on his row. No author commits under Dominick's name appear on `main` at `7d3c779`. He opened [PR #292](https://github.com/CMSC495-GROUP3/Sourcebook/pull/292) (`docs: add lighthouse metrics to quality.md`, for [#214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214)) on 2026-09-26; at the snapshot it was open, with changes requested.
 
 ## Scope of this record
 
 - Work that exists only in a fork, a classroom write-up, or a chat is not listed.
-- Review counts are pull requests GitHub marks `reviewed-by`, not every comment.
+- Review counts are other people's pull requests GitHub marks `reviewed-by`, not every comment.
 - Issue assignment is cited as ownership, not as authored work.
 
-[^claude]: This total includes 16 Claude-authored commits Taylor directed and accepted responsibility for.
+[^claude]: This total includes 48 Claude-authored commits Taylor directed and accepted responsibility for.
