@@ -1,6 +1,6 @@
 # Code quality evidence
 
-This page points a grader at the review, coverage, and performance artifacts that already exist. Every number names the file, pull request, or Actions run it came from. It does not invent a committed coverage percentage, a live-evaluation PASS, Lighthouse scores, or a beta/final release folder that is not on `main`.
+This page points a grader at the review, coverage, and performance artifacts that already exist. Every number names the file, pull request, or Actions run it came from. It does not invent a committed coverage percentage, a live-evaluation PASS, or a beta/final release folder that is not on `main`.
 
 Sibling pages own adjacent evidence and are not duplicated here:
 
@@ -9,7 +9,6 @@ Sibling pages own adjacent evidence and are not duplicated here:
 - React component tests: [issue #211](https://github.com/CMSC495-GROUP3/Sourcebook/issues/211).
 - Load run against the demo site: [issue #212](https://github.com/CMSC495-GROUP3/Sourcebook/issues/212).
 - Full evaluation tier: [issue #213](https://github.com/CMSC495-GROUP3/Sourcebook/issues/213). The beta run is recorded; the final run is not.
-- Lighthouse per theme: [issue #214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214).
 - `v1.0.0` freeze scaffold: [issue #215](https://github.com/CMSC495-GROUP3/Sourcebook/issues/215).
 
 ## Code review
@@ -104,7 +103,7 @@ The suite is the real application with Mongo, the model, and vector search repla
 | Alpha smoke evaluation | Two host runs of the 20-case smoke tier (`9871e3e` vs `4e90382`). Recall@5, citation correctness, and grounded-answer rate are 100% of 12 answerable cases on both commits. Unsupported-refusal handling and prompt-injection grounding-gate refusal are **0%** of their cases on both commits. | A product-quality PASS. The zeros are [issue #192](https://github.com/CMSC495-GROUP3/Sourcebook/issues/192), since closed; the [beta's smoke run](releases/v0.2.0/live-evaluation.md#results-against-the-alpha) scores both at 100%. [Issue #189](https://github.com/CMSC495-GROUP3/Sourcebook/issues/189) (follow-ups scored only the rewrite) was closed by [PR #245](https://github.com/CMSC495-GROUP3/Sourcebook/pull/245); that does not close #192. The full tier was first run on the beta; see the beta full-tier row. | [live-evaluation.md](releases/v0.1.0-alpha.1/live-evaluation.md), [results JSON](releases/v0.1.0-alpha.1/live-evaluation-results.json), [docs/evaluation.md](evaluation.md) |
 | Beta full-tier evaluation | [Run 36267109629](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36267109629) on the `v0.2.0` tag `383cea5`, 2026-09-26: 59 cases. Recall@5, citation correctness, and grounded-answer rate are 95.9% (47 of 49 answerable); unsupported-refusal handling is 100% of 4 and prompt-injection gate refusal 100% of 3. Both misses retrieved an overlapping policy; one exposes a contradiction between two sample policies on the incident-reporting window. | The final's full tier ([issue #213](https://github.com/CMSC495-GROUP3/Sourcebook/issues/213)), or anything about a real corpus. | [live-evaluation.md](releases/v0.2.0/live-evaluation.md#full-tier-run-on-2026-09-26), [results JSON](releases/v0.2.0/live-evaluation-full-results.json) |
 | Live evaluation workflow | Manual Actions job against real secrets. [PR #226](https://github.com/CMSC495-GROUP3/Sourcebook/pull/226) merged on 2026-09-13 (`112c96e`) and closed [issue #223](https://github.com/CMSC495-GROUP3/Sourcebook/issues/223): `scripts/validate_live_evaluation.py` and [evaluation.yml](https://github.com/CMSC495-GROUP3/Sourcebook/blob/main/.github/workflows/evaluation.yml) fail-close on empty or illegal `MONGODB_DB`, empty secrets, a nonzero evaluator exit, and missing or malformed results. CI also runs the synthetic checks in `scripts/test_live_evaluation_fail_closed.sh`. [PR #229](https://github.com/CMSC495-GROUP3/Sourcebook/pull/229) was closed as a duplicate of #226 and was not merged. A green workflow means the instrument recorded a trustworthy results file, not that refusals passed. Latest successful runs: the beta smoke tier, [run 36062704072](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36062704072) at `231e652`, and the beta full tier, [run 36267109629](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36267109629) at `383cea5`. | Refusal-quality PASS. A green run means the results file is trustworthy, not that the scores are good. | [evaluation.yml](https://github.com/CMSC495-GROUP3/Sourcebook/blob/main/.github/workflows/evaluation.yml), [PR #181](https://github.com/CMSC495-GROUP3/Sourcebook/pull/181), [PR #226](https://github.com/CMSC495-GROUP3/Sourcebook/pull/226) |
-| Lighthouse | Not run. | — | [issue #214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214) |
+| Lighthouse | On the demo site running `7d3c779`, 2026-09-27: accessibility 100 and best practices 100 on all three pages in both themes; performance 87 to 96 on mobile and 100 on desktop; SEO 91, losing points on `robots.txt` only. See [Lighthouse scores](#lighthouse-scores). | Lab scores from one cold load per page, theme, and width on one laptop, not what every visitor gets. | [lighthouse.md](releases/v1.0.0/evidence/lighthouse.md), [lighthouse-summary.json](releases/v1.0.0/evidence/lighthouse-summary.json) |
 | Beta live benchmark | The alpha's bounded protocol, run on 2026-09-24 against the demo site. Status on that page: **every target met.** | The final's repeat, which follows the freeze ([issue #215](https://github.com/CMSC495-GROUP3/Sourcebook/issues/215)). | [live-benchmark.md](releases/v0.2.0/live-benchmark.md), [results JSON](releases/v0.2.0/live-benchmark-results.json) |
 
 ### Local quality loop
@@ -118,6 +117,25 @@ make audit    # pip-audit and npm audit; accepted advisories in scripts/audit.sh
 
 `make stub` is not a quality measurement. Fake embeddings are noise; do not tune `SIMILARITY_THRESHOLD` or judge refusal quality from the stub ([CONTRIBUTING.md](../CONTRIBUTING.md#things-that-will-bite-you)).
 
+## Lighthouse scores
+
+Recorded at 14:33 UTC on 2026-09-27 against the demo site at <https://sourcebook.duckdns.org>, running [`7d3c779`](https://github.com/CMSC495-GROUP3/Sourcebook/commit/7d3c7795c197c5be56b15aebc650576760fd75d1), with Lighthouse 13.5.0 in Google Chrome 153.0.8010.53 on a Mac laptop. How the runs were made and what each audit found are in [releases/v1.0.0/evidence/lighthouse.md](releases/v1.0.0/evidence/lighthouse.md) ([#214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214)).
+
+| Page | Theme | Width | Performance | Accessibility | Best practices | SEO |
+| --- | --- | --- | ---: | ---: | ---: | ---: |
+| sign-in | light | mobile | 89 | 100 | 100 | 91 |
+| chat | light | mobile | 87 | 100 | 100 | 91 |
+| document | light | mobile | 92 | 100 | 100 | 91 |
+| sign-in | light | desktop | 100 | 100 | 100 | 91 |
+| chat | light | desktop | 100 | 100 | 100 | 91 |
+| document | light | desktop | 100 | 100 | 100 | 91 |
+| sign-in | dark | mobile | 96 | 100 | 100 | 91 |
+| chat | dark | mobile | 91 | 100 | 100 | 91 |
+| document | dark | mobile | 91 | 100 | 100 | 91 |
+| sign-in | dark | desktop | 100 | 100 | 100 | 91 |
+| chat | dark | desktop | 100 | 100 | 100 | 91 |
+| document | dark | desktop | 100 | 100 | 100 | 91 |
+
 ## What this page will gain later
 
-When `docs/releases/v1.0.0/evidence/coverage.md` holds the candidate's tables (#210), add the Python and web totals and the run link to the coverage section above. When #212, #213, and #214 produce artifacts, add rows to the table above. #226 already merged the fail-closed Live evaluation instrument; a green workflow is a trustworthy measurement, not a pass.
+When `docs/releases/v1.0.0/evidence/coverage.md` holds the candidate's tables (#210), add the Python and web totals and the run link to the coverage section above. When #212 and #213 produce artifacts, add rows to the table above. #226 already merged the fail-closed Live evaluation instrument; a green workflow is a trustworthy measurement, not a pass.
