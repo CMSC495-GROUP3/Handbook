@@ -503,7 +503,9 @@ def verdicts(monkeypatch, *, same: set[frozenset[str]] = frozenset(), reply=None
         calls.append(pairs)
         if reply is not None:
             return reply(pairs)
-        return json.dumps({"same": [frozenset(pair) in same for pair in pairs]})
+        return json.dumps(
+            {"same": [n for n, pair in enumerate(pairs, start=1) if frozenset(pair) in same]}
+        )
 
     monkeypatch.setattr(reports.get_provider(), "complete", complete)
     return calls

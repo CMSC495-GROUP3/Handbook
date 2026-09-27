@@ -27,7 +27,7 @@ SCORED = [
 
 
 def fake_openai(monkeypatch, answer):
-    """Serve chat calls with ``answer(ids in the batch)``; return the batches."""
+    """Reply ``{"same": answer(ids in the batch)}``; return the batches."""
     batches: list[list[str]] = []
 
     def create(*, messages, **_kwargs):
@@ -45,7 +45,7 @@ def fake_openai(monkeypatch, answer):
 
 
 def test_each_floor_is_judged_in_the_batches_the_page_would_send(monkeypatch):
-    batches = fake_openai(monkeypatch, lambda ids: [True] * len(ids))
+    batches = fake_openai(monkeypatch, lambda ids: list(range(1, len(ids) + 1)))
 
     measure.judge_floors(SCORED)
 
@@ -56,7 +56,7 @@ def test_each_floor_is_judged_in_the_batches_the_page_would_send(monkeypatch):
 def test_each_floor_is_scored_with_its_own_verdicts(monkeypatch):
     # A pair judged alone says "same"; with a neighbour it says "different".
     # At 0.45 "edge" shares a batch with "low", at 0.60 it is alone.
-    batches = fake_openai(monkeypatch, lambda ids: [len(ids) == 1] * len(ids))
+    batches = fake_openai(monkeypatch, lambda ids: [1] if len(ids) == 1 else [])
 
     low, default = measure.judge_floors(SCORED)
 
@@ -69,7 +69,7 @@ def test_each_floor_is_scored_with_its_own_verdicts(monkeypatch):
 
 
 def test_an_unparsed_batch_counts_as_different(monkeypatch):
-    fake_openai(monkeypatch, lambda ids: [True] * (len(ids) + 1))
+    fake_openai(monkeypatch, lambda ids: [len(ids) + 1])  # no such pair
 
     low, default = measure.judge_floors(SCORED)
 

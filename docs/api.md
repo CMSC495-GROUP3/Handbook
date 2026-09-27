@@ -410,10 +410,10 @@ repeat load makes no provider call and the route writes nothing.
 If that call fails, `grouping` is `"exact"` and every wording has its own row.
 
 Cosine cannot tell a paraphrase from a near neighbour, so pairs scoring from
-`QUESTION_JUDGE_FLOOR` (default 0.6) up to the threshold go to the utility
+`QUESTION_JUDGE_FLOOR` (default 0.7) up to the threshold go to the utility
 model (#293). It gets both wordings as untrusted data and must reply
-`{"same": [true, false, ...]}`, one boolean per pair. A pair merges only on
-`true`. All of a load's new pairs go in one call, at most
+`{"same": [2, 5]}`, the numbers of the pairs that are one question. A pair
+merges only when it is listed. All of a load's new pairs go in one call, at most
 `QUESTION_JUDGE_MAX_PAIRS` (default 50), closest first; pairs past the cap
 stay apart on that load and are judged on a later one. `unjudged` counts the
 band pairs a load left without a verdict, past the cap or in a failed call,
@@ -439,10 +439,10 @@ a stalled provider costs a load about 16 seconds at most before it falls back
 
 Merging two different questions ("How does PTO accrue?" and "Does unused PTO
 carry over?") hides a gap behind a covered neighbour, which is worse than
-splitting one question into two rows. On 80 labelled pairs the closest two
-different questions score 0.833, so 0.85 merges none of them, but cosine alone
-merges only 4 of 40 paraphrases: a missing question mark, a change of case,
-and two close rewordings. The model check exists for the rest. The
+splitting one question into two rows. On 120 labelled pairs 0.85 merges 2 of
+60 different questions, both one word apart ("HSA" and "FSA"), and only 6 of
+60 paraphrases: a missing question mark, a change of case, and close
+rewordings. The model check brings paraphrases merged to 29 of 60. The
 measurements are in [evaluation.md](evaluation.md#question-grouping-threshold).
 
 ```http
