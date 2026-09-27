@@ -97,6 +97,94 @@ def _apply_update(doc: dict, update: dict, inserted: bool) -> None:
             doc.setdefault(field, value)
 
 
+_MISSING = object()
+
+
+def _field(doc: dict, path: str) -> Any:
+    """Follow a dotted path ("_id.hash"); _MISSING if any step is absent."""
+    value: Any = doc
+    for part in path.split("."):
+        if not isinstance(value, dict) or part not in value:
+            return _MISSING
+        value = value[part]
+    return value
+
+
+def _is_missing(doc: dict, expr: Any) -> bool:
+    """True when expr is a field path the document does not have."""
+    return isinstance(expr, str) and expr.startswith("$") and _field(doc, expr[1:]) is _MISSING
+
+
+def _resolve(doc: dict, expr: Any) -> Any:
+    """A field path ("$refused", "$_id.hash"), {"$eq": [a, b]},
+    {"$cond": [if, then, else]}, {"$size": array}, {"$slice": [array, n]} with
+    n >= 0, an object of expressions
+    ({"hash": "$question_hash"}), or a literal."""
+    if isinstance(expr, str) and expr.startswith("$"):
+        value = _field(doc, expr[1:])
+        return None if value is _MISSING else value
+    if isinstance(expr, dict) and "$size" in expr:
+        return len(_resolve(doc, expr["$size"]))
+    if isinstance(expr, dict) and "$slice" in expr:
+        array, n = expr["$slice"]
+        return _resolve(doc, array)[:n]
+    if isinstance(expr, dict) and "$eq" in expr:
+        left, right = expr["$eq"]
+        return _resolve(doc, left) == _resolve(doc, right)
+    if isinstance(expr, dict) and "$cond" in expr:
+        condition, then, otherwise = expr["$cond"]
+        return _resolve(doc, then if _resolve(doc, condition) else otherwise)
+    if isinstance(expr, dict) and not any(key.startswith("$") for key in expr):
+        # Mongo leaves a field out of the object when its path is missing,
+        # so {"s": "$absent"} is {} but {"s": "$stored_null"} is {"s": None}.
+        return {key: _resolve(doc, sub) for key, sub in expr.items() if not _is_missing(doc, sub)}
+    return expr
+
+
+def _hashable(value: Any) -> Any:
+    """A dict key for a group _id. Field order counts, as it does in Mongo."""
+    if isinstance(value, dict):
+        return tuple((key, _hashable(sub)) for key, sub in value.items())
+    if isinstance(value, list):
+        return tuple(_hashable(item) for item in value)
+    return value
+
+
+def _group(rows: list[dict], spec: dict) -> list[dict]:
+    """$group with $sum, $first and $addToSet, the accumulators the coverage report uses.
+
+    _id may be a field path or an object of them, and groups come out in the
+    order their first row went in.
+    """
+    groups: dict[Any, dict] = {}
+    for row in rows:
+        key = _resolve(row, spec["_id"])
+        slot = _hashable(key)
+        is_new = slot not in groups
+        group = groups.setdefault(slot, {"_id": key})
+        for field, accumulator in spec.items():
+            if field == "_id":
+                continue
+            (op, expr), *_ = accumulator.items()
+            if op == "$sum":
+                value = _resolve(row, expr)
+                # Mongo's $sum skips non-numbers, booleans included.
+                numeric = isinstance(value, int | float) and not isinstance(value, bool)
+                group[field] = group.get(field, 0) + (value if numeric else 0)
+            elif op == "$first":
+                if is_new:
+                    group[field] = _resolve(row, expr)
+            elif op == "$addToSet":
+                members = group.setdefault(field, [])
+                # A missing field adds nothing; a stored null is a member, as in Mongo.
+                value = _resolve(row, expr)
+                if not _is_missing(row, expr) and value not in members:
+                    members.append(value)
+            else:
+                raise NotImplementedError(f"FakeCollection $group does not implement {op}.")
+    return list(groups.values())
+
+
 class _Cursor:
     def __init__(self, docs: list[dict]):
         self._docs = docs
@@ -139,7 +227,7 @@ class FakeCollection:
     def find(self, query: dict | None = None, projection: dict | None = None):
         return _Cursor([_project(d, projection) for d in self._docs if _matches(d, query or {})])
 
-    def count_documents(self, query: dict) -> int:
+    def count_documents(self, query: dict, **kwargs) -> int:
         return sum(1 for d in self._docs if _matches(d, query))
 
     def distinct(self, field: str):
@@ -208,11 +296,41 @@ class FakeCollection:
     def create_index(self, *args, **kwargs):
         return "index"
 
-    def aggregate(self, pipeline):
-        raise NotImplementedError(
-            "FakeCollection does not implement aggregate. $vectorSearch is "
-            "Atlas-only and cannot be emulated meaningfully."
-        )
+    def drop_index(self, name):
+        return None
+
+    def aggregate(self, pipeline, **kwargs):
+        """The $match / $group / $addFields / $project / $sort / $limit subset
+        the coverage report runs.
+
+        Any other stage raises. $vectorSearch in particular is Atlas-only and
+        cannot be emulated meaningfully.
+        """
+        rows = [copy.deepcopy(d) for d in self._docs]
+        for stage in pipeline:
+            (op, spec), *_ = stage.items()
+            if op == "$match":
+                rows = [r for r in rows if _matches(r, spec)]
+            elif op == "$group":
+                rows = _group(rows, spec)
+            elif op == "$sort":
+                # Null sorts first ascending and last descending, as in Mongo.
+                for field, direction in reversed(spec.items()):
+                    rows.sort(
+                        key=lambda r: (r.get(field) is not None, r.get(field)),
+                        reverse=direction < 0,
+                    )
+            elif op == "$addFields":
+                rows = [{**r, **{f: _resolve(r, e) for f, e in spec.items()}} for r in rows]
+            elif op == "$project":
+                if any(v != 0 for v in spec.values()):
+                    raise NotImplementedError("FakeCollection $project supports exclusion only.")
+                rows = [{k: v for k, v in r.items() if k not in spec} for r in rows]
+            elif op == "$limit":
+                rows = rows[:spec]
+            else:
+                raise NotImplementedError(f"FakeCollection.aggregate does not implement {op}.")
+        return iter(rows)
 
 
 class FakeDB:

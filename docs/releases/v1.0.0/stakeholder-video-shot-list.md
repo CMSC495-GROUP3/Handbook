@@ -38,7 +38,8 @@ or the portfolio/handoff pages owned by other lanes.
 | S11 | 6:40–7:00 | Refusal card | Full refusal UI in frame | Demo operator | Hold 3–5 seconds; stop take if prose+chips return |
 | S12 | 7:00–7:30 | Escalation form | Ask Human Resources form filled (non-secret fields) | Demo operator | No PII beyond demo question |
 | S13 | 7:30–7:50 | Escalation confirmed | Confirmation / escalation id on screen | Demo operator | Keep id for S14 |
-| S14 | 7:50–9:20 | HR handling | **HR Requests** (`/escalations`) two-pane queue as on tagged deploy | Demo operator + HR handler | Confirm page on tagged host; do not stage a fake console |
+| S14 | 7:50–8:50 | HR handling | **HR Requests** (`/escalations`) two-pane queue as on tagged deploy | Demo operator + HR handler | Signed in with the HR password, typed off camera; confirm page on tagged host; do not stage a fake console |
+| S14b | 8:50–9:20 | What People Ask | **What People Ask** (`/gaps`), 30-day window | HR handler | Same HR session; show the rows the pilot has, no seeded questions |
 | S15 | 9:20–10:20 | RAG rationale | Slide: RAG vs fine-tuning bullets | Architecture narrator | Citations + ingest without retrain |
 | S16 | 10:20–11:00 | Grounding | Slide or code pointer: cosine vs threshold + coverage judge | Architecture narrator | No live metric invention |
 | S17 | 11:00–11:50 | CI/CD | `docs/ci-cd.md` or Actions overview (public pages only) | Architecture narrator | Final run URLs **pending** tagged SHA |
@@ -67,6 +68,7 @@ in this pull request.
 | VID-05 | Refusal card | S11 |
 | VID-06 | Escalation confirmed | S13 |
 | VID-07 | HR Requests queue / resolve | S14 |
+| VID-08 | What People Ask, 30-day window | S14b |
 
 ## Edit checklist
 

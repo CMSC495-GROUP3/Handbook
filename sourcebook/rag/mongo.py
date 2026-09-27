@@ -39,9 +39,12 @@ operation — so import stays fast either way.
 """
 
 import os
+from collections.abc import Callable
 from threading import Lock
+from typing import TypeVar
 
 from pymongo import MongoClient
+from pymongo.client_session import ClientSession
 from pymongo.collection import Collection
 from pymongo.database import Database
 
@@ -49,6 +52,9 @@ from sourcebook.rag.config import MONGO_MAX_POOL_SIZE
 
 _client: MongoClient | None = None
 _lock = Lock()
+
+_T = TypeVar("_T")
+_transaction_support: bool | None = None
 
 
 def get_client(*, server_selection_timeout_ms: int | None = None) -> MongoClient:
@@ -89,10 +95,53 @@ def get_collection(name: str) -> Collection:
     return get_db()[name]
 
 
+def transactions_supported() -> bool:
+    """Return whether the configured real MongoDB backend supports transactions.
+
+    Fake/stub databases deliberately return False rather than pretending to
+    provide transactional referential integrity.
+
+    Real transactions require logical sessions and either a replica set or a
+    mongos-backed sharded deployment.
+    """
+    global _transaction_support
+
+    db = get_db()
+
+    # The test/load-test harness replaces PyMongo Database with FakeDB.
+    if not isinstance(db, Database):
+        return False
+
+    if _transaction_support is None:
+        hello = db.command("hello")
+        has_sessions = hello.get("logicalSessionTimeoutMinutes") is not None
+        is_replica_set = bool(hello.get("setName"))
+        is_sharded = hello.get("msg") == "isdbgrid"
+        _transaction_support = bool(has_sessions and (is_replica_set or is_sharded))
+
+    return _transaction_support
+
+
+def run_transaction(callback: Callable[[ClientSession | None], _T]) -> _T:
+    """Run a callback in a real transaction when the backend supports one.
+
+    The callback receives a real ClientSession on a transaction-capable MongoDB
+    backend. FakeMongo and other non-transactional backends receive ``None`` and
+    retain their existing sequential semantics.
+    """
+    if not transactions_supported():
+        return callback(None)
+
+    with get_client().start_session() as session:
+        return session.with_transaction(callback)
+
+
 def reset_client() -> None:
     """Close and forget the client. For tests only."""
-    global _client
+    global _client, _transaction_support
+
     with _lock:
         if _client is not None:
             _client.close()
             _client = None
+        _transaction_support = None

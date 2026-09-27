@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { isAxiosError } from 'axios'
 import client, { TOKEN_KEY, signOut } from '../api/client'
 import type { RefusalReason } from '../types'
 
@@ -37,6 +38,14 @@ export interface ChatMessage {
 interface UseChatOptions {
   sessionId: string | null
   onSessionCreated: (sessionId: string) => void
+  /**
+   * The conversation in the URL is not this browser's, or no longer exists.
+   * Conversations belong to the browser that made them (#290), so an old
+   * link, a bookmark, or one opened in another browser answers 404. The page
+   * should drop the id, or every question would go to a conversation the
+   * server refuses.
+   */
+  onSessionMissing?: () => void
 }
 
 interface SendOptions {
@@ -97,7 +106,7 @@ function lastUserQuestion(messages: ChatMessage[]): string | null {
   return null
 }
 
-export function useChat({ sessionId, onSessionCreated }: UseChatOptions) {
+export function useChat({ sessionId, onSessionCreated, onSessionMissing }: UseChatOptions) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(false)    // true = waiting for first token (show dots)
   const [streaming, setStreaming] = useState(false) // true = tokens arriving (input disabled)
@@ -107,10 +116,16 @@ export function useChat({ sessionId, onSessionCreated }: UseChatOptions) {
   const sendGeneration = useRef(0)
   // `loading`/`streaming` publish on the next render; this claims the request now.
   const inFlightRef = useRef(false)
+  // Read by the load effect, which runs per conversation, not per render.
+  const onSessionMissingRef = useRef(onSessionMissing)
 
   useEffect(() => {
     messagesRef.current = messages
   }, [messages])
+
+  useEffect(() => {
+    onSessionMissingRef.current = onSessionMissing
+  }, [onSessionMissing])
 
   useEffect(() => {
     activeSessionId.current = sessionId
@@ -168,6 +183,9 @@ export function useChat({ sessionId, onSessionCreated }: UseChatOptions) {
         follow_ups: m.follow_ups,
       }))
       setMessages(mapped)
+    }).catch((error: unknown) => {
+      if (cancelled) return
+      if (isAxiosError(error) && error.response?.status === 404) onSessionMissingRef.current?.()
     })
     return () => {
       cancelled = true

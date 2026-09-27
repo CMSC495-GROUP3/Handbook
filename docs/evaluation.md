@@ -134,3 +134,134 @@ These are evaluation measurements, not guarantees of production correctness.
 If a result misses its target, preserve the result and use it to tune chunking,
 retrieval count, or the grounding threshold. Do not rewrite the expected answer
 to make the score look better.
+
+## Question grouping threshold
+
+The What People Ask page merges two wordings into one row when their question
+embeddings are within `QUESTION_GROUP_THRESHOLD` cosine (#287). The threshold
+was measured on `evaluation/question_pairs.json`: 60 pairs that are one
+question in two wordings ("same") and 60 pairs on one topic that need different
+answers ("different"), drawn from the sample policies. The first 80 were
+written for #287 and the last 40 for #293.
+
+```bash
+OPENAI_API_KEY=... python scripts/measure_question_groups.py \
+  --out evaluation/question_pairs_results.json
+```
+
+Run on 2026-09-27 with `text-embedding-3-small`:
+
+| Pairs | Min | Median | Max |
+| --- | ---: | ---: | ---: |
+| same (60) | 0.468 | 0.720 | 0.973 |
+| different (60) | 0.321 | 0.656 | 0.907 |
+
+| Threshold | Paraphrases left apart | Different questions merged |
+| ---: | ---: | ---: |
+| 0.70 | 25 of 60 | 21 of 60 |
+| 0.76 | 42 | 9 |
+| 0.80 | 49 | 6 |
+| 0.84 | 53 | 2 |
+| 0.85 | 54 | 2 |
+| 0.90 | 57 | 1 |
+| 0.91 (default) | 57 | 0 |
+
+The two distributions overlap from 0.47 to 0.91, so no cosine threshold
+separates them. "Can I work from home when I'm sick?" and "Can I work from
+home when my child is sick?" score 0.907 and need different answers, and "Can
+I use my HSA for dental work?" against the same question about an FSA scores
+0.862. Those are the two different pairs 0.85 merges. "How many days off do I
+get when a family member dies?" and "What is the bereavement leave policy?"
+score 0.468 and are one question. On the first 80 pairs the closest different
+pair scored 0.833, which is why 0.85 was picked first; the 40 added for #293
+include pairs that differ by one word, and two of them clear it. The default
+is now 0.91, the lowest round value above every different pair again, and
+pairs between the floor and it go to the model check below. On cosine alone,
+which is what the page falls back to when that check fails, 0.91 groups only
+case and punctuation changes (3 of 60 paraphrases) and nothing else. Grouping
+most paraphrases needs a second check, not a lower threshold.
+
+A hundred and twenty pairs on a fictional corpus are evidence for this
+corpus's topics. Rerun the script after changing the embedding model.
+
+### The model check below the threshold
+
+Pairs from `QUESTION_JUDGE_FLOOR` up to the threshold go to the utility model, which
+decides whether they are one question (#293). `--judge` scores that combined
+rule on the same pairs. Each floor is judged on its own: its band goes to the
+model in batches the size of `QUESTION_JUDGE_MAX_PAIRS`, closest first, as the
+page would send them at that floor. A pair's neighbours in a batch can change
+its verdict, so one floor's verdicts are never reused for another. The output
+records each floor's verdicts and how many replies did not parse:
+
+```bash
+OPENAI_API_KEY=... python scripts/measure_question_groups.py --judge \
+  --out evaluation/question_pairs_results.json
+```
+
+The floor bounds recall no matter what the model says. From the cosine scores
+above, with the threshold at 0.91:
+
+| Floor | Pairs sent | Paraphrases the rule can reach | Different pairs sent |
+| ---: | ---: | ---: | ---: |
+| 0.50 | 107 | 59 of 60 | 51 |
+| 0.55 | 101 | 58 | 46 |
+| 0.60 | 88 | 55 | 36 |
+| 0.65 | 74 | 45 | 32 |
+| 0.70 (default) | 53 | 35 | 21 |
+
+Three `--judge` runs on 2026-09-27 with `gpt-4o-mini`, prompt v3, 50 pairs per
+batch, threshold 0.91. Each cell is paraphrases merged of 60, then different
+pairs merged. Run 1 is the one in `evaluation/question_pairs_results.json`.
+
+| Floor | Run 1 | Run 2 | Run 3 |
+| ---: | ---: | ---: | ---: |
+| 0.45 | 22, 2 | 22, 2 | 21, 2 |
+| 0.50 | 23, 1 | 21, 2 | 21, 2 |
+| 0.55 | 22, 2 | 21, 2 | 22, 2 |
+| 0.60 | 25, 2 | 22, 2 | 25, 2 |
+| 0.65 | 21, 2 | 23, 2 | 19, 2 |
+| 0.70 (default) | 18, 0 | 16, 1 | 16, 1 |
+
+The model turned down both one-word pairs (HSA and FSA, a sick employee and a
+sick child) in every run. The one different pair it merged at 0.70 was "How
+long is parental leave?" with "Is parental leave paid?" (0.783).
+
+Four earlier runs used the threshold at 0.85. There two of the false merges in
+every cell are the cosine pairs above 0.85, which the model never saw.
+
+| Floor | Run 1 | Run 2 | Run 3 | Run 4 |
+| ---: | ---: | ---: | ---: | ---: |
+| 0.45 | 46, 6 | 47, 5 | 44, 7 | 45, 9 |
+| 0.50 | 45, 6 | 46, 6 | 43, 6 | 44, 8 |
+| 0.55 | 44, 6 | 43, 6 | 45, 9 | 39, 6 |
+| 0.60 | 46, 7 | 46, 6 | 43, 8 | 40, 7 |
+| 0.65 | 37, 7 | 37, 6 | 38, 7 | 35, 9 |
+| 0.70 | 29, 2 | 29, 3 | 29, 2 | 29, 3 |
+
+Below 0.70 the model merges the same handful of different pairs run after
+run, all between 0.57 and 0.68: "How does PTO accrue?" with "Does unused PTO
+carry over?", overtime pay with overtime approval, hiring a relative with a
+relative in my department, the 401k match with vesting in it. From 0.70 up it
+merged one different pair in two of four runs, a different one each time
+("How is severance pay calculated?" with "Is severance pay taxed?", 0.711;
+"Can I take PTO before it accrues?" with "Can I cash out my PTO?", 0.728), and
+it took paraphrases merged from 6 to 29 of 60 in every run. The default floor is
+0.70 for that reason, at either threshold.
+
+Moving the threshold from 0.85 to 0.91 trades recall for fewer false merges:
+paraphrases merged fall from 29 to 16 to 18 of 60, and different pairs merged
+fall from 2 or 3 to 0 or 1. A false merge hides an unanswered question behind
+a covered neighbour, while a missed merge only lists one question twice, so
+the default takes the second trade. `QUESTION_GROUP_THRESHOLD=0.85` restores
+the other. The #293 target, half the paraphrases with no different pair
+merged, is not met at either setting.
+
+Two other setups were measured and rejected. Prompt v1 asked for one boolean
+per pair, and at 50 pairs `gpt-4o-mini` returned the wrong count so often that
+at the 0.60 floor every batch failed to parse and nothing below the threshold
+merged. Prompt v3 asks for the numbers of the pairs that are the same, so a
+miscount can only leave a pair out. Batches of 10 instead of 50
+merged a few more paraphrases (49 of 60 at 0.60) but twice the different
+pairs (11 at 0.60, 3 at 0.70), so the batch stays at 50.
+

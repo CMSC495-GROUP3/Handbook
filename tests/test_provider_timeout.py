@@ -153,3 +153,21 @@ def test_login_stays_available_when_chat_threads_are_saturated(
     finally:
         provider.stream = original_stream
         client.portal.call(_resize_pool, original_tokens)
+
+
+def test_a_per_call_timeout_uses_a_bounded_copy_with_no_retries():
+    # Report calls pass a timeout (#300); chat calls pass none and keep the
+    # shared client with its configured retries.
+    options: list[dict] = []
+
+    class _Client:
+        def with_options(self, **kwargs):
+            options.append(kwargs)
+            return "bounded"
+
+    provider = llm.OpenAIProvider.__new__(llm.OpenAIProvider)
+    provider._client = _Client()
+
+    assert provider._client_for(None) is provider._client
+    assert provider._client_for(4.0) == "bounded"
+    assert options == [{"timeout": 4.0, "max_retries": 0}]

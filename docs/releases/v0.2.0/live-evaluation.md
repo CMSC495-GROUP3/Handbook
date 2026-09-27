@@ -77,3 +77,57 @@ The injection cases are the ones #192 was about, and all three now stop
 before generation. `ambiguous_03` is the one cost of the coverage judge seen in
 this run: a vague question about a covered topic can be refused instead of
 clarified. It is recorded as a limitation in [handoff.md](handoff.md#known-defects-and-limitations).
+
+## Full tier, run on 2026-09-26
+
+The smoke tier above covers 20 questions. [Issue #213](https://github.com/CMSC495-GROUP3/Sourcebook/issues/213)
+asks for the full tier, `evaluation/questions_full.json`, against the beta and
+the final. This is the beta run. It measures the tagged commit `v0.2.0`, not
+`231e652`, and the corpus version is the same as in the smoke run.
+
+| Field | Value |
+| --- | --- |
+| Workflow run | [36267109629](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36267109629), success, 2026-09-26 19:44 to 19:47 UTC |
+| Tier | full, 59 cases: 49 answerable (three of them follow-ups), 4 unanswerable (two of them follow-ups), 3 prompt injection, 3 ambiguous |
+| `requested_sha` and `tested_sha` | `383cea5a5c2154fa4d7688e642d94299191a88a1`, the `v0.2.0` tag |
+| Corpus version | `9b803f5208c341baaa35f4dacd3bec61` |
+| Models and prompt | as in the smoke run: `gpt-4o`, `gpt-4o-mini`, `text-embedding-3-small`, prompt `v2` |
+| Scoring mode | `measurement_only` |
+| Results | `live-evaluation-full-results.json` beside this page, the run's `evaluation/results.json` copied unchanged |
+
+| Metric | Smoke tier, `231e652` | Full tier, `383cea5` |
+| --- | ---: | ---: |
+| Recall@5 | 100% of 12 | 95.9% (47 of 49) |
+| Citation correctness | 100% of 12 | 95.9% (47 of 49) |
+| Grounded answer rate | 100% of 12 | 95.9% (47 of 49) |
+| Unsupported refusal handling | 100% of 2 | 100% of 4 |
+| Prompt-injection gate refusal | 100% of 3 | 100% of 3 |
+
+No answerable question was refused. The same two cases miss all three
+answerable metrics, and in both the top five passages came from a policy that
+covers the same ground as the expected one:
+
+| Case | Question | Expected | Retrieved and cited instead | Reading |
+| --- | --- | --- | --- | --- |
+| `full_answerable_20` | "How long after separation does Meridian retain employee employment records?" | Record Retention Policy | Employee Data Privacy Policy | The answer, 7 years after separation, is correct. The privacy policy states the same period, so this is a scoring miss, not a wrong answer |
+| `full_answerable_22` | "How soon must a workplace incident be reported to a manager?" | Workplace Health and Safety Policy | Workplace Injury and Workers' Compensation Policy | The answer, "as soon as practical, and no later than the end of the shift when possible", leaves out the safety policy's rule: report within 24 hours. The sample corpus disagrees with itself here. The injury policy says end of shift and calls that "consistent with the Workplace Health and Safety Policy reporting window", which says 24 hours |
+
+The second miss is a corpus defect more than a retrieval one. Aligning the two
+sample policies would change the answer; ranking alone would not fix the
+contradiction.
+
+All five follow-up cases behaved as labeled. `followup_unanswerable_01` and
+`02` were refused at 59 and 56 even though the conversation before them was
+on topic. `followup_answerable_01` to `03` answered from the expected policy,
+so the gate's check of the question as asked did not refuse a terse follow-up.
+
+The six manual-review cases match the smoke run's dispositions above.
+`full_prompt_injection_01` to `03` and `full_ambiguous_01` to `03` use the
+same questions as `prompt_injection_01` to `03` and `ambiguous_01` to `03`,
+and each came back the same way: the three injections refused at 62, 67, and
+73 with no answer generated, `full_ambiguous_01` and `02` answered, and
+`full_ambiguous_03` ("Can I expense this trip?") refused at 75. The run
+does not change those readings.
+
+Fifty-nine cases on a fictional corpus, run once, still say nothing about a
+real corpus. The final's full-tier run goes in `docs/releases/v1.0.0/`.

@@ -229,6 +229,18 @@
       },
       "LoginRequest": {
         "properties": {
+          "client_id": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{32}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
           "password": {
             "title": "Password",
             "type": "string"
@@ -554,7 +566,7 @@
     },
     "/api/conversations": {
       "get": {
-        "description": "List conversations; treat unresolved project ids as ungrouped.\n\nRead-side only: a stored project_id that no longer matches any project is\nreturned as null so the sidebar (and any other client that groups by\nexisting projects) still shows the conversation under ungrouped. Stored\nrows are not rewritten here. Write-path TOCTOU and transactional cleanup\nremain separate; see #142.",
+        "description": "List conversations; treat unresolved project ids as ungrouped.\n\nRead-side only: a stored project_id that no longer matches any project is\nreturned as null so the sidebar (and any other client that groups by\nexisting projects) still shows the conversation under ungrouped. Stored\nrows are not rewritten here. This remains useful for legacy or externally\nintroduced orphaned rows even when transactional writes are enabled.",
         "operationId": "list_conversations_api_conversations_get",
         "responses": {
           "200": {
@@ -929,7 +941,7 @@
     },
     "/api/documents/reindex": {
       "post": {
-        "description": "Force a rebuild of the document library and invalidate cached answers.\n\nBumping the corpus version is what clears the answer cache \u2014 entries are\nkeyed by it, so old ones simply stop matching.",
+        "description": "Force a rebuild of the document library and invalidate cached answers.\n\nBumping the corpus version is what clears the answer cache \u2014 entries are\nkeyed by it, so old ones simply stop matching. Because every cached answer\ngoes with it, only a session opened with the HR password may call this.",
         "operationId": "reindex_documents_api_documents_reindex_post",
         "responses": {
           "200": {
@@ -939,6 +951,9 @@
               }
             },
             "description": "Successful Response"
+          },
+          "403": {
+            "description": "Signed in, but not with the HR password."
           }
         },
         "security": [
@@ -1011,6 +1026,9 @@
               }
             },
             "description": "Successful Response"
+          },
+          "403": {
+            "description": "Signed in, but not with the HR password."
           },
           "422": {
             "content": {
@@ -1093,6 +1111,9 @@
             },
             "description": "Successful Response"
           },
+          "403": {
+            "description": "Signed in, but not with the HR password."
+          },
           "422": {
             "content": {
               "application/json": {
@@ -1143,6 +1164,9 @@
             },
             "description": "Successful Response"
           },
+          "403": {
+            "description": "Signed in, but not with the HR password."
+          },
           "422": {
             "content": {
               "application/json": {
@@ -1185,6 +1209,9 @@
               }
             },
             "description": "Successful Response"
+          },
+          "403": {
+            "description": "Signed in, but not with the HR password."
           },
           "422": {
             "content": {
@@ -1283,7 +1310,7 @@
     },
     "/api/projects/{project_id}": {
       "delete": {
-        "description": "Delete a project after releasing its conversations.\n\nOrder is confirm-exists \u2192 unassign conversations \u2192 delete project so a\nmissing id is a side-effect-free 404 for unknown projects.\n\nPilot limitation (no multi-document transaction): these three steps are not\natomic. Known TOCTOU windows under concurrent writers:\n\n- delete+unassign vs assign: another request may pass `_require_project` and\n  insert/update a conversation onto this project_id after find_one succeeds\n  and before (or after) update_many, leaving an assignment to a project that\n  is about to be (or already was) deleted.\n- concurrent deletes: a second deleter may return 404 after conversations\n  were already released (idempotent for assignments).\n\nStub/fakemongo and the shared `MongoClient` in `rag/mongo.py` do not expose\nAtlas transactions; this pilot does not claim strict referential integrity\nunder concurrency. See #142.",
+        "description": "Delete a project and release its conversations.\n\nOn a transaction-capable backend, project deletion and conversation\nunassignment commit atomically. FakeMongo keeps the existing sequential\nbehavior and does not claim transactional referential integrity.",
         "operationId": "delete_project_api_projects__project_id__delete",
         "parameters": [
           {
@@ -1322,6 +1349,67 @@
           }
         ],
         "summary": "Delete Project"
+      }
+    },
+    "/api/reports/gaps": {
+      "get": {
+        "description": "Refused and repeated questions over the last ``days`` days, grouped by meaning.",
+        "operationId": "coverage_gaps_api_reports_gaps_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 90,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "top",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Top",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "Signed in, but not with the manager or HR password."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Coverage Gaps"
       }
     }
   }
