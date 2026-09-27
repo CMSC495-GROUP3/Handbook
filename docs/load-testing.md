@@ -5,11 +5,11 @@ users."* All numbers reproducible with the harness in `scripts/loadtest/`.
 
 These are synthetic. The model, MongoDB, and vector search are stubbed and the
 chat limiter is off, so they measure what the thread pool can sustain, not what
-a user of the deployed pilot waits. For that, see
+a user of the deployed demo site waits. For that, see
 [live-benchmark.md](releases/v0.1.0-alpha.1/live-benchmark.md), which runs
 against the deployed stack with real OpenAI and Atlas on a sample far too small
-for throughput, and [load-testing-pilot.md](load-testing-pilot.md), which loads
-the deployed pilot at a few concurrency levels with the real model. They answer
+for throughput, and [load-testing-demo.md](load-testing-demo.md), which loads
+the deployed demo site at a few concurrency levels with the real model. They answer
 different questions and none substitutes for the others.
 
 ## Defining the target
@@ -307,8 +307,11 @@ A result document is capped at 16 MB, so the full list fails at roughly
 #296 capped the list at 1,000 ids per wording (`WORDING_SESSION_SAMPLE`) with
 the exact `session_count` beside it. A merged group reports the larger of the
 union and its biggest wording's count: exact below the cap, a lower bound
-above it. #308 replaced that pipeline with the per-day rollup below, which keeps
-the same 1,000-id cap per wording as `ROLLUP_SESSION_SAMPLE`.
+above it. #308 replaced that pipeline with the per-day rollup below. It keeps
+at most 1,000 ids per question per day (`ROLLUP_SESSION_SAMPLE`), and the
+route reads ids only for wordings with at most 1,000 conversations in the
+window, so the union is exact there; a bigger wording's exact count is the
+floor.
 
 ### Reproducing
 
@@ -350,7 +353,7 @@ Measured on the same local `mongo:7` container as above (7.0.43, Apple M3,
 `scripts/loadtest/rollup_timing.py` seeds `query_log_daily` directly at 7M
 asks a day for 90 days: one hot question with 1% of the asks, the rest spread
 over N other questions a day, 80% of which come back every day. Distinct
-questions a day is a flag because the pilot has not measured it. Times are
+questions a day is a flag because the demo site has not measured it. Times are
 medians of five runs unless noted.
 
 **The rollup alone was not enough.** At 50k questions a day, the rollup's
@@ -394,9 +397,12 @@ What this says:
 - **The refresh costs about 56 s of database time every five minutes at 200k
   questions a day**, about a fifth of the interval. Each window stops at
   `REFRESH_TIMEOUT_MS` (120 s), and the lease is held long enough to cover
-  all three at that limit, so two workers never refresh at once.
-- **Counts on the page are up to one interval old.** `until` in the response
-  says when the snapshot was taken.
+  all three windows at their limits: each window's aggregation, and its
+  sample-text lookups together, are bounded by that timeout, so two workers
+  never refresh at once.
+- **Counts on the page are normally up to one interval old**, and never more
+  than three: past that the route computes the window live. `until` in the
+  response says when the snapshot was taken.
 
 **Not measured on Atlas.** The seed writes about 30 GB, which does not belong
 in the production cluster, so these runs used the local container. Point

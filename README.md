@@ -6,14 +6,15 @@
 
 <p align="center">
   Answers employee questions about company policy and cites the document each answer came from.<br>
-  When the documents do not cover a question, it says so and hands the question to a person.
+  When the documents do not cover a question, it says so and hands the question to a person.<br>
+  A CMSC 495 capstone project, built for Meridian Systems, a fictional company.
 </p>
 
 <p align="center">
   <a href="https://github.com/CMSC495-GROUP3/Sourcebook/actions/workflows/ci.yml"><img src="https://github.com/CMSC495-GROUP3/Sourcebook/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
   <a href="https://github.com/CMSC495-GROUP3/Sourcebook/actions/workflows/security.yml"><img src="https://github.com/CMSC495-GROUP3/Sourcebook/actions/workflows/security.yml/badge.svg?branch=main" alt="Security"></a>
   <a href="https://github.com/CMSC495-GROUP3/Sourcebook/releases"><img src="https://img.shields.io/github/v/release/CMSC495-GROUP3/Sourcebook?include_prereleases&sort=semver&label=release" alt="Latest release"></a>
-  <a href="https://sourcebook.duckdns.org"><img src="https://img.shields.io/website?url=https%3A%2F%2Fsourcebook.duckdns.org&label=pilot%20site&up_message=up&down_message=down" alt="Pilot site status"></a>
+  <a href="https://sourcebook.duckdns.org"><img src="https://img.shields.io/website?url=https%3A%2F%2Fsourcebook.duckdns.org&label=demo%20site&up_message=up&down_message=down" alt="Demo site status"></a>
   <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff"></a>
   <img src="https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-3776ab" alt="Python 3.11 to 3.14">
   <img src="https://img.shields.io/badge/react-19-007ec6" alt="React 19">
@@ -21,7 +22,7 @@
 </p>
 
 <p align="center">
-  <a href="https://sourcebook.duckdns.org">Pilot site</a> ·
+  <a href="https://sourcebook.duckdns.org">Demo site</a> ·
   <a href="#start-here">Start here</a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="docs/architecture.md">How it works</a> ·
@@ -35,12 +36,11 @@
 
 | You are | Read first | Then |
 | --- | --- | --- |
-| Grading or evaluating the project | This page, from [The problem](#the-problem) through [Evidence](#evidence) | the `v1.0.0` [handoff](docs/releases/v1.0.0/handoff.md) and [portfolio](docs/releases/v1.0.0/portfolio.md), [quality.md](docs/quality.md), [evaluation.md](docs/evaluation.md) |
-| An employee, a manager, or in Human Resources | the [pilot site](https://sourcebook.duckdns.org) and the [user guide](docs/user-guide.md) | the user guide's HR Requests and What People Ask sections |
+| Grading or evaluating the project | This page, from [The problem](#the-problem) through [Evidence](#evidence) | the [demo site](https://sourcebook.duckdns.org) with the [user guide](docs/user-guide.md), the `v1.0.0` [handoff](docs/releases/v1.0.0/handoff.md) and [portfolio](docs/releases/v1.0.0/portfolio.md), [quality.md](docs/quality.md), [evaluation.md](docs/evaluation.md) |
 | Running or deploying it | [docs/install.md](docs/install.md) | [docs/ci-cd.md](docs/ci-cd.md) for the deploy pipeline, [docs/evaluation.md](docs/evaluation.md) to measure it |
 | Changing the code | [Quick start](#quick-start), then [CONTRIBUTING.md](CONTRIBUTING.md) | [docs/architecture.md](docs/architecture.md), [docs/api.md](docs/api.md), [docs/design.md](docs/design.md) |
 
-Every page under `docs/` is listed, grouped the same way, in
+Every page under `docs/` is listed, grouped by task, in
 [docs/README.md](docs/README.md).
 
 ## What it does
@@ -192,17 +192,18 @@ generation.
 ## Evidence
 
 The `v1.0.0` release was tagged on 2026-09-27. Its figures come from the
-release candidate `7d3c779`, and every number links to a committed file or a
-workflow run in the [shared evidence sheet](docs/releases/v1.0.0/evidence/numbers.md).
+release candidate `7d3c779`. Each row links its source, and all but the
+stubbed throughput figures are also in the
+[shared evidence sheet](docs/releases/v1.0.0/evidence/numbers.md).
 
 | What | Result | Where |
 | --- | --- | --- |
 | Answer quality, 20-case smoke tier | 100% recall@5, citation correctness, and grounded answers; 100% refusal of unsupported questions and prompt injection | [live evaluation](docs/releases/v1.0.0/live-evaluation.md) |
 | Answer quality, 59-case full tier | 95.9% (47 of 49) recall@5, citation correctness, and grounded answers; 100% of 4 unsupported and 3 injection cases refused | [live evaluation](docs/releases/v1.0.0/live-evaluation.md) |
-| Latency on the pilot | first token 1.18 s at p50; generated answers 3.3 s at most; refusals 0.05 s at most | [live benchmark](docs/releases/v1.0.0/live-benchmark.md) |
-| Load on the pilot | 0 errors at 5, 10, and 20 concurrent users; at 40, 33 requests failed on the OpenAI rate limit and the app's own provider cap | [pilot load run](docs/load-testing-pilot.md) |
+| Latency on the demo site | first token 1.18 s at p50; generated answers 3.3 s at most; refusals 0.05 s at most | [live benchmark](docs/releases/v1.0.0/live-benchmark.md) |
+| Load on the demo site | 0 errors at 5, 10, and 20 concurrent users; at 40, 33 requests failed on the OpenAI rate limit and the app's own provider cap | [demo-site load run](docs/load-testing-demo.md) |
 | Throughput, model stubbed | 14.9 req/s on the default thread pool, 98.7 req/s at 320 threads, against an 83 req/s target | [load-testing.md](docs/load-testing.md) |
-| Test coverage | Python 93%; web 92% of statements | [coverage](docs/releases/v1.0.0/evidence/coverage.md) |
+| Test coverage | Python 93%; web 92% of statements in the files `web/vitest.config.ts` lists, not all of `web/src` | [coverage](docs/releases/v1.0.0/evidence/coverage.md) |
 | Accessibility and performance | Lighthouse accessibility 100 in both themes | [Lighthouse](docs/releases/v1.0.0/evidence/lighthouse.md) |
 
 The [handoff](docs/releases/v1.0.0/handoff.md) says what the release does and
@@ -227,7 +228,7 @@ Open <http://localhost:5173> and sign in with the password `dev`. Sign in with
 is canned in this mode, so use it to see the UI and the refusal path
 (`make stub REFUSE=1`), not to judge retrieval quality.
 
-The pilot at <https://sourcebook.duckdns.org> runs against the real services.
+The demo site at <https://sourcebook.duckdns.org> runs against the real services.
 Sign in with the shared password; ask the team for it. The instance is not
 hosted around the clock, so a connection timeout means it is off, not broken.
 
@@ -248,7 +249,7 @@ has the full text.
   pages; there is no visual regression or full browser suite.
 - **Document search uses `$regex`**, which does not use an index. Fine at this
   corpus size.
-- **JWTs live in browser local storage.** Acceptable for an internal pilot
+- **JWTs live in browser local storage.** Acceptable for a class demo
   behind shared credentials.
 - **Conversations belong to a browser, not a person**
   ([#290](https://github.com/CMSC495-GROUP3/Sourcebook/issues/290)). Clearing

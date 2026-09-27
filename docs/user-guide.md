@@ -1,5 +1,10 @@
 # User guide
 
+Sourcebook is a CMSC 495 capstone project. Meridian Systems, its employees,
+and its policies are fictional, and this guide walks through the app in the
+roles it was designed for: an employee asking questions, Human Resources, and
+a manager.
+
 How to use Sourcebook: asking a policy question, checking where the answer came
 from, and handing a question to Human Resources when Sourcebook can't answer
 it. The last two parts are for Human Resources and managers: working those
@@ -19,12 +24,12 @@ refusal wording. Provenance is in
 
 ## Sign in
 
-Open the pilot at <https://sourcebook.duckdns.org>. If you're running it
+Open the demo site at <https://sourcebook.duckdns.org>. If you're running it
 locally with the stub, the address is <http://localhost:5173> and the password
 is `dev` (`manager` for a manager, `hr` for Human Resources).
 
-Sourcebook uses a shared password, not personal accounts. Ask Human
-Resources for it, type it in **Password**, and select **Sign in**.
+Sourcebook uses a shared password, not personal accounts. The team gives it
+out on request. Type it in **Password** and select **Sign in**.
 
 Two other passwords open more. Each does everything the shared password does:
 
@@ -249,9 +254,9 @@ password. It shows what employees asked Sourcebook, so Human Resources can see
 which policies to write or make clearer, and managers can see what to cover in
 training and orientation before new hires have to ask.
 
-The page lists questions as employees typed them. It doesn't say who asked,
-but a question can still identify someone, so keep what you read there inside
-Human Resources.
+The page lists questions as they were typed. It doesn't say who asked, but a
+question can still identify someone, which is why the app shows managers only
+questions several conversations asked (see **What a manager sees** below).
 
 Choose **7 days**, **30 days**, or **90 days** at the top. The first line
 counts how many questions in that window had no policy to answer them, and

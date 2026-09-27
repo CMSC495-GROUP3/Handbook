@@ -20,7 +20,7 @@ item, with no regression. Every answer and score sits beside this page in
 
 | Side | Commit | `PROMPT_VERSION` | What it is |
 | --- | --- | --- | --- |
-| main | `4e903828621d30deec838302b005b037e623a9e0` | `v2` | tip of `main` on 2026-09-11, the alpha candidate, deployed on the pilot |
+| main | `4e903828621d30deec838302b005b037e623a9e0` | `v2` | tip of `main` on 2026-09-11, the alpha candidate, deployed on the demo site |
 | baseline | `9871e3ed2faa798cc21d237b421c7ac68963a9a2` | `v1` | the last `main` before PR #138, named as the baseline on #137 |
 
 The dataset is `evaluation/questions.json`, identical on both commits, SHA-256
@@ -29,7 +29,7 @@ The dataset is `evaluation/questions.json`, identical on both commits, SHA-256
 
 ## How it was run
 
-On the pilot host, with the `.env`, provider, and Atlas vector index the
+On the demo host, with the `.env`, provider, and Atlas vector index the
 deployed app uses, through `sourcebook.rag.evaluation`, which is the
 same runner the Live evaluation workflow calls. It runs in-process rather than
 through the deployed API, so it pays for retrieval and one answer call per

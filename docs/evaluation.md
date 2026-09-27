@@ -81,7 +81,7 @@ reason, and the key pair alone authenticates the call.
 The key's role bounds what a leaked pair can do. `ATLAS_PUBLIC_KEY` and
 `ATLAS_PRIVATE_KEY` belong to a key holding only "Project IP Access List
 Admin". Someone with both could add an address to the cluster access list, or
-delete the pilot host's entry and take the deployed site down. Neither reads a
+delete the demo host's entry and take the deployed site down. Neither reads a
 document. That needs the credentials in `MONGODB_URI`, whose user must be
 read-only on the corpus database.
 

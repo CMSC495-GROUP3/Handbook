@@ -1,17 +1,17 @@
-# auto-deploy.service journal on the pilot host, 2026-09-27, the deploy of the v1.0.0 candidate 7d3c779
+# auto-deploy.service journal on the demo host, 2026-09-27, the deploy of the v1.0.0 candidate 7d3c779
 # From: journalctl -u auto-deploy.service -o short-iso, 14:09:58 to 14:10:06 UTC.
-# Sanitized: the host name is replaced with pilot-host, and BuildKit step lines (#N ...) are left out. Nothing else is changed.
-2026-09-27T14:09:58+00:00 pilot-host systemd[1]: Starting auto-deploy.service - Pull upstream main and rebuild changed services...
-2026-09-27T14:09:58+00:00 pilot-host auto_deploy.sh[989970]: deploy 95db28f -> 7d3c779: api
-2026-09-27T14:09:59+00:00 pilot-host auto_deploy.sh[990008]:  Image cmsc495-cap-api Building
-2026-09-27T14:09:59+00:00 pilot-host auto_deploy.sh[990008]:  Image cmsc495-cap-api Built
-2026-09-27T14:10:00+00:00 pilot-host auto_deploy.sh[990069]:  Container cmsc495-cap-api-1 Recreate
-2026-09-27T14:10:02+00:00 pilot-host auto_deploy.sh[990069]:  Container cmsc495-cap-api-1 Recreated
-2026-09-27T14:10:02+00:00 pilot-host auto_deploy.sh[990069]:  Container cmsc495-cap-api-1 Starting
-2026-09-27T14:10:02+00:00 pilot-host auto_deploy.sh[990069]:  Container cmsc495-cap-api-1 Started
-2026-09-27T14:10:05+00:00 pilot-host auto_deploy.sh[990349]: NAME                  IMAGE             COMMAND                  SERVICE   CREATED          STATUS          PORTS
-2026-09-27T14:10:05+00:00 pilot-host auto_deploy.sh[990349]: cmsc495-cap-api-1     cmsc495-cap-api   "uvicorn sourcebook.…"   api       5 seconds ago    Up 2 seconds    8000/tcp
-2026-09-27T14:10:05+00:00 pilot-host auto_deploy.sh[990349]: cmsc495-cap-caddy-1   caddy:2-alpine    "caddy run --config …"   caddy     3 weeks ago      Up 3 weeks      0.0.0.0:80->80/tcp, [::]:80->80/tcp, 0.0.0.0:443->443/tcp, [::]:443->443/tcp, 443/udp, 2019/tcp
-2026-09-27T14:10:05+00:00 pilot-host auto_deploy.sh[990349]: cmsc495-cap-web-1     cmsc495-cap-web   "/docker-entrypoint.…"   web       20 minutes ago   Up 20 minutes   80/tcp
-2026-09-27T14:10:05+00:00 pilot-host systemd[1]: auto-deploy.service: Deactivated successfully.
-2026-09-27T14:10:05+00:00 pilot-host systemd[1]: Finished auto-deploy.service - Pull upstream main and rebuild changed services.
+# Sanitized: the host name is replaced with demo-host, and BuildKit step lines (#N ...) are left out. Nothing else is changed.
+2026-09-27T14:09:58+00:00 demo-host systemd[1]: Starting auto-deploy.service - Pull upstream main and rebuild changed services...
+2026-09-27T14:09:58+00:00 demo-host auto_deploy.sh[989970]: deploy 95db28f -> 7d3c779: api
+2026-09-27T14:09:59+00:00 demo-host auto_deploy.sh[990008]:  Image cmsc495-cap-api Building
+2026-09-27T14:09:59+00:00 demo-host auto_deploy.sh[990008]:  Image cmsc495-cap-api Built
+2026-09-27T14:10:00+00:00 demo-host auto_deploy.sh[990069]:  Container cmsc495-cap-api-1 Recreate
+2026-09-27T14:10:02+00:00 demo-host auto_deploy.sh[990069]:  Container cmsc495-cap-api-1 Recreated
+2026-09-27T14:10:02+00:00 demo-host auto_deploy.sh[990069]:  Container cmsc495-cap-api-1 Starting
+2026-09-27T14:10:02+00:00 demo-host auto_deploy.sh[990069]:  Container cmsc495-cap-api-1 Started
+2026-09-27T14:10:05+00:00 demo-host auto_deploy.sh[990349]: NAME                  IMAGE             COMMAND                  SERVICE   CREATED          STATUS          PORTS
+2026-09-27T14:10:05+00:00 demo-host auto_deploy.sh[990349]: cmsc495-cap-api-1     cmsc495-cap-api   "uvicorn sourcebook.…"   api       5 seconds ago    Up 2 seconds    8000/tcp
+2026-09-27T14:10:05+00:00 demo-host auto_deploy.sh[990349]: cmsc495-cap-caddy-1   caddy:2-alpine    "caddy run --config …"   caddy     3 weeks ago      Up 3 weeks      0.0.0.0:80->80/tcp, [::]:80->80/tcp, 0.0.0.0:443->443/tcp, [::]:443->443/tcp, 443/udp, 2019/tcp
+2026-09-27T14:10:05+00:00 demo-host auto_deploy.sh[990349]: cmsc495-cap-web-1     cmsc495-cap-web   "/docker-entrypoint.…"   web       20 minutes ago   Up 20 minutes   80/tcp
+2026-09-27T14:10:05+00:00 demo-host systemd[1]: auto-deploy.service: Deactivated successfully.
+2026-09-27T14:10:05+00:00 demo-host systemd[1]: Finished auto-deploy.service - Pull upstream main and rebuild changed services.

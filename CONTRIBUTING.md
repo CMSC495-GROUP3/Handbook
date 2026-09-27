@@ -229,16 +229,18 @@ sourcebook/   the Python application, one package, absolute imports only
     seed_documents.py, embed_documents.py   offline ingestion
 web/                React 19, TypeScript, Tailwind 4, Vite; served by Nginx
 tests/              pytest suite; conftest.py stubs every external service
-scripts/            auto_deploy.sh and its systemd units, deploy.sh, audit.sh, the
+scripts/            auto_deploy.sh and the deploy and prune systemd units, deploy.sh, audit.sh, the
                     proxy-chain acceptance test, the live evaluation gate and its
                     synthetic test, purge_ownerless_conversations.py,
-                    measure_question_groups.py, the Lighthouse runner in lighthouse/,
-                    and the load-test harness in loadtest/
-evaluation/         smoke (20) and full-corpus labeled questions plus scoring notes
+                    measure_question_groups.py, export_openapi.py,
+                    migrate_passage_index.py, atlas_access_list.sh, the Lighthouse
+                    runner in lighthouse/, and the load-test harness in loadtest/
+evaluation/         smoke (20) and full-corpus labeled questions, the question-pair set
+                    for What People Ask grouping, and scoring notes
 data/               42 fictional sample policies
 docs/               install, user-guide, architecture, api, design, evaluation, load-testing,
-                    load-testing-pilot, ci-cd, quality, and team pages,
-                    and one folder per release under releases/ with its handoff, notes,
+                    load-testing-demo, ci-cd, quality, and team pages, the README.md
+                    index, the committed openapi.json, and one folder per release under releases/ with its handoff, notes,
                     measurements, and evidence
 assets/brand/       the Sourcebook mark, source PNGs; web/public/ holds the served copies
 requirements/       *.in are pip-compile inputs (base is shared; api is the Docker image; ingest;
@@ -246,7 +248,7 @@ requirements/       *.in are pip-compile inputs (base is shared; api is the Dock
 pyproject.toml      ruff and pytest settings
 Makefile            setup, stub, web, test, lint, build, compose; `make` lists them
 Dockerfile          the API image; web/ has its own
-docker-compose.yml  caddy, web, api
+docker-compose.yml  caddy, web, api; docker-compose.acceptance.yml overrides it for make acceptance
 Caddyfile           TLS termination and reverse proxy in front of Nginx
 .env.example        every setting, with a comment on each
 .github/            CI, Security, PR checks, PR path labels, and Live evaluation workflows; templates; Dependabot; CODEOWNERS

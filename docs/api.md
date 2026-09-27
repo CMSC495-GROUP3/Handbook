@@ -402,7 +402,7 @@ per-day rollup kept as each ask is logged, not from the raw rows (#291).
 
 The page's windows, 7, 30, and 90 days, are read from snapshots that the API
 refreshes in the background every `REPORT_REFRESH_SECONDS` (default 300), so
-their counts can be up to that old. `until` in the response is when the
+their counts are normally up to that old and never more than three intervals. `until` in the response is when the
 snapshot was taken, and `since` is the UTC midnight its window starts at. Any
 other `days`, or a window whose snapshot is missing or more than three
 intervals old, is computed when it is asked for.

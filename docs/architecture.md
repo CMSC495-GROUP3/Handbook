@@ -3,7 +3,7 @@
 The design behind the [README](../README.md)'s summary: how a question becomes
 an answer or a refusal, the four risks the design had to answer and where each
 answer lives in the code, what the query log is for, and the limits of the
-pilot in full. To run it, read [install.md](install.md). For the HTTP
+class demo in full. To run it, read [install.md](install.md). For the HTTP
 contract, read [api.md](api.md).
 
 ## Client identity across the proxies
@@ -204,7 +204,7 @@ ingestion script uses, at 1536 doubles per vector:
 
 An earlier 11-document corpus measured 0.55 MB in Atlas against 0.58 MB by the
 same arithmetic, so the estimate is close. Storage is not the binding
-constraint at pilot scale; a corpus a hundred times larger still fits. The real
+constraint at demo scale; a corpus a hundred times larger still fits. The real
 costs are per-query embedding and generation calls, which is the other reason
 the grounding gate runs before generation. Hosting adds one EC2 instance. The
 DNS name is a free DuckDNS subdomain and the certificate comes from Let's
@@ -252,7 +252,7 @@ rows themselves; it and the one-time rollup backfill are in
 [install.md § Maintenance on the host](install.md#maintenance-on-the-host).
 
 This is deliberately not fine-tuning. Retraining on interaction data would
-contradict the reason RAG was chosen, and no pilot produces the volume it would
+contradict the reason RAG was chosen, and no class demo produces the volume it would
 need. Improving what gets retrieved, and knowing what to write next, delivers
 the same intent at none of that cost.
 
@@ -287,7 +287,7 @@ in one line each.
 
 - **Authentication is shared passwords**: the shared one, an optional second,
   and one each for Human Resources and managers. There are no per-employee
-  accounts. Fine for a pilot. It is the first thing to change before a real
+  accounts. Fine for a class demo. It is the first thing to change before a real
   deployment.
 - **The similarity threshold is untuned** against a real corpus. On the sample
   corpus it does not separate covered questions from uncovered ones on nearby
@@ -304,7 +304,7 @@ in one line each.
   work.
 - **Document search uses `$regex`**, which does not use an index. Fine at this
   corpus size. Move to Atlas Search if the library grows large.
-- **JWTs live in browser local storage.** Acceptable for an internal pilot
+- **JWTs live in browser local storage.** Acceptable for a class demo
   behind shared credentials, not for a multi-user security model.
 - **Conversations belong to a browser, not a person.** There is no per-user
   sign-in, so the owner of a conversation is a random id the browser keeps in
@@ -320,7 +320,7 @@ in one line each.
   `sourcebook/rag/mongo.py`.
 - **Re-ingestion is not atomic.** Passages are upserted one at a time, so for a
   few seconds a document whose chunk boundaries moved can be retrieved with an
-  old chunk and its replacement side by side. Acceptable for a pilot; a staged
+  old chunk and its replacement side by side. Acceptable for a class demo; a staged
   collection swap would close the window. The reading copy of
   a document is written right after its passages, so for the same moment its
   body can be one version behind them, and an ingestion killed mid-run leaves

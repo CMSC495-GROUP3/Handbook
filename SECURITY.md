@@ -10,11 +10,11 @@ you think the impact is. A maintainer will reply on the advisory thread.
 
 ## What counts
 
-This is a pilot internal tool with a shared password (optionally a second one,
-plus a Human Resources password that alone opens HR Requests and a manager
-password that opens What People Ask), a JWT session,
-and a policy corpus that is not confidential in the sample data but would be
-in a real deployment. Reports we want:
+Sourcebook is a CMSC 495 capstone project running as a class demo, with a
+fictional company's policies. It has a shared password (optionally a second
+one, plus a Human Resources password that alone opens HR Requests and a
+manager password that opens What People Ask) and a JWT session. Reports we
+want:
 
 - Authentication or rate-limit bypass on any `/api` route
 - Reading another session's conversation, escalation, or cached answer

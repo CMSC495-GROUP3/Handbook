@@ -1,4 +1,4 @@
-# Pilot host (EC2) uptime, pulled 2026-09-27 at about 20:00 UTC
+# Demo host (EC2) uptime, pulled 2026-09-27 at about 20:00 UTC
 # From: uptime -s, and journalctl --list-boots -o short-iso. Boot IDs are systemd's random per-boot ids.
 # This is the host, not the site. Nothing outside the host monitored the site, so availability is not measured.
 $ uptime -s

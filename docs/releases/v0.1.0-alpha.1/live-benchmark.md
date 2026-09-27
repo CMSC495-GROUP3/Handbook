@@ -1,16 +1,16 @@
 # Alpha performance benchmark against the real services
 
-Unit 5 asks whether the pilot meets minimum acceptable performance. The
+Unit 5 asks whether the demo site meets minimum acceptable performance. The
 existing [load-test results](../../load-testing.md) answer a
 different question. They ran on a laptop with a fake model, an in-memory
 database, canned retrieval, and the chat limiter switched off, and they measure
-what the thread pool can sustain. This page covers the deployed pilot with
+what the thread pool can sustain. This page covers the deployed demo site with
 OpenAI, Atlas, Caddy, Nginx, rate limits, and provider bounds all on, on a
 sample small enough to stay within a few cents. Tracking issue:
 [#183](https://github.com/CMSC495-GROUP3/Sourcebook/issues/183).
 
 Status on 2026-09-10: **run performed, every target met.** The operator
-agreed the targets, then ran the workload against the deployed pilot. The
+agreed the targets, then ran the workload against the deployed demo site. The
 numbers, the settings in force, and the limitations are in
 [Results](#results) below, and the sanitized JSON sits beside this page in
 `live-benchmark-results.json`.
@@ -70,7 +70,7 @@ for the run; if the burst trips the limiter, the 429s are the result.
 ## Targets
 
 The deployment operator agreed these before the run, unchanged from the set
-PR #186 proposed. They describe what a pilot user should find acceptable, not
+PR #186 proposed. They describe what a demo-site user should find acceptable, not
 the 10,000-user requirement, which a run this size cannot address.
 
 | Target | Limit | Reasoning |
@@ -94,7 +94,7 @@ From any machine with the repository's virtualenv. The client's network adds
 to every number, so record where it ran.
 
 ```bash
-BENCH_PASSWORD='the pilot password' ./.venv/bin/python scripts/loadtest/live_benchmark.py \
+BENCH_PASSWORD='the demo password' ./.venv/bin/python scripts/loadtest/live_benchmark.py \
   --url https://sourcebook.duckdns.org \
   --deployed-sha "$(ssh ubuntu@sourcebook.duckdns.org git -C CMSC495-CAP rev-parse refs/deployed/main)" \
   --client-location 'home, Maryland' \
@@ -218,7 +218,7 @@ measurement would differ by less than a cent.
 A passing run shows that the deployed path works end to end for a single
 user and a burst of three, within the agreed limits, on that day. It says
 nothing about 10,000 concurrent users. That claim rests on the synthetic
-measurements in load-testing.md plus the caveats listed there, and a pilot run of
+measurements in load-testing.md plus the caveats listed there, and a demo-site run of
 this size does not change it either way. The handoff page records the
 original requirement, the synthetic evidence, this run, and the gap between
 them without redefining the requirement.

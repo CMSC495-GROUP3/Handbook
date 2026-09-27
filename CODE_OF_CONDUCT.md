@@ -10,7 +10,7 @@ specific to how this project actually runs.
 
 The GitHub repository (issues, pull requests, reviews, discussions, commit
 messages), the team's Discord server, the course classroom, and any place
-someone is speaking for the project, such as the pilot site or a class
+someone is speaking for the project, such as the demo site or a class
 presentation. It applies to the seven members.
 
 ## What we expect
@@ -55,10 +55,10 @@ review. A PR description that says an agent drafted part of it is normal. A
 PR the author cannot answer questions about is a problem regardless of who or
 what wrote it.
 
-**Escalations from the pilot.** The app forwards real questions from real
-people to Human Resources. Content in escalation records, logs, and the
-evaluation set is handled as confidential. It does not go in screenshots,
-issues, or chat.
+**What people type on the demo site.** Escalation records and logs hold what
+teammates, testers, and graders typed, which can be personal even on a
+fictional company's app. Keep it out of screenshots, issues, and chat unless
+it is test text or blurred.
 
 ## What is not acceptable
 

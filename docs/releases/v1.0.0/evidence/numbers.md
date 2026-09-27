@@ -110,7 +110,7 @@ The alpha folder moved from `docs/alpha/` to `docs/releases/v0.1.0-alpha.1/`
 after the tag. The tagged links above point at the files as tagged; the
 figures are the same in both places.
 
-## Live benchmark against the pilot
+## Live benchmark against the demo site
 
 The same bounded workload each time: at most 8 requests, a burst of 3, from
 one operator's laptop. It checks that the deployed path works for one user
@@ -129,12 +129,12 @@ and a small burst. It is not a load test.
 The beta's and the final's refusal steps were refused at the cosine gate, so
 no run times a refusal by the coverage judge. Seven requests are too few for percentiles.
 
-## Load, Lighthouse, and the deployed pilot
+## Load, Lighthouse, and the deployed demo site
 
 | Figure | Value | Source |
 | --- | --- | --- |
-| Pilot load run: req/s, p50/p95 time to first token, errors, host CPU/memory | 5 / 10 / 20 concurrent: 0 errors, 1.11 / 4.44 / 8.86 req/s, first token p50 3.94 / 1.43 / 1.46 s and p95 4.09 / 1.73 / 1.68 s. 40 concurrent: 33 of 40 failed (20 OpenAI 30k TPM limit, 13 provider bound 503). API CPU peak 80%, memory 138 MiB, load 0.60 | [load-testing-pilot.md § Results](../../../load-testing-pilot.md#results), [pilot-load.json](pilot-load.json), run `3eac2646` on 2026-09-27 against code identical to `7d3c779`. Not measured at the beta: "The deployed system has not been load-tested" ([beta release notes](https://github.com/CMSC495-GROUP3/Sourcebook/blob/v0.2.0/docs/releases/v0.2.0/release-notes.md#what-this-beta-does-not-establish)) |
-| Synthetic load figures (not the pilot) | Generated answers saturate at 14.9 req/s on the default 40-thread pool; the refusal path reaches about 700 req/s. Model faked, database in memory, chat limiter off | [docs/load-testing.md](../../../load-testing.md). Do not cite these as the deployed system's capacity |
+| Demo-site load run: req/s, p50/p95 time to first token, errors, host CPU/memory | 5 / 10 / 20 concurrent: 0 errors, 1.11 / 4.44 / 8.86 req/s, first token p50 3.94 / 1.43 / 1.46 s and p95 4.09 / 1.73 / 1.68 s. 40 concurrent: 33 of 40 failed (20 OpenAI 30k TPM limit, 13 provider bound 503). API CPU peak 80%, memory 138 MiB, load 0.60 | [load-testing-demo.md § Results](../../../load-testing-demo.md#results), [pilot-load.json](pilot-load.json), run `3eac2646` on 2026-09-27 against code identical to `7d3c779`. Not measured at the beta: "The deployed system has not been load-tested" ([beta release notes](https://github.com/CMSC495-GROUP3/Sourcebook/blob/v0.2.0/docs/releases/v0.2.0/release-notes.md#what-this-beta-does-not-establish)) |
+| Synthetic load figures (not the demo site) | Generated answers saturate at 14.9 req/s on the default 40-thread pool; the refusal path reaches about 700 req/s. Model faked, database in memory, chat limiter off | [docs/load-testing.md](../../../load-testing.md). Do not cite these as the deployed system's capacity |
 | Lighthouse, light theme (phone and desktop) | Performance 87, 92, 89 on mobile (chat, document, sign-in) and 100 on desktop; accessibility 100; best practices 100; SEO 91 | [lighthouse.md](lighthouse.md), Lighthouse 13.5.0 on `7d3c779`, 2026-09-27. Not measured at the beta ([beta handoff](https://github.com/CMSC495-GROUP3/Sourcebook/blob/v0.2.0/docs/releases/v0.2.0/handoff.md#what-this-beta-does-not-establish)) |
 | Lighthouse, dark theme (phone and desktop) | Performance 91, 91, 96 on mobile (chat, document, sign-in) and 100 on desktop; accessibility 100; best practices 100; SEO 91 | Same run. SEO loses 9 points on `robots-txt` only |
 | Deployed uptime | Host: up without a reboot from 2026-09-02 03:35 UTC, before the alpha, through the `v1.0.0` tag and after. Site availability: not measured, since nothing outside the host monitored it. Each deploy that rebuilt the API (25 of the 74 below) restarted its container for a few seconds | [host-uptime.txt](host-uptime.txt), `uptime -s` and `journalctl --list-boots` on the host |
