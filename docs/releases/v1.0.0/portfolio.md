@@ -35,12 +35,12 @@ Stakeholder video: Pending, linked after upload
 | README | [README.md](../../../README.md) | release row and video link, written after the tag |
 | API documentation | [docs/api.md](../../api.md), [docs/openapi.json](../../openapi.json) | CI fails when the committed OpenAPI document is stale |
 | Installation guide | [docs/install.md](../../install.md) | none needed |
-| User manual | `docs/user-guide.md` (Pending, [#206](https://github.com/CMSC495-GROUP3/Sourcebook/issues/206)) | screenshots from the final browser pass |
+| User manual | [docs/user-guide.md](../../user-guide.md) ([#206](https://github.com/CMSC495-GROUP3/Sourcebook/issues/206)) | screenshots from the final browser pass in [evidence/](evidence/README.md) |
 | Code reviews | [docs/quality.md](../../quality.md): CODEOWNERS rule, PR checks, review counts, and threads where review changed the code | counts refreshed at the freeze |
 | Coverage | [evidence/coverage.md](evidence/coverage.md): Python and web, with the CI run | copied from the final commit's coverage artifacts ([#210](https://github.com/CMSC495-GROUP3/Sourcebook/issues/210)) |
 | Performance benchmarks | [live-benchmark.md](live-benchmark.md); synthetic [docs/load-testing.md](../../load-testing.md) | bounded real-service run; load run against the pilot, [docs/load-testing-pilot.md](../../load-testing-pilot.md) ([#212](https://github.com/CMSC495-GROUP3/Sourcebook/issues/212)); Lighthouse in [docs/quality.md](../../quality.md) ([#214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214)) |
 | Collaboration evidence | [docs/quality.md](../../quality.md); the pull requests and reviews on GitHub | totals in [evidence/numbers.md](evidence/numbers.md) |
-| Individual contributions | `docs/team.md` (Pending, [#209](https://github.com/CMSC495-GROUP3/Sourcebook/issues/209)); README [Team](../../../README.md#team) | each member confirmed their own row |
+| Individual contributions | [docs/team.md](../../team.md) ([#209](https://github.com/CMSC495-GROUP3/Sourcebook/issues/209)); README [Team](../../../README.md#team) | five of seven members confirmed their own row; Gavin's and Dominick's are marked unconfirmed |
 
 ## What the release does not establish
 

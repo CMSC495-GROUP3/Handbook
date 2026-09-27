@@ -98,8 +98,8 @@ make setup && make stub     # then, in a second terminal
 make web
 ```
 
-**Setup and usage** are in [docs/install.md](../../install.md), the user guide
-(Pending, #259), and the [README](../../../README.md).
+**Setup and usage** are in [docs/install.md](../../install.md), the
+[user guide](../../user-guide.md), and the [README](../../../README.md).
 
 ## Known defects
 
