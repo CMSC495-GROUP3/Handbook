@@ -14,6 +14,8 @@ import copy
 import itertools
 from typing import Any
 
+from pymongo.errors import DuplicateKeyError
+
 
 def _matches(doc: dict, query: dict) -> bool:
     """Support the handful of query forms used in this codebase."""
@@ -91,7 +93,11 @@ def _apply_update(doc: dict, update: dict, inserted: bool) -> None:
     for field, value in update.get("$inc", {}).items():
         doc[field] = doc.get(field, 0) + value
     for field, spec in update.get("$push", {}).items():
-        doc.setdefault(field, []).extend(spec.get("$each", [spec]))
+        values = spec["$each"] if isinstance(spec, dict) and "$each" in spec else [spec]
+        doc.setdefault(field, []).extend(values)
+        if isinstance(spec, dict) and "$slice" in spec:
+            # A positive $slice keeps the first n, the only form used here.
+            doc[field] = doc[field][: spec["$slice"]]
     if inserted:
         for field, value in update.get("$setOnInsert", {}).items():
             doc.setdefault(field, value)
@@ -224,7 +230,7 @@ class FakeCollection:
                 return _project(doc, projection)
         return None
 
-    def find(self, query: dict | None = None, projection: dict | None = None):
+    def find(self, query: dict | None = None, projection: dict | None = None, **kwargs):
         return _Cursor([_project(d, projection) for d in self._docs if _matches(d, query or {})])
 
     def count_documents(self, query: dict, **kwargs) -> int:
@@ -237,6 +243,10 @@ class FakeCollection:
     def insert_one(self, doc: dict):
         doc = copy.deepcopy(doc)
         doc.setdefault("_id", next(self._ids))
+        # _id is unique in every Mongo collection. The report's rollup relies
+        # on this to count a conversation once (#291).
+        if any(existing["_id"] == doc["_id"] for existing in self._docs):
+            raise DuplicateKeyError(f"E11000 duplicate key error _id: {doc['_id']!r}")
         self._docs.append(doc)
         return type("R", (), {"inserted_id": doc["_id"]})()
 

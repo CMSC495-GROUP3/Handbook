@@ -10,8 +10,9 @@ from pymongo.errors import ExecutionTimeout, OperationFailure
 from scripts.loadtest.fakemongo import FakeCollection
 from sourcebook.api.routes import reports
 from sourcebook.api.routes.reports import MAX_WINDOW_DAYS
-from sourcebook.rag import query_log_reports
+from sourcebook.rag import query_log_rollup
 from sourcebook.rag.config import MANAGER_MIN_CONVERSATIONS
+from sourcebook.rag.query_log_rollup import record_ask
 
 URL = "/api/reports/gaps"
 # Each logged row is its own conversation unless a test passes session_id.
@@ -35,17 +36,25 @@ def full_ttl(monkeypatch):
 
 
 def log(question: str, *, refused: bool, age: timedelta = timedelta(hours=1), **fields) -> None:
-    """One query_logs row, shaped like analytics.log_query writes it."""
-    FAKE_DB["query_logs"].insert_one(
-        {
-            "created_at": datetime.now(UTC) - age,
-            "question_raw": question,
-            "question_condensed": question,
-            "question_hash": question.lower(),
-            "refused": refused,
-            "session_id": f"session-{next(_SESSIONS)}",
-            **fields,
-        }
+    """One ask, recorded in the rollup the report reads, as analytics.log_query does."""
+    row = {
+        "created_at": datetime.now(UTC) - age,
+        "question_raw": question,
+        "question_condensed": question,
+        "question_hash": question.lower(),
+        "refused": refused,
+        "session_id": f"session-{next(_SESSIONS)}",
+        **fields,
+    }
+    record_ask(
+        FAKE_DB[query_log_rollup.DAILY_COLLECTION],
+        FAKE_DB[query_log_rollup.SESSIONS_COLLECTION],
+        created_at=row["created_at"],
+        session_id=row["session_id"],
+        question_hash=row["question_hash"],
+        question_raw=row["question_raw"],
+        question_condensed=row["question_condensed"],
+        refused=row["refused"],
     )
 
 
@@ -240,7 +249,7 @@ def test_a_slow_report_answers_503(client, hr_auth, monkeypatch):
         calls.append(kwargs)
         raise ExecutionTimeout("operation exceeded time limit")
 
-    monkeypatch.setattr(reports.query_logs_col, "aggregate", too_slow)
+    monkeypatch.setattr(reports.query_log_daily_col, "aggregate", too_slow)
 
     response = client.get(URL, headers=hr_auth)
 
@@ -250,12 +259,12 @@ def test_a_slow_report_answers_503(client, hr_auth, monkeypatch):
 
 
 def test_a_report_over_the_memory_limit_answers_503(client, hr_auth, monkeypatch):
-    """$addToSet cannot spill, so one very common question can hit code 146 (#291)."""
+    """Code 146 answers 503 like a timeout, should a pipeline hit it (#291)."""
 
     def too_big(_pipeline, **_kwargs):
         raise OperationFailure("$group exceeded memory limit", code=146)
 
-    monkeypatch.setattr(reports.query_logs_col, "aggregate", too_big)
+    monkeypatch.setattr(reports.query_log_daily_col, "aggregate", too_big)
 
     response = client.get(URL, headers=hr_auth)
 
@@ -267,7 +276,7 @@ def test_other_mongo_failures_are_not_reported_as_slow(client, hr_auth, monkeypa
     def unauthorized(_pipeline, **_kwargs):
         raise OperationFailure("not authorized", code=13)
 
-    monkeypatch.setattr(reports.query_logs_col, "aggregate", unauthorized)
+    monkeypatch.setattr(reports.query_log_daily_col, "aggregate", unauthorized)
 
     with pytest.raises(OperationFailure):
         client.get(URL, headers=hr_auth)
@@ -707,33 +716,10 @@ def test_a_zero_pair_cap_turns_the_judge_off(client, hr_auth, monkeypatch):
     assert body["unjudged"] == 0
 
 
-def test_wording_pipeline_returns_a_capped_sample_of_session_ids(monkeypatch):
-    """A popular wording's full id list would pass the 16 MB result document
-    limit at about 370k conversations (#291). The count stays exact."""
-    monkeypatch.setattr(query_log_reports, "WORDING_SESSION_SAMPLE", 2)
-    now = datetime.now(UTC)
-    collection = FakeCollection()
-    collection.insert_many(
-        [
-            {"created_at": now, "question_hash": "pto", "refused": False, "session_id": s}
-            for s in ("a", "b", "c", "d")
-        ]
-    )
-
-    [row] = collection.aggregate(
-        query_log_reports.wording_pipeline(
-            now - timedelta(days=1), now + timedelta(days=1), 10, refused_only=False
-        )
-    )
-
-    assert row["session_count"] == 4
-    assert len(row["sessions"]) == 2
-
-
 def test_a_wording_past_the_sample_cap_reports_its_exact_conversations(
     client, hr_auth, monkeypatch
 ):
-    monkeypatch.setattr(query_log_reports, "WORDING_SESSION_SAMPLE", 2)
+    monkeypatch.setattr(reports, "ROLLUP_SESSION_SAMPLE", 2)
     vectors(monkeypatch, {"Where do I park?": PARKING})
     for session in ("a", "b", "c"):
         log("Where do I park?", refused=False, session_id=session)

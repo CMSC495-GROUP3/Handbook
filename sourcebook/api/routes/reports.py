@@ -35,7 +35,11 @@ way each list ranks. A wording outside that cap cannot join a group, which at
 pilot volume is every wording there is. Vectors fetched or embedded here are
 kept in a bounded per-process memo, so a repeat load costs no provider call.
 
-The window counts back ``days`` from now, at most 90. ``query_logs`` rows
+The counts come from ``sourcebook.rag.query_log_rollup``, one document per
+question and UTC day kept as each ask is logged, not from the raw rows. At
+the volume config.py plans for, the raw log is too big to group inside
+``QUERY_TIMEOUT_MS`` for any window (#291). The window is ``days`` whole UTC
+days, today included, at most 90. ``query_logs`` rows
 expire after ``QUERY_LOG_TTL_SECONDS``, so a window longer than the TTL is
 shortened to it and the response's ``days`` says what was used. The bound on
 the parameter stays fixed, so a short TTL cannot turn every request into a 422.
@@ -60,13 +64,13 @@ import threading
 from array import array
 from collections import OrderedDict
 from collections.abc import Sequence
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pymongo.errors import ExecutionTimeout, OperationFailure
 
-from sourcebook.api.db import query_logs_col
+from sourcebook.api.db import query_log_daily_col
 from sourcebook.api.limiter import limiter
 from sourcebook.api.routes.auth import MANAGER_PASSWORD_HASH_VAR
 from sourcebook.api.routes.deps import (
@@ -88,7 +92,13 @@ from sourcebook.rag.query_log_reports import (
     DEFAULT_MIN_REPEAT,
     DEFAULT_TOP,
     MAX_TOP,
-    wording_pipeline,
+)
+from sourcebook.rag.query_log_rollup import (
+    ROLLUP_SESSION_SAMPLE,
+    ranking_pipeline,
+    session_samples,
+    totals_pipeline,
+    window_start,
 )
 from sourcebook.rag.question_groups import (
     QuestionGroup,
@@ -108,15 +118,15 @@ MAX_WINDOW_DAYS = 90
 # Rows older than the TTL are gone, so no window reaches past it. Never below
 # one day, or a TTL under a day would leave an empty window.
 TTL_DAYS = max(1, QUERY_LOG_TTL_SECONDS // 86400)
-# Per query. At the volume the TTL comment in config.py plans for, a 90-day
-# $group is not free, and a manager or HR session can ask for one 30 times a
-# minute.
+# Per query. The rollup keeps a 90-day $group to one document per question
+# and day, but that is still not free, and a manager or HR session can ask
+# for one 30 times a minute.
 QUERY_TIMEOUT_MS = 5000
-# MongoDB's ExceededMemoryLimit. An $addToSet accumulator cannot spill to disk,
-# so one question asked in about 1.6M conversations stops the pipeline with it
-# (docs/load-testing.md, #291). A shorter window fixes it like a timeout does.
-# Code 292 is the same failure when allowDiskUse is false; nothing here sets
-# that and the server default is true, so add it if that ever changes.
+# MongoDB's ExceededMemoryLimit. The rollup's $group holds only sums, so it
+# can spill to disk and should not hit this; it is kept so a pipeline change
+# that brings back an array accumulator answers 503, not 500
+# (docs/load-testing.md, #291). Code 292 is the same failure when allowDiskUse
+# is false; nothing here sets that and the server default is true.
 EXCEEDED_MEMORY_LIMIT = 146
 # Hash groups per list that go into grouping. Two lists of 200 is at most 400
 # texts in one embed_many call. Listing the judge's candidates checks every pair
@@ -153,15 +163,38 @@ def _question(row: dict[str, Any]) -> str | None:
     return None
 
 
-def _wording(row: dict[str, Any]) -> Wording:
+def _wording(row: dict[str, Any], sessions: dict[str | None, frozenset[str | None]]) -> Wording:
     return Wording(
         question_hash=row.get("_id"),
         question=_question(row),
         count=int(row.get("count") or 0),
         refused=int(row.get("refused_count") or 0),
-        sessions=frozenset(row.get("sessions") or ()),
+        sessions=sessions.get(row.get("_id"), frozenset()),
         session_count=int(row.get("session_count") or 0),
     )
+
+
+def _wordings(
+    rows: list[dict[str, Any]], since: datetime, until: datetime, *, refused_only: bool
+) -> list[Wording]:
+    """Wordings with their conversation ids, for the union across a group.
+
+    Ids are read only for wordings at or under ``ROLLUP_SESSION_SAMPLE``
+    conversations, where the rollup holds all of them. A bigger wording
+    keeps an empty set, and its exact ``session_count`` is the group's floor.
+    """
+    small = [
+        row.get("_id") for row in rows if (row.get("session_count") or 0) <= ROLLUP_SESSION_SAMPLE
+    ]
+    sessions = session_samples(
+        query_log_daily_col,
+        since,
+        until,
+        small,
+        refused_only=refused_only,
+        max_time_ms=QUERY_TIMEOUT_MS,
+    )
+    return [_wording(row, sessions) for row in rows]
 
 
 def _remember(vectors: dict[str, list[float]]) -> None:
@@ -355,8 +388,7 @@ def coverage_gaps(
     """Refused and repeated questions over the last ``days`` days, grouped by meaning."""
     days = min(days, TTL_DAYS)
     until = datetime.now(UTC)
-    since = until - timedelta(days=days)
-    window = {"created_at": {"$gte": since, "$lt": until}}
+    since = window_start(until, days)
     min_conversations = MANAGER_MIN_CONVERSATIONS if cred == MANAGER_PASSWORD_HASH_VAR else None
     candidates = {"min_sessions": min_conversations or 1}
 
@@ -365,19 +397,22 @@ def coverage_gaps(
         # Listed here, not lazily in the response, so a timeout while the
         # cursor is read is caught below too.
         refused_rows = list(
-            query_logs_col.aggregate(
-                wording_pipeline(since, until, CANDIDATE_LIMIT, refused_only=True, **candidates),
+            query_log_daily_col.aggregate(
+                ranking_pipeline(since, until, CANDIDATE_LIMIT, refused_only=True, **candidates),
                 **limit,
             )
         )
         all_rows = list(
-            query_logs_col.aggregate(
-                wording_pipeline(since, until, CANDIDATE_LIMIT, refused_only=False, **candidates),
+            query_log_daily_col.aggregate(
+                ranking_pipeline(since, until, CANDIDATE_LIMIT, refused_only=False, **candidates),
                 **limit,
             )
         )
-        total = query_logs_col.count_documents(window, **limit)
-        refused = query_logs_col.count_documents({**window, "refused": True}, **limit)
+        refused_wordings = _wordings(refused_rows, since, until, refused_only=True)
+        all_wordings = _wordings(all_rows, since, until, refused_only=False)
+        totals = next(
+            iter(query_log_daily_col.aggregate(totals_pipeline(since, until), **limit)), {}
+        )
     except ExecutionTimeout:
         raise HTTPException(
             status_code=503,
@@ -391,8 +426,8 @@ def coverage_gaps(
             detail="This report needs too much memory. Try a shorter window.",
         ) from None
 
-    refused_wordings = [_wording(row) for row in refused_rows]
-    all_wordings = [_wording(row) for row in all_rows]
+    total = int(totals.get("total") or 0)
+    refused = int(totals.get("refused") or 0)
     texts = sorted({w.question for w in refused_wordings + all_wordings if w.question})
     gap_groups, faq_groups, grouping, unjudged = _grouped(
         refused_wordings, all_wordings, _vectors(texts)

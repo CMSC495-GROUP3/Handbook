@@ -297,3 +297,56 @@ docker run -d --rm --name sourcebook-report-timing -p 27099:27017 mongo:7
   --rows 1000000 --sessions 800000
 docker stop sourcebook-report-timing
 ```
+
+### The per-day rollup
+
+The 90-day report did not fit inside 5 s at the 7M rows a day planned in
+`config.py`, with either `$group` shape. At the measured rate (about 1.2 s for
+600k rows) even a one-day window of 7M rows would take on the order of 14 s,
+so a shorter window cannot fix it. The route now reads
+`query_log_daily` instead (`sourcebook/rag/query_log_rollup.py`). Each ask
+updates one document per question and UTC day as it is logged, and a
+per-(question, conversation) marker makes sure each conversation counts once.
+The report's cost then grows with distinct questions per day, not with asks.
+
+What changes:
+
+- **Asks are exact. Conversations can be lower, never higher.** A
+  conversation counts on the day of its first ask of a question. If that day
+  falls before the window, a later ask inside the window adds an ask but not
+  a conversation.
+- **Windows are whole UTC days**, today included.
+- **Each ask costs up to three more writes**: one marker, or two when it is
+  refused, and one upsert. The marker collection grows with distinct
+  (question, conversation) pairs over 90 days, up to about the size of
+  `query_logs` itself, but with small documents.
+- **The terminal report is unchanged.** It still reads the raw rows. It has no
+  timeout and is exact.
+
+**Not yet measured.** No MongoDB server was reachable where this was built.
+`scripts/loadtest/rollup_timing.py` seeds the rollup at planned volume and
+times the route's reads with its `maxTimeMS`. Distinct questions per day is a
+flag, because the pilot has not measured it:
+
+```bash
+docker run -d --rm --name sourcebook-report-timing -p 27099:27017 mongo:7
+.venv/bin/python -m scripts.loadtest.rollup_timing --uri mongodb://localhost:27099
+.venv/bin/python -m scripts.loadtest.rollup_timing --uri mongodb://localhost:27099 \
+  --questions-per-day 200000
+docker stop sourcebook-report-timing
+```
+
+To run it on Atlas, point `--uri` at a scratch cluster. The `--db` guard stops
+it from dropping a real collection, but it still writes a large scratch
+database.
+
+| Distinct questions a day | Day documents (90 days) | gaps ranking | FAQ ranking | Session ids | Totals | Where |
+|---|---|---|---|---|---|---|
+| 50,000 | about 4.5M | pending | pending | pending | pending | local `mongo:7` |
+| 200,000 | about 18M | pending | pending | pending | pending | local `mongo:7` |
+| 50,000 | about 4.5M | pending | pending | pending | pending | Atlas |
+
+If the rankings are slow because they read whole documents (each one carries
+up to 1,000 session ids), the next step is a covering index on `day`,
+`question_hash`, and the four counts, with sample text and ids fetched only
+for the top 200.

@@ -1,0 +1,234 @@
+"""The What People Ask rollup: per-day counts kept as each ask is logged (#291)."""
+
+import logging
+from datetime import UTC, datetime, timedelta, timezone
+
+import pytest
+from conftest import FAKE_DB, make_passages
+
+from sourcebook.api import analytics
+from sourcebook.rag import query_log_rollup
+from sourcebook.rag.query_log_rollup import (
+    DAILY_COLLECTION,
+    SESSIONS_COLLECTION,
+    backfill,
+    ranking_pipeline,
+    record_ask,
+    session_samples,
+    totals_pipeline,
+    utc_day,
+    window_start,
+)
+
+NOW = datetime(2026, 9, 27, 15, 30, tzinfo=UTC)
+
+
+def daily():
+    return FAKE_DB[DAILY_COLLECTION]
+
+
+def ask(question_hash: str, session_id: str | None, *, at: datetime = NOW, refused=False):
+    record_ask(
+        daily(),
+        FAKE_DB[SESSIONS_COLLECTION],
+        created_at=at,
+        session_id=session_id,
+        question_hash=question_hash,
+        question_raw=f"{question_hash}?",
+        question_condensed=f"{question_hash}?",
+        refused=refused,
+    )
+
+
+def ranked(since=NOW - timedelta(days=89), until=NOW, *, refused_only=False, **kwargs):
+    pipeline = ranking_pipeline(since, until, 10, refused_only=refused_only, **kwargs)
+    return [(row["_id"], row["count"], row["session_count"]) for row in daily().aggregate(pipeline)]
+
+
+def test_window_start_is_whole_utc_days_including_today():
+    assert window_start(NOW, 1) == datetime(2026, 9, 27, tzinfo=UTC)
+    assert window_start(NOW, 7) == datetime(2026, 9, 21, tzinfo=UTC)
+
+
+def test_utc_day_is_the_utc_date_not_the_local_one():
+    # 20:00 on the 27th in New York is 00:00 on the 28th in UTC.
+    new_york = timezone(timedelta(hours=-4))
+    assert utc_day(datetime(2026, 9, 27, 20, 0, tzinfo=new_york)) == datetime(
+        2026, 9, 28, tzinfo=UTC
+    )
+
+
+def test_repeats_in_one_conversation_are_one_conversation():
+    for _ in range(3):
+        ask("pto", "a")
+    ask("pto", "b")
+
+    assert ranked() == [("pto", 4, 2)]
+
+
+def test_a_conversation_counts_once_across_days_on_its_first_day():
+    ask("pto", "a", at=NOW - timedelta(days=3))
+    ask("pto", "a", at=NOW)
+
+    [first, second] = sorted(daily().find({}), key=lambda doc: doc["day"])
+    assert (first["count"], first["session_count"]) == (1, 1)
+    assert (second["count"], second["session_count"]) == (1, 0)
+    assert ranked() == [("pto", 2, 1)]
+
+
+def test_a_window_after_the_first_ask_undercounts_and_never_overcounts():
+    """The documented trade: the conversation's later ask is in the window,
+    its first is not, so the window counts the ask but not the conversation."""
+    ask("pto", "a", at=NOW - timedelta(days=10))
+    ask("pto", "a", at=NOW)
+
+    assert ranked(since=window_start(NOW, 7)) == [("pto", 1, 0)]
+
+
+def test_refused_conversations_are_counted_apart():
+    ask("pto", "a", refused=False)
+    ask("pto", "a", refused=True)
+    ask("pto", "b", refused=True)
+
+    assert ranked(refused_only=True) == [("pto", 2, 2)]
+    assert ranked() == [("pto", 3, 2)]
+
+
+def test_refused_only_leaves_out_questions_never_refused():
+    ask("answered", "a")
+    ask("gap", "b", refused=True)
+
+    assert [row[0] for row in ranked(refused_only=True)] == ["gap"]
+
+
+def test_min_sessions_drops_wordings_before_the_cap():
+    ask("once", "a")
+    ask("twice", "a")
+    ask("twice", "b")
+
+    assert ranked(min_sessions=2) == [("twice", 2, 2)]
+
+
+def test_rows_without_a_session_count_as_one_conversation():
+    ask("pto", None)
+    ask("pto", None)
+
+    assert ranked() == [("pto", 2, 1)]
+
+
+def test_totals_sum_the_days():
+    ask("pto", "a", at=NOW - timedelta(days=2))
+    ask("gap", "b", refused=True)
+    [row] = daily().aggregate(totals_pipeline(NOW - timedelta(days=89), NOW))
+
+    assert (row["total"], row["refused"]) == (2, 1)
+
+
+def test_session_ids_are_capped_per_day(monkeypatch):
+    monkeypatch.setattr(query_log_rollup, "ROLLUP_SESSION_SAMPLE", 2)
+    for session in ("a", "b", "c"):
+        ask("pto", session)
+
+    [doc] = daily().find({})
+    assert (doc["session_count"], doc["sessions"]) == (3, ["a", "b"])
+
+
+def test_session_samples_union_the_days_in_the_window():
+    ask("pto", "old", at=NOW - timedelta(days=20))
+    ask("pto", "a", at=NOW - timedelta(days=2))
+    ask("pto", "b", at=NOW, refused=True)
+
+    since = window_start(NOW, 7)
+    assert session_samples(daily(), since, NOW, ["pto"], refused_only=False) == {
+        "pto": frozenset({"a", "b"})
+    }
+    assert session_samples(daily(), since, NOW, ["pto"], refused_only=True) == {
+        "pto": frozenset({"b"})
+    }
+    assert session_samples(daily(), since, NOW, [], refused_only=False) == {}
+
+
+# ── Logging ───────────────────────────────────────────────────────────────────
+
+
+def _log(**overrides):
+    fields = dict(
+        session_id="s1",
+        question="How much PTO do I get?",
+        condensed_question="How much PTO do I get?",
+        passages=make_passages(0.80),
+        refused=False,
+        sources=["PTO Policy"],
+        cache_hit=None,
+        latency_ms=120,
+    )
+    fields.update(overrides)
+    analytics.log_query(**fields)
+
+
+def test_log_query_records_the_ask_and_marks_the_row():
+    _log()
+    _log(refused=True)
+
+    [row, _] = FAKE_DB["query_logs"].find({})
+    [doc] = daily().find({})
+    assert row["rolled_up"] is True
+    assert (doc["count"], doc["refused_count"], doc["session_count"]) == (2, 1, 1)
+    assert doc["question_hash"] == row["question_hash"]
+
+
+def test_a_rollup_failure_keeps_the_row_and_never_raises(monkeypatch, caplog):
+    def broken(*_args, **_kwargs):
+        raise RuntimeError("rollup down")
+
+    monkeypatch.setattr(analytics, "record_ask", broken)
+    with caplog.at_level(logging.ERROR):
+        _log()
+
+    assert FAKE_DB["query_logs"].count_documents({}) == 1
+    assert "Failed to count query" in caplog.text
+
+
+def test_a_failed_row_is_not_counted(monkeypatch):
+    def broken(*_args, **_kwargs):
+        raise RuntimeError("log down")
+
+    monkeypatch.setattr(analytics.query_logs_col, "insert_one", broken)
+    _log()
+
+    assert daily().count_documents({}) == 0
+
+
+# ── Backfill ──────────────────────────────────────────────────────────────────
+
+
+def _row(session, at, **fields):
+    return {
+        "created_at": at,
+        "session_id": session,
+        "question_raw": "pto?",
+        "question_condensed": "pto?",
+        "question_hash": "pto",
+        "refused": False,
+        **fields,
+    }
+
+
+def test_backfill_records_old_rows_oldest_first_and_once():
+    logs = FAKE_DB["query_logs"]
+    # Inserted newest first; the backfill must still count "a" on its first day.
+    logs.insert_one(_row("a", NOW))
+    logs.insert_one(_row("a", NOW - timedelta(days=5)))
+    logs.insert_one(_row("b", NOW, rolled_up=True))
+
+    assert backfill(logs, daily(), FAKE_DB[SESSIONS_COLLECTION]) == 2
+    assert backfill(logs, daily(), FAKE_DB[SESSIONS_COLLECTION]) == 0
+
+    days = {doc["day"]: doc["session_count"] for doc in daily().find({})}
+    assert days == {utc_day(NOW - timedelta(days=5)): 1, utc_day(NOW): 0}
+    assert logs.count_documents({"rolled_up": True}) == 3
+
+
+def test_backfill_cli_needs_the_flag():
+    with pytest.raises(SystemExit):
+        query_log_rollup.main([])

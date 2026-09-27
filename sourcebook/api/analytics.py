@@ -26,9 +26,10 @@ a user's answer to a bookkeeping problem.
 import logging
 from datetime import UTC, datetime
 
-from sourcebook.api.db import query_logs_col
+from sourcebook.api.db import query_log_daily_col, query_log_sessions_col, query_logs_col
 from sourcebook.api.logutil import normalize_log_token
 from sourcebook.rag.cache import question_hash
+from sourcebook.rag.query_log_rollup import record_ask
 
 logger = logging.getLogger(__name__)
 
@@ -58,16 +59,20 @@ def log_query(
     # Sanitised once, up front, so the stored record and the failure log line
     # below carry the same value. A missing session stays None in Mongo.
     safe_session = None if session_id is None else normalize_log_token(session_id)
+    created_at = datetime.now(UTC)
     try:
+        raw = question[:MAX_QUESTION_LENGTH]
+        condensed = condensed_question[:MAX_QUESTION_LENGTH]
+        # Groups repeats of the same question regardless of casing/spacing.
+        hashed = question_hash(condensed_question)
         scores = [p.get("score", 0.0) for p in passages]
         query_logs_col.insert_one(
             {
-                "created_at": datetime.now(UTC),
+                "created_at": created_at,
                 "session_id": safe_session,
-                "question_raw": question[:MAX_QUESTION_LENGTH],
-                "question_condensed": condensed_question[:MAX_QUESTION_LENGTH],
-                # Groups repeats of the same question regardless of casing/spacing.
-                "question_hash": question_hash(condensed_question),
+                "question_raw": raw,
+                "question_condensed": condensed,
+                "question_hash": hashed,
                 "best_score": max(scores) if scores else None,
                 # Best score for the question as asked when a follow-up ran a
                 # second retrieval, else None. A refused row whose best_score
@@ -81,7 +86,27 @@ def log_query(
                 "sources": sources,
                 "cache_hit": cache_hit,
                 "latency_ms": latency_ms,
+                # Counted in the What People Ask rollup below, so the
+                # rollup's backfill skips it.
+                "rolled_up": True,
             }
         )
     except Exception:
         logger.exception("Failed to write query log for session %s", safe_session or "-")
+        return
+    # Separate from the row above, so a rollup failure still keeps the row.
+    # A failure here leaves this ask out of the report's counts; the offline
+    # report, which reads the rows, still has it.
+    try:
+        record_ask(
+            query_log_daily_col,
+            query_log_sessions_col,
+            created_at=created_at,
+            session_id=safe_session,
+            question_hash=hashed,
+            question_raw=raw,
+            question_condensed=condensed,
+            refused=refused,
+        )
+    except Exception:
+        logger.exception("Failed to count query for session %s", safe_session or "-")
