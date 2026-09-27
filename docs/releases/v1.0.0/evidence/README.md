@@ -11,7 +11,7 @@ token, or session id may be visible in any image.
 | [lighthouse.md](lighthouse.md) | Lighthouse on the pilot, both themes, phone and desktop ([#214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214)), with [lighthouse-summary.json](lighthouse-summary.json) | Done on `7d3c779` |
 | [pilot-load.json](pilot-load.json), [pilot-load-host.csv](pilot-load-host.csv) | the load run against the pilot and the host samples during it ([#212](https://github.com/CMSC495-GROUP3/Sourcebook/issues/212)); results in [../../../load-testing-pilot.md](../../../load-testing-pilot.md#results) | Done, code identical to `7d3c779` |
 | End-to-end pass screenshots | the 22 files below, from the pass in [../handoff.md](../handoff.md#end-to-end-pass-by-hand) | Done on `7d3c779` |
-| CI/CD screenshots | green CI, Security, and auto-deploy runs on the candidate ([#207](https://github.com/CMSC495-GROUP3/Sourcebook/issues/207)) | Pending |
+| `ci-green.png`, `security-green.png`, `pr-checks-green.png`, `pr-path-labels-green.png`, `live-evaluation-green.png`, `auto-deploy-green.png`, [auto-deploy-journal.txt](auto-deploy-journal.txt) | green CI, Security, PR checks, path labels, and full-tier evaluation runs, and the auto-deploy of the candidate ([#207](https://github.com/CMSC495-GROUP3/Sourcebook/issues/207)); each is linked with its run in [../../../ci-cd.md](../../../ci-cd.md) | Done on `7d3c779` and #274 |
 
 ## End-to-end pass screenshots
 

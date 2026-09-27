@@ -101,7 +101,7 @@ Every code change on the candidate:
 | Lighthouse, both themes, phone and desktop ([#214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214)) | Done on `7d3c779`: accessibility and best practices 100 on all 12 runs; performance 100 on desktop and 87 to 96 on mobile; SEO 91, from `robots-txt` only | [evidence/lighthouse.md](evidence/lighthouse.md) |
 | End-to-end pass by hand | Done on `7d3c779`: 18 of 18 steps pass | [below](#end-to-end-pass-by-hand), screenshots in [evidence/](evidence/README.md) |
 | What People Ask on the pilot's query log, 30-day window, signed in with the HR password and with the reviewer password | Done: 15 of 87 questions unanswered (17%), `grouping` `meaning`, nothing left unjudged; the reviewer sees the same headline with only rows from at least 3 conversations | [evidence/16](evidence/16-what-people-ask-hr.png) and [evidence/19](evidence/19-what-people-ask-reviewer.png), question text blurred |
-| Screenshots of green CI, Security, and auto-deploy runs ([#207](https://github.com/CMSC495-GROUP3/Sourcebook/issues/207)) | Pending | [evidence/](evidence/README.md) |
+| Screenshots of green CI, Security, and auto-deploy runs ([#207](https://github.com/CMSC495-GROUP3/Sourcebook/issues/207)) | Done on `7d3c779`: CI, Security, the full-tier evaluation, and the auto-deploy journal; PR checks and path labels on #274. The release links follow the tag | [docs/ci-cd.md](../../ci-cd.md), [evidence/](evidence/README.md) |
 
 ### End-to-end pass by hand
 
