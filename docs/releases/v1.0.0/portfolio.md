@@ -15,7 +15,8 @@ Stakeholder video: Pending, linked after upload
 ## Two ways in
 
 1. **The pilot** at <https://sourcebook.duckdns.org>. The reviewer password
-   comes through the course channel, never this repository. The pilot follows
+   comes through the course channel, never this repository. It is also the
+   HR password, so it opens HR Requests and What People Ask. The pilot follows
    `main`; the tag is the submitted version.
 2. **Locally, with no accounts:** [docs/install.md](../../install.md), or
    `git clone` then `make setup && make stub`. It uses a fake model and an

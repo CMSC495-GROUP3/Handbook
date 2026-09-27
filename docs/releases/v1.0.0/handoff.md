@@ -54,8 +54,11 @@ Pending until the freeze. So far:
 | Refusal card for vague questions | When related policies don't answer a question as asked, the card says to ask the full question again with the details it depends on, such as dates, location, or the kind of leave or expense. The coverage judge is unchanged | #281 |
 | Sign-in page and Lighthouse | The sign-in page has a main landmark and a meta description. `scripts/lighthouse/` runs Lighthouse on the three pages in both themes at phone and desktop widths ([#214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214)) | #280 |
 | Compression on the pilot | Nginx gzips responses that come through Caddy. Before, Caddy's `Via` header made Nginx skip gzip, so the pilot served its 674 KB JavaScript bundle uncompressed. The chat stream stays uncompressed and unbuffered | #282 |
+| What People Ask | A page for Human Resources that ranks the questions no policy answered and the questions asked in more than one conversation, over 7, 30, or 90 days, from `GET /api/reports/gaps`. Wordings whose embeddings are within `QUESTION_GROUP_THRESHOLD` cosine (0.85) share a row ([#287](https://github.com/CMSC495-GROUP3/Sourcebook/issues/287)); the threshold is measured in [docs/evaluation.md](../../evaluation.md#question-grouping-threshold). The "Asked most" caption names the bar colors in plain words ([#294](https://github.com/CMSC495-GROUP3/Sourcebook/issues/294)) | #286, #288, #297 |
+| HR password | `HR_PASSWORD_HASH` is a third password. HR Requests, What People Ask, and their routes return 403 to any other session, and the sidebar hides both links. Filing an escalation from the chat still needs only the shared password. On the pilot the HR hash equals the second one, so the reviewer password opens both pages ([#290](https://github.com/CMSC495-GROUP3/Sourcebook/issues/290)) | #295 |
+| What People Ask at volume | The grouped report returns at most 1,000 session ids per wording with an exact count beside them, so one question asked in 400,000 conversations no longer exceeds MongoDB's 16 MB document limit. A window over Mongo's memory limit gets 503 and "Try a shorter window." instead of 500. Timings from a local `mongo:7`, not Atlas, are in [docs/load-testing.md](../../load-testing.md) ([#291](https://github.com/CMSC495-GROUP3/Sourcebook/issues/291)) | #296 |
 | Sample policies | The injury policy's incident-reporting window now matches the Workplace Health and Safety Policy: report no later than 24 hours after the incident, instead of by the end of the shift. The pilot was re-ingested on 2026-09-26, so the corpus version differs from the beta's | #284 |
-| Documentation | User guide ([#206](https://github.com/CMSC495-GROUP3/Sourcebook/issues/206)) and team page ([#209](https://github.com/CMSC495-GROUP3/Sourcebook/issues/209)) pending; [portfolio page](portfolio.md) in this folder; pilot load-run page | Pending: #259, #231; #274, #278 |
+| Documentation | User guide ([#206](https://github.com/CMSC495-GROUP3/Sourcebook/issues/206)) and team page ([#209](https://github.com/CMSC495-GROUP3/Sourcebook/issues/209)) pending; [portfolio page](portfolio.md) in this folder; pilot load-run page; README and quality page corrected where the beta made their status claims stale | Pending: #259, #231; #274, #278, #285 |
 
 ## Verification status
 
@@ -70,14 +73,17 @@ Pending until the freeze. So far:
 | Load run against the deployed pilot ([#212](https://github.com/CMSC495-GROUP3/Sourcebook/issues/212)) | Pending | [docs/load-testing-pilot.md](../../load-testing-pilot.md), Pending |
 | Lighthouse, both themes, phone and desktop ([#214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214)) | Pending: run `scripts/lighthouse` (#280) against the pilot on the candidate | [docs/quality.md](../../quality.md), Pending |
 | End-to-end pass by hand | Pending | [below](#end-to-end-pass-by-hand) |
-| Knowledge-gap report run against the pilot's query log | Pending | none yet |
+| What People Ask on the pilot's query log, 30-day window, signed in with the HR password | Pending: record the headline counts and a sanitized screenshot. Question text can identify who asked, so crop or blur it | none yet |
 | Screenshots of green CI, Security, and auto-deploy runs ([#207](https://github.com/CMSC495-GROUP3/Sourcebook/issues/207)) | Pending | [evidence/](evidence/README.md) |
 
 ### End-to-end pass by hand
 
 Pending. Repeat the beta's pass with the same steps and expected results, and
-add one step each for the #271 and #277 fixes. Save sanitized screenshots to
-[evidence/](evidence/README.md): no password, token, or session id visible.
+add steps for the #271, #277, and #295 fixes and the What People Ask page.
+Sign in with the reviewer password, which on the pilot is also the HR
+password, and switch to the shared employee password only for the step that
+says so. Save sanitized screenshots to [evidence/](evidence/README.md): no
+password, token, or session id visible.
 
 | Field | Value |
 | --- | --- |
@@ -88,7 +94,7 @@ add one step each for the #271 and #277 fixes. Save sanitized screenshots to
 
 | Step | Expected | Result |
 | --- | --- | --- |
-| Sign in with the reviewer password | lands on the chat page; a wrong password shows "Incorrect password." | Pending |
+| Sign in with the reviewer password | lands on the chat page with HR Requests and What People Ask in the sidebar; a wrong password shows "Incorrect password." | Pending |
 | Ask a covered question | streamed answer with at least one cited source and a score | Pending |
 | Open a cited source | the source pane shows the whole document | Pending |
 | Ask a follow-up in the same conversation | the answer uses the history; no cache badge | Pending |
@@ -99,6 +105,8 @@ add one step each for the #271 and #277 fixes. Save sanitized screenshots to
 | Escalate the refusal with a note | confirmation in the UI; the record appears on the HR Requests page | Pending |
 | Escalate the same message again | the first record comes back, not a second one | Pending |
 | Resolve the request on the HR Requests page, then reopen it | the request moves between the open and resolved lists | Pending |
+| Open What People Ask and switch between 7, 30, and 90 days (#286, #288) | the headline counts questions and the share no policy answered; both lists load; the URL carries `?days=` | Pending |
+| Sign out, sign in with the shared employee password, then open `/gaps` (#290) | no HR links in the sidebar; the page says it is for Human Resources instead of loading the report | Pending |
 | At 390px wide, keyboard only: open a request on the HR Requests page, choose "All requests", then press Back (#266) | focus lands on the request's heading, then on its row; Back leaves the page instead of reopening the request | Pending |
 
 ## Known defects and limitations
@@ -108,7 +116,9 @@ Carried from the beta unless fixed before the freeze. Update at the freeze.
 | Issue | What a pilot user would see | Mitigation |
 | --- | --- | --- |
 | Vague questions on covered topics | "Can I expense this trip?" is refused where the alpha answered in general terms ([beta evaluation](../v0.2.0/live-evaluation.md#manual-review)) | the refusal card now says to ask the full question again with the details it depends on (#281); or use Ask Human Resources |
-| README known limitations | a shared password, a threshold set by judgement, non-atomic re-ingestion, one instance, a fictional corpus | documented in the README |
+| Conversations are not scoped to their owner | anyone with a password can list and open every conversation through `GET /api/conversations`, including the question text the HR pages show (README [Known limitations](../../../README.md#known-limitations)) | a pilot with a few reviewers; draft PR #299 scopes conversations to the browser that made them, and would move this row to the changes above if it merges before the freeze |
+| What People Ask merges few paraphrases | at 0.85 cosine it merged 4 of 40 labelled paraphrases and none of 40 different questions ([measurement](../../evaluation.md#question-grouping-threshold)), so "Asked most" undercounts a question asked in different words | the caption says so; draft PR #298 ([#293](https://github.com/CMSC495-GROUP3/Sourcebook/issues/293)) confirms candidate pairs with the utility model |
+| README known limitations | shared passwords plus an HR password, a threshold set by judgement, non-atomic re-ingestion, one instance, a fictional corpus | documented in the README |
 
 ## What this release does not establish
 
