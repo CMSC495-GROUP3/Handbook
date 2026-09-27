@@ -394,13 +394,33 @@ in a bounded in-process memo (5,000 entries, off when `CACHE_ENABLED=0`) and nev
 repeat load makes no provider call and the route writes nothing.
 If that call fails, `grouping` is `"exact"` and every wording has its own row.
 
+Cosine cannot tell a paraphrase from a near neighbour, so pairs scoring from
+`QUESTION_JUDGE_FLOOR` (default 0.6) up to the threshold go to the utility
+model (#293). It gets both wordings as untrusted data and must reply
+`{"same": [true, false, ...]}`, one boolean per pair. A pair merges only on
+`true`. All of a load's new pairs go in one call, at most
+`QUESTION_JUDGE_MAX_PAIRS` (default 50), closest first; pairs past the cap
+stay apart on that load and are judged on a later one. Verdicts are memoized
+per process (20,000 entries, off when `CACHE_ENABLED=0`) and never stored, so
+a repeat load with nothing new makes no call. At 50 pairs the call is about
+2,000 input tokens and 200 output tokens, under $0.001 on `gpt-4o-mini`. If it
+fails or the reply does not parse, those pairs stay apart and `grouping` is
+`"cosine"`. `QUESTION_JUDGE_MAX_PAIRS=0` turns the check off and also reports
+`"cosine"`.
+
+| `grouping` | Rows merge when |
+| --- | --- |
+| `meaning` | cosine clears the threshold, or clears the floor and the model says they are one question |
+| `cosine` | cosine clears the threshold |
+| `exact` | the text is identical after normalization |
+
 Merging two different questions ("How does PTO accrue?" and "Does unused PTO
 carry over?") hides a gap behind a covered neighbour, which is worse than
 splitting one question into two rows. On 80 labelled pairs the closest two
-different questions score 0.833, so 0.85 merges none of them, but it merges
-only 4 of 40 paraphrases: a missing question mark, a change of case, and two
-close rewordings. Most rephrasings still get their own row. The measurement is
-in [evaluation.md](evaluation.md#question-grouping-threshold).
+different questions score 0.833, so 0.85 merges none of them, but cosine alone
+merges only 4 of 40 paraphrases: a missing question mark, a change of case,
+and two close rewordings. The model check exists for the rest. The
+measurements are in [evaluation.md](evaluation.md#question-grouping-threshold).
 
 ```http
 GET /api/reports/gaps?days=30

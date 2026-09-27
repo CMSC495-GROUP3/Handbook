@@ -10,11 +10,17 @@ A false merge is the worse error: it hides a question behind a neighbour that
 needs a different answer. Pick the lowest threshold with no false merges, then
 check how many missed merges that leaves.
 
-Needs ``OPENAI_API_KEY`` in the environment. Each unique text is embedded once,
-in one request, so a run costs a fraction of a cent. The output file holds the
-scores only, never the key:
+With ``--judge``, pairs from ``--floor`` up to ``QUESTION_GROUP_THRESHOLD``
+also go to the utility model with the page's prompt (issue #293), in batches
+of ``QUESTION_JUDGE_MAX_PAIRS``, closest first, as the page sends them. The
+output then scores the combined rule for each floor: a pair merges at or above
+the threshold, or from the floor up when the model says it is one question.
 
-    OPENAI_API_KEY=... python scripts/measure_question_groups.py \\
+Needs ``OPENAI_API_KEY`` in the environment. Each unique text is embedded once,
+in one request, and ``--judge`` adds one chat call per batch, so a run costs a
+fraction of a cent. The output file holds the scores only, never the key:
+
+    OPENAI_API_KEY=... python scripts/measure_question_groups.py --judge \\
         --out evaluation/question_pairs_results.json
 """
 
@@ -30,9 +36,25 @@ from pathlib import Path
 from openai import OpenAI
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+from sourcebook.rag.config import (  # noqa: E402
+    QUESTION_GROUP_THRESHOLD,
+    QUESTION_JUDGE_FLOOR,
+    QUESTION_JUDGE_MAX_PAIRS,
+)
+from sourcebook.rag.question_judge import (  # noqa: E402
+    QUESTION_JUDGE_PROMPT_VERSION,
+    QUESTION_JUDGE_SYSTEM_PROMPT,
+    parse_verdicts,
+    user_message,
+)
+
 PAIRS = ROOT / "evaluation" / "question_pairs.json"
 MODEL = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+UTILITY_MODEL = os.getenv("OPENAI_UTILITY_MODEL", "gpt-4o-mini")
 THRESHOLDS = [round(0.70 + 0.01 * step, 2) for step in range(26)]
+FLOORS = [0.45, 0.50, 0.55, 0.60, 0.65, 0.70]
 
 
 def cosine(a: list[float], b: list[float]) -> float:
@@ -44,6 +66,56 @@ def embed(texts: list[str]) -> dict[str, list[float]]:
     response = OpenAI().embeddings.create(model=MODEL, input=texts)
     ordered = sorted(response.data, key=lambda item: item.index)
     return {text: item.embedding for text, item in zip(texts, ordered, strict=True)}
+
+
+def judge(scored: list[dict], floor: float) -> dict[str, bool | None]:
+    """The model's verdict for every pair in the band, keyed by pair id. A
+    batch whose reply does not parse gives None for its pairs, which the
+    combined rule treats as different, as the page does."""
+    band = sorted(
+        (p for p in scored if floor <= p["cosine"] < QUESTION_GROUP_THRESHOLD),
+        key=lambda p: -p["cosine"],
+    )
+    client = OpenAI()
+    verdicts: dict[str, bool | None] = {}
+    for start in range(0, len(band), QUESTION_JUDGE_MAX_PAIRS):
+        batch = band[start : start + QUESTION_JUDGE_MAX_PAIRS]
+        response = client.chat.completions.create(
+            model=UTILITY_MODEL,
+            temperature=0,
+            messages=[
+                {"role": "system", "content": QUESTION_JUDGE_SYSTEM_PROMPT},
+                {"role": "user", "content": user_message([(p["a"], p["b"]) for p in batch])},
+            ],
+        )
+        parsed = parse_verdicts(response.choices[0].message.content or "", len(batch))
+        for index, pair in enumerate(batch):
+            verdicts[pair["id"]] = None if parsed is None else parsed[index]
+    return verdicts
+
+
+def combined(scored: list[dict], verdicts: dict[str, bool | None]) -> list[dict]:
+    """Paraphrase recall and false merges of cosine plus the model, per floor."""
+    rows = []
+    for floor in FLOORS:
+
+        def merges(pair: dict, floor: float = floor) -> bool:
+            if pair["cosine"] >= QUESTION_GROUP_THRESHOLD:
+                return True
+            return pair["cosine"] >= floor and verdicts.get(pair["id"]) is True
+
+        same = [p for p in scored if p["label"] == "same"]
+        false = [p["id"] for p in scored if p["label"] == "different" and merges(p)]
+        rows.append(
+            {
+                "floor": floor,
+                "judged": sum(floor <= p["cosine"] < QUESTION_GROUP_THRESHOLD for p in scored),
+                "paraphrases_merged": sum(merges(p) for p in same),
+                "false_merges": len(false),
+                "false_merge_ids": false,
+            }
+        )
+    return rows
 
 
 def sweep(scored: list[dict]) -> list[dict]:
@@ -74,6 +146,11 @@ def summary(values: list[float]) -> dict[str, float]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--out", type=Path, help="Write the scores and sweep as JSON here.")
+    parser.add_argument(
+        "--judge",
+        action="store_true",
+        help="Also ask the utility model about pairs below the threshold.",
+    )
     args = parser.parse_args()
     if not os.getenv("OPENAI_API_KEY"):
         print("OPENAI_API_KEY is not set.", file=sys.stderr)
@@ -95,12 +172,32 @@ def main() -> int:
             for p in sorted(scored, key=lambda p: -p["cosine"])
         ],
     }
+    if args.judge:
+        verdicts = judge(scored, min(FLOORS))
+        result["judge"] = {
+            "model": UTILITY_MODEL,
+            "prompt_version": QUESTION_JUDGE_PROMPT_VERSION,
+            "threshold": QUESTION_GROUP_THRESHOLD,
+            "default_floor": QUESTION_JUDGE_FLOOR,
+            "batch_size": QUESTION_JUDGE_MAX_PAIRS,
+            "unparsed": sum(verdict is None for verdict in verdicts.values()),
+            "floors": combined(scored, verdicts),
+            "verdicts": dict(sorted(verdicts.items())),
+        }
     print(f"model {MODEL}, {len(scored)} pairs")
     print(f"same:      {result['same']}")
     print(f"different: {result['different']}")
     print("threshold  missed  false")
     for row in result["sweep"]:
         print(f"{row['threshold']:.2f}       {row['missed_merges']:>3}    {row['false_merges']:>3}")
+    if args.judge:
+        print(f"judge {UTILITY_MODEL}, threshold {QUESTION_GROUP_THRESHOLD}")
+        print("floor  judged  paraphrases merged  false merges")
+        for row in result["judge"]["floors"]:
+            print(
+                f"{row['floor']:.2f}   {row['judged']:>5}  {row['paraphrases_merged']:>9} of"
+                f" {sum(p['label'] == 'same' for p in scored)}  {row['false_merges']:>11}"
+            )
     if args.out:
         args.out.write_text(json.dumps(result, indent=2) + "\n")
     return 0

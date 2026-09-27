@@ -198,6 +198,16 @@ QUERY_LOG_TTL_SECONDS = int(os.getenv("QUERY_LOG_TTL_SECONDS", str(90 * 86400)))
 # Lowering it trades false merges for recall; see docs/evaluation.md.
 QUESTION_GROUP_THRESHOLD = float(os.getenv("QUESTION_GROUP_THRESHOLD", "0.85"))
 
+# Pairs between this floor and QUESTION_GROUP_THRESHOLD go to the utility model,
+# which decides whether they are one question (issue #293). Below the floor a
+# pair never merges. At 0.6, 35 of the 40 measured paraphrases can merge (4 on
+# cosine, 31 if the model agrees) and 5 cannot; 22 of the 40 different pairs
+# reach the model.
+QUESTION_JUDGE_FLOOR = float(os.getenv("QUESTION_JUDGE_FLOOR", "0.6"))
+# Pairs judged per page load, in one utility call, closest first. The rest wait
+# for a later load. 0 turns the judge off.
+QUESTION_JUDGE_MAX_PAIRS = int(os.getenv("QUESTION_JUDGE_MAX_PAIRS", "50"))
+
 # ── Conversation limits ───────────────────────────────────────────────────────
 # Turns of history replayed to the model, and turns used to rewrite a follow-up
 # into a standalone retrieval query.

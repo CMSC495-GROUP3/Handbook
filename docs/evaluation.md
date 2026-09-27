@@ -171,10 +171,35 @@ do I get when a family member dies?" and "What is the bereavement leave
 policy?" score 0.468 and are one question. The default, 0.85, is the lowest
 round value above every different pair, with a margin of 0.017. At that
 setting grouping catches case, punctuation, and close rewordings (4 of 40
-paraphrases) and nothing else. Grouping most paraphrases would need a second
-check, such as a model judging the candidate pairs between 0.6 and 0.85, not a
-lower threshold.
+paraphrases) and nothing else. Grouping most paraphrases needs a second check,
+not a lower threshold.
 
 Forty pairs on a fictional corpus are evidence for this corpus's topics. Rerun
 the script after changing the embedding model.
+
+### The model check below the threshold
+
+Pairs from `QUESTION_JUDGE_FLOOR` up to 0.85 go to the utility model, which
+decides whether they are one question (#293). `--judge` scores that combined
+rule on the same pairs, sending them in batches the size of
+`QUESTION_JUDGE_MAX_PAIRS`, closest first, as the page does:
+
+```bash
+OPENAI_API_KEY=... python scripts/measure_question_groups.py --judge \
+  --out evaluation/question_pairs_results.json
+```
+
+The floor bounds recall no matter what the model says. From the cosine scores
+above:
+
+| Floor | Pairs sent | Paraphrases the rule can reach | Different pairs sent |
+| ---: | ---: | ---: | ---: |
+| 0.50 | 68 | 39 of 40 | 33 |
+| 0.55 | 65 | 38 | 31 |
+| 0.60 (default) | 53 | 35 | 22 |
+| 0.65 | 42 | 27 | 19 |
+
+TODO(#293): run `--judge` and record paraphrases merged and false merges per
+floor here. The target is at least 20 of 40 paraphrases merged with no
+different pair merged.
 

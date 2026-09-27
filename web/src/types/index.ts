@@ -122,8 +122,12 @@ export interface CoverageReport {
   since: string
   until: string
   days: number
-  /** "exact" when grouping by meaning was unavailable and each wording is its own row. */
-  grouping: 'meaning' | 'exact'
+  /**
+   * "meaning": close wordings merge, and the model checked the rewordings.
+   * "cosine": the model check was off or failed, so only near-identical wordings merge.
+   * "exact": embeddings were unavailable and each wording is its own row.
+   */
+  grouping: 'meaning' | 'cosine' | 'exact'
   /** Every chat request in the window. */
   total: number
   refused: number
