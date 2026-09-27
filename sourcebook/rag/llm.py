@@ -96,8 +96,13 @@ class LLMProvider(ABC):
         index — see the migration note in the README.
         """
 
-    def embed_many(self, texts: list[str]) -> list[list[float]]:
-        """Return embedding vectors for multiple texts in input order."""
+    def embed_many(self, texts: list[str], *, timeout: float | None = None) -> list[list[float]]:
+        """Return embedding vectors for multiple texts in input order.
+
+        ``timeout``, when given, bounds this one call in seconds with no
+        retries, for callers that would rather fall back than wait (#300).
+        Providers that cannot bound a call may ignore it.
+        """
         return [self.embed(text) for text in texts]
 
     @abstractmethod
@@ -111,8 +116,10 @@ class LLMProvider(ABC):
         *,
         role: ModelRole = "utility",
         temperature: float = 0.0,
+        timeout: float | None = None,
     ) -> str:
-        """Return a complete response as a single string."""
+        """Return a complete response as a single string. ``timeout`` is as in
+        ``embed_many``."""
 
     @abstractmethod
     def stream(
@@ -198,6 +205,13 @@ class OpenAIProvider(LLMProvider):
         finally:
             self._capacity.release()
 
+    def _client_for(self, timeout: float | None):
+        """The shared client, or a copy bounded to ``timeout`` seconds with no
+        retries. The copy shares the connection pool."""
+        if timeout is None:
+            return self._client
+        return self._client.with_options(timeout=timeout, max_retries=0)
+
     def _model_for(self, role: ModelRole) -> str:
         return self.ANSWER_MODEL if role == "answer" else self.UTILITY_MODEL
 
@@ -218,7 +232,7 @@ class OpenAIProvider(LLMProvider):
             )
         return response.data[0].embedding
 
-    def embed_many(self, texts: list[str]) -> list[list[float]]:
+    def embed_many(self, texts: list[str], *, timeout: float | None = None) -> list[list[float]]:
         """One request per document's chunks. A document is a few dozen chunks,
         far below the API's 2048-input and per-request token limits; a whole
         corpus in one call would not be, so keep batches per document."""
@@ -226,7 +240,7 @@ class OpenAIProvider(LLMProvider):
             return []
 
         with self._request_slot():
-            response = self._client.embeddings.create(
+            response = self._client_for(timeout).embeddings.create(
                 model=self.EMBEDDING_MODEL,
                 input=texts,
             )
@@ -244,10 +258,11 @@ class OpenAIProvider(LLMProvider):
         *,
         role: ModelRole = "utility",
         temperature: float = 0.0,
+        timeout: float | None = None,
     ) -> str:
         try:
             with self._request_slot():
-                response = self._client.chat.completions.create(
+                response = self._client_for(timeout).chat.completions.create(
                     model=self._model_for(role),
                     messages=messages,
                     temperature=temperature,
@@ -339,7 +354,7 @@ class FakeProvider(LLMProvider):
         self._sleep(self.EMBED_DELAY_MS)
         return self._vector(text)
 
-    def embed_many(self, texts: list[str]) -> list[list[float]]:
+    def embed_many(self, texts: list[str], *, timeout: float | None = None) -> list[list[float]]:
         """One delay for the batch: the OpenAI provider makes one request, not N."""
         if not texts:
             return []
@@ -364,6 +379,7 @@ class FakeProvider(LLMProvider):
         *,
         role: ModelRole = "utility",
         temperature: float = 0.0,
+        timeout: float | None = None,
     ) -> str:
         if role == "answer":
             self._sleep(self.STREAM_DELAY_MS * len(self.ANSWER.split()))

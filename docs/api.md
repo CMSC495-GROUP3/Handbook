@@ -44,16 +44,17 @@ HR password, on an HR-only route → HTTP 403,
 Login accepts up to three passwords. The token's `cred` claim names the
 variable whose hash matched: `APP_PASSWORD_HASH`, `APP_PASSWORD_HASH_2`, or
 `HR_PASSWORD_HASH`. Every signed-in route takes any of them except these
-five, which take only an `HR_PASSWORD_HASH` session:
+six, which take only an `HR_PASSWORD_HASH` session:
 
 - `GET /api/escalations`
 - `GET /api/escalations/{escalation_id}`
 - `PATCH /api/escalations/{escalation_id}`
 - `POST /api/escalations/{escalation_id}/retry-delivery`
 - `GET /api/reports/gaps`
+- `POST /api/documents/reindex`
 
 `POST /api/escalations` is not one of them; employees file escalations from
-the chat. When `HR_PASSWORD_HASH` is unset, the five answer 403 to everyone.
+the chat. When `HR_PASSWORD_HASH` is unset, the six answer 403 to everyone.
 The web app decodes the token's payload to decide whether to show the HR
 links, but the server check above is the only gate.
 
@@ -67,7 +68,8 @@ back in on the same browser keeps its history. A client that sends no
 and chat route, and filing an escalation, sees only the caller's own records;
 someone else's session id or project id answers 404, the same as one that does
 not exist. HR sessions are no exception. Records stored before owners existed
-match no one. A token without an owner id in `sub`, which is every token issued
+match no one; `scripts/purge_ownerless_conversations.py` deletes them (see the
+README's Configure section). A token without an owner id in `sub`, which is every token issued
 before this change, gets 401.
 
 Both chat routes answer HTTP 503 when the model provider is at its
@@ -413,13 +415,20 @@ model (#293). It gets both wordings as untrusted data and must reply
 `{"same": [true, false, ...]}`, one boolean per pair. A pair merges only on
 `true`. All of a load's new pairs go in one call, at most
 `QUESTION_JUDGE_MAX_PAIRS` (default 50), closest first; pairs past the cap
-stay apart on that load and are judged on a later one. Verdicts are memoized
+stay apart on that load and are judged on a later one. `unjudged` counts the
+band pairs a load left without a verdict, past the cap or in a failed call,
+and the page asks for a reload while it is above 0. Verdicts are memoized
 per process (20,000 entries, off when `CACHE_ENABLED=0`) and never stored, so
 a repeat load with nothing new makes no call. At 50 pairs the call is about
 2,000 input tokens and 200 output tokens, under $0.001 on `gpt-4o-mini`. If it
 fails or the reply does not parse, those pairs stay apart and `grouping` is
 `"cosine"`. `QUESTION_JUDGE_MAX_PAIRS=0` turns the check off and also reports
 `"cosine"`.
+
+The embed call and the judge call each get `REPORT_PROVIDER_TIMEOUT_SECONDS`
+(default 8) with no retry, instead of the chat's 30 seconds plus a retry, so
+a stalled provider costs a load about 16 seconds at most before it falls back
+(#300).
 
 | `grouping` | Rows merge when |
 | --- | --- |
@@ -446,6 +455,7 @@ Authorization: Bearer <hr_access_token>
   "until": "2026-09-26T14:00:00+00:00",
   "days": 30,
   "grouping": "meaning",
+  "unjudged": 0,
   "total": 412,
   "refused": 37,
   "gaps": [
@@ -569,7 +579,8 @@ max 200), `skip`.
 passage strings retrieval sees.
 
 `POST /api/documents/reindex` rebuilds the library and bumps the corpus
-version (that is what invalidates the answer cache):
+version (that is what invalidates the answer cache). It takes only an HR
+session, because every cached answer goes with it:
 
 ```json
 {"ok": true, "documents": 1, "corpus_version": "f971481377004fb3a3fce267dc5facd3"}

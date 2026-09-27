@@ -128,6 +128,11 @@ export interface CoverageReport {
    * "exact": embeddings were unavailable and each wording is its own row.
    */
   grouping: 'meaning' | 'cosine' | 'exact'
+  /**
+   * Close pairs of wordings this load left without a verdict: past the
+   * per-load cap, or in a check that failed. A later load judges the next batch.
+   */
+  unjudged: number
   /** Every chat request in the window. */
   total: number
   refused: number

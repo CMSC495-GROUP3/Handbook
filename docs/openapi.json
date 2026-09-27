@@ -941,7 +941,7 @@
     },
     "/api/documents/reindex": {
       "post": {
-        "description": "Force a rebuild of the document library and invalidate cached answers.\n\nBumping the corpus version is what clears the answer cache \u2014 entries are\nkeyed by it, so old ones simply stop matching.",
+        "description": "Force a rebuild of the document library and invalidate cached answers.\n\nBumping the corpus version is what clears the answer cache \u2014 entries are\nkeyed by it, so old ones simply stop matching. Because every cached answer\ngoes with it, only a session opened with the HR password may call this.",
         "operationId": "reindex_documents_api_documents_reindex_post",
         "responses": {
           "200": {
@@ -951,6 +951,9 @@
               }
             },
             "description": "Successful Response"
+          },
+          "403": {
+            "description": "Signed in, but not with the HR password."
           }
         },
         "security": [

@@ -579,7 +579,8 @@ one password's sessions; sessions from the other passwords keep working.
 Give Human Resources its own password in `HR_PASSWORD_HASH`, generated the same
 way. A session opened with it can do everything the shared password can, and
 it is the only one that can open the HR Requests queue and the What People Ask
-report, both of which show questions employees typed. Every other valid token
+report, both of which show questions employees typed, and the only one that
+can call `POST /api/documents/reindex`, which drops every cached answer. Every other valid token
 gets 403 on those routes, and the web app hides their links unless the stored
 token's `cred` claim is `HR_PASSWORD_HASH`. Leave it unset and nobody can open
 either page. Use a password different from the shared one: login checks
@@ -598,6 +599,19 @@ clearing the browser's site data or switching browsers starts an empty
 history. Conversations stored before this existed have no owner and stop
 appearing for anyone. Every token issued before it is rejected, so everyone
 signs in once more after the upgrade.
+
+Those ownerless conversations and projects stay in Mongo, and nothing in the
+app can reach or delete them. They still hold the questions employees typed,
+so remove them once the upgrade has settled. The script counts them and
+changes nothing until it is given `--delete`:
+
+```bash
+.venv/bin/python -m scripts.purge_ownerless_conversations
+.venv/bin/python -m scripts.purge_ownerless_conversations --delete
+```
+
+Escalation records are kept. HR Requests reads only those, and each one
+copies the question and answer it was filed from.
 
 ### 2. Load the corpus
 

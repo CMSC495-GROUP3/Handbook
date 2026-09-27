@@ -186,6 +186,13 @@ function Summary({ report, requested }: { report: CoverageReport; requested: num
           wordings share a row.
         </p>
       )}
+      {report.grouping === 'meaning' && report.unjudged > 0 && (
+        <p className="mt-2 max-w-120 text-[13px] leading-normal text-ink-3">
+          {plural(report.unjudged, 'pair')} of close wordings {report.unjudged === 1 ? 'is' : 'are'} still
+          waiting to be checked, so some rewordings may have their own row. Reload
+          to check the next batch.
+        </p>
+      )}
       {report.days < requested && (
         <p className="mt-2 max-w-120 text-[13px] leading-normal text-ink-3">
           The query log keeps {plural(report.days, 'day')} of questions, so this is the longest window there is.

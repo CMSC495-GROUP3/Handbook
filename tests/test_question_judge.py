@@ -58,7 +58,7 @@ def test_one_call_judges_the_whole_batch(monkeypatch):
     assert judge_pairs([("a", "b"), ("c", "d")]) == [True, False]
     [(messages, kwargs)] = calls
     assert messages[0] == {"role": "system", "content": QUESTION_JUDGE_SYSTEM_PROMPT}
-    assert kwargs == {"role": "utility", "temperature": 0}
+    assert kwargs == {"role": "utility", "temperature": 0, "timeout": None}
 
 
 def test_no_pairs_makes_no_call(monkeypatch):
