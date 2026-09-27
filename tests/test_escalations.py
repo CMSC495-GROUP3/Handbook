@@ -7,8 +7,9 @@ import sys
 import urllib.error
 from datetime import UTC, datetime, timedelta
 
+import bcrypt
 import pytest
-from conftest import FAKE_DB, make_passages
+from conftest import FAKE_DB, _bearer, make_passages
 from pymongo.errors import DuplicateKeyError
 
 from sourcebook.api import notify
@@ -574,11 +575,25 @@ HR_ROUTES = [
 
 class TestHrOnly:
     @pytest.mark.parametrize(("method", "path", "body"), HR_ROUTES)
-    def test_an_employee_token_is_forbidden(
-        self, client, auth, refused, delivered, method, path, body
-    ):
+    def test_no_token_is_rejected(self, client, auth, refused, delivered, method, path, body):
         escalation_id = _create(client, auth, refused).json()["escalation_id"]
-        response = client.request(method, path.format(id=escalation_id), json=body, headers=auth)
+        response = client.request(method, path.format(id=escalation_id), json=body)
+        assert response.status_code in (401, 403)
+        assert _stored(escalation_id)["status"] == "open"
+
+    # The reviewer's password is an employee one too, unless a deployment gives
+    # HR_PASSWORD_HASH the same hash (see test_auth.py).
+    @pytest.mark.parametrize("cred", ["APP_PASSWORD_HASH", "APP_PASSWORD_HASH_2"])
+    @pytest.mark.parametrize(("method", "path", "body"), HR_ROUTES)
+    def test_an_employee_token_is_forbidden(
+        self, client, auth, refused, delivered, monkeypatch, method, path, body, cred
+    ):
+        monkeypatch.setenv(
+            "APP_PASSWORD_HASH_2", bcrypt.hashpw(b"reviewer", bcrypt.gensalt(4)).decode()
+        )
+        escalation_id = _create(client, auth, refused).json()["escalation_id"]
+        headers = _bearer(cred)
+        response = client.request(method, path.format(id=escalation_id), json=body, headers=headers)
         assert response.status_code == 403
         assert response.json()["detail"] == "Human Resources sign-in required."
         # Refused before the route ran: the record is still open.
