@@ -7,7 +7,7 @@ from datetime import timedelta
 
 import bcrypt
 import pytest
-from conftest import TEST_PASSWORD
+from conftest import HR_TEST_PASSWORD, TEST_PASSWORD
 
 from sourcebook.api.routes import auth as auth_routes
 from sourcebook.api.tokens import decode_claims
@@ -84,7 +84,11 @@ def test_malformed_second_hash_is_a_server_error(client, monkeypatch, caplog):
 
 @pytest.mark.parametrize(
     ("password", "variable"),
-    [(TEST_PASSWORD, "APP_PASSWORD_HASH"), (SECOND_PASSWORD, "APP_PASSWORD_HASH_2")],
+    [
+        (TEST_PASSWORD, "APP_PASSWORD_HASH"),
+        (SECOND_PASSWORD, "APP_PASSWORD_HASH_2"),
+        (HR_TEST_PASSWORD, "HR_PASSWORD_HASH"),
+    ],
 )
 def test_login_records_which_password_was_used(client, monkeypatch, caplog, password, variable):
     # Both passwords open the same door; the log line and the claim are the
@@ -217,12 +221,107 @@ def test_startup_requires_the_first_hash_even_with_a_second(monkeypatch):
 
 def test_startup_accepts_one_or_two_well_formed_hashes(monkeypatch):
     monkeypatch.delenv("APP_PASSWORD_HASH_2", raising=False)
+    monkeypatch.delenv("HR_PASSWORD_HASH", raising=False)
     assert [name for name, _ in auth_routes.validate_password_hashes()] == ["APP_PASSWORD_HASH"]
     monkeypatch.setenv("APP_PASSWORD_HASH_2", _second_hash())
     assert [name for name, _ in auth_routes.validate_password_hashes()] == [
         "APP_PASSWORD_HASH",
         "APP_PASSWORD_HASH_2",
     ]
+
+
+# ── The HR password ───────────────────────────────────────────────────────────
+
+
+def test_hr_password_opens_the_employee_routes_too(client):
+    token = client.post("/api/auth/login", json={"password": HR_TEST_PASSWORD}).json()[
+        "access_token"
+    ]
+    assert (
+        client.get("/api/conversations", headers={"Authorization": f"Bearer {token}"}).status_code
+        == 200
+    )
+
+
+def test_hr_password_is_rejected_when_not_configured(client, monkeypatch):
+    monkeypatch.delenv("HR_PASSWORD_HASH", raising=False)
+    assert client.post("/api/auth/login", json={"password": HR_TEST_PASSWORD}).status_code == 401
+    assert client.post("/api/auth/login", json={"password": TEST_PASSWORD}).status_code == 200
+
+
+def test_the_shared_password_wins_when_hr_reuses_it(client, monkeypatch):
+    """An HR hash of the shared password must not make every employee HR."""
+    monkeypatch.setenv("HR_PASSWORD_HASH", _cost4_hash())
+    token = client.post("/api/auth/login", json={"password": TEST_PASSWORD}).json()["access_token"]
+    assert decode_claims(token)["cred"] == "APP_PASSWORD_HASH"
+
+
+def test_hr_wins_when_it_shares_the_second_hash(client, monkeypatch):
+    """The course deployment gives the reviewer's password HR access this way."""
+    second = _second_hash()
+    monkeypatch.setenv("APP_PASSWORD_HASH_2", second)
+    monkeypatch.setenv("HR_PASSWORD_HASH", second)
+    token = client.post("/api/auth/login", json={"password": SECOND_PASSWORD}).json()[
+        "access_token"
+    ]
+    assert decode_claims(token)["cred"] == "HR_PASSWORD_HASH"
+    headers = {"Authorization": f"Bearer {token}"}
+    assert client.get("/api/reports/gaps", headers=headers).status_code == 200
+
+
+def test_malformed_hr_hash_is_a_server_error(client, monkeypatch, caplog):
+    monkeypatch.setenv("HR_PASSWORD_HASH", "not-a-bcrypt-hash")
+    with caplog.at_level(logging.ERROR, logger="sourcebook.api.routes.auth"):
+        response = client.post("/api/auth/login", json={"password": TEST_PASSWORD})
+    assert response.status_code == 500
+    assert "HR_PASSWORD_HASH is not a valid bcrypt hash" in caplog.text
+
+
+def test_hr_hash_alone_does_not_replace_the_first(monkeypatch):
+    monkeypatch.setenv("APP_PASSWORD_HASH", "")
+    with pytest.raises(auth_routes.PasswordHashError, match="APP_PASSWORD_HASH is not configured"):
+        auth_routes.validate_password_hashes()
+
+
+def test_startup_accepts_all_three_hashes(monkeypatch):
+    monkeypatch.setenv("APP_PASSWORD_HASH_2", _second_hash())
+    assert [name for name, _ in auth_routes.validate_password_hashes()] == [
+        "APP_PASSWORD_HASH",
+        "HR_PASSWORD_HASH",
+        "APP_PASSWORD_HASH_2",
+    ]
+
+
+def test_rotated_hr_hash_rejects_its_tokens(client, monkeypatch):
+    token = client.post("/api/auth/login", json={"password": HR_TEST_PASSWORD}).json()[
+        "access_token"
+    ]
+    headers = {"Authorization": f"Bearer {token}"}
+    assert client.get("/api/escalations", headers=headers).status_code == 200
+
+    monkeypatch.setenv("HR_PASSWORD_HASH", _cost4_hash())
+    assert client.get("/api/escalations", headers=headers).status_code == 401
+    assert client.get("/api/conversations", headers=headers).status_code == 401
+
+
+def test_unset_hr_hash_rejects_its_tokens(client, monkeypatch):
+    token = client.post("/api/auth/login", json={"password": HR_TEST_PASSWORD}).json()[
+        "access_token"
+    ]
+    monkeypatch.delenv("HR_PASSWORD_HASH", raising=False)
+    headers = {"Authorization": f"Bearer {token}"}
+    assert client.get("/api/escalations", headers=headers).status_code == 401
+    assert client.get("/api/reports/gaps", headers=headers).status_code == 401
+
+
+@pytest.mark.parametrize("cred", ["APP_PASSWORD_HASH", "APP_PASSWORD_HASH_2"])
+def test_employee_logins_cannot_reach_the_hr_routes(client, monkeypatch, cred):
+    monkeypatch.setenv("APP_PASSWORD_HASH_2", _second_hash())
+    password = TEST_PASSWORD if cred == "APP_PASSWORD_HASH" else SECOND_PASSWORD
+    token = client.post("/api/auth/login", json={"password": password}).json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+    assert client.get("/api/escalations", headers=headers).status_code == 403
+    assert client.get("/api/reports/gaps", headers=headers).status_code == 403
 
 
 def test_unconfigured_password_is_a_server_error(client, monkeypatch, caplog):

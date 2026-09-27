@@ -32,7 +32,9 @@ the parameter stays fixed, so a short TTL cannot turn every request into a 422.
 
 Question text is the logged ``question_condensed`` (the standalone rewrite that
 the hash groups on), falling back to the truncated ``question_raw``. No
-session id leaves the server; sessions are only counted.
+session id leaves the server; sessions are only counted. Only a session opened
+with the HR password may read it (``require_hr``), because the text is what
+employees typed.
 """
 
 import logging
@@ -48,7 +50,7 @@ from pymongo.errors import ExecutionTimeout, OperationFailure
 
 from sourcebook.api.db import query_logs_col
 from sourcebook.api.limiter import limiter
-from sourcebook.api.routes.deps import require_auth
+from sourcebook.api.routes.deps import HR_ONLY_RESPONSES, require_hr
 from sourcebook.rag.cache import embedding_cache_key, get_cached_embeddings
 from sourcebook.rag.config import (
     CACHE_ENABLED,
@@ -79,7 +81,7 @@ MAX_WINDOW_DAYS = 90
 # one day, or a TTL under a day would leave an empty window.
 TTL_DAYS = max(1, QUERY_LOG_TTL_SECONDS // 86400)
 # Per query. At the volume the TTL comment in config.py plans for, a 90-day
-# $group is not free, and any signed-in user can ask for one 30 times a minute.
+# $group is not free, and an HR session can ask for one 30 times a minute.
 QUERY_TIMEOUT_MS = 5000
 # MongoDB's ExceededMemoryLimit. An $addToSet accumulator cannot spill to disk,
 # so one question asked in about 1.6M conversations stops the pipeline with it
@@ -199,7 +201,7 @@ def _by_conversations(groups: list[QuestionGroup]) -> list[QuestionGroup]:
     return sorted(groups, key=lambda g: (-g.conversations, -g.count, g.leader.question_hash or ""))
 
 
-@router.get("/reports/gaps", dependencies=[Depends(require_auth)])
+@router.get("/reports/gaps", responses=HR_ONLY_RESPONSES, dependencies=[Depends(require_hr)])
 @limiter.limit("30/minute")
 def coverage_gaps(
     request: Request,

@@ -3,7 +3,8 @@
 This page is the client walkthrough. The machine-readable contract is
 [openapi.json](openapi.json). Regenerate it with `make openapi`; CI fails if the
 committed file is stale. The live console is `/docs` while the API is running
-(`make stub` on :8000, password `dev`). Setup and the things that bite are in
+(`make stub` on :8000, password `dev`, or `hr` for the HR routes). Setup and
+the things that bite are in
 [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 Send `Authorization: Bearer <access_token>` on every route except
@@ -34,7 +35,28 @@ in-process). Defaults:
 
 Missing bearer → `{"detail": "Not authenticated"}`. Bad or rotated token →
 `{"detail": "Invalid or expired token."}`. Wrong password →
-`{"detail": "Incorrect password."}`.
+`{"detail": "Incorrect password."}`. A valid token that was not issued for the
+HR password, on an HR-only route → HTTP 403,
+`{"detail": "Human Resources sign-in required."}`.
+
+## HR-only routes
+
+Login accepts up to three passwords. The token's `cred` claim names the
+variable whose hash matched: `APP_PASSWORD_HASH`, `APP_PASSWORD_HASH_2`, or
+`HR_PASSWORD_HASH`. Every signed-in route takes any of them except these
+five, which take only an `HR_PASSWORD_HASH` session:
+
+- `GET /api/escalations`
+- `GET /api/escalations/{escalation_id}`
+- `PATCH /api/escalations/{escalation_id}`
+- `POST /api/escalations/{escalation_id}/retry-delivery`
+- `GET /api/reports/gaps`
+
+`POST /api/escalations` is not one of them; employees file escalations from
+the chat. When `HR_PASSWORD_HASH` is unset, the five answer 403 to everyone.
+The web app decodes the token's payload to decide whether to show the HR
+links, but the server check above is the only gate. The conversation routes
+are not HR-only and have no owner filter.
 
 Both chat routes answer HTTP 503 when the model provider is at its
 concurrency limit (`OPENAI_MAX_CONCURRENT_REQUESTS`, waited on for
@@ -248,12 +270,15 @@ now: a webhook is configured, attempts are under
 
 ## Human Resources queue and resolve
 
+Every route in this section needs an HR session; see
+[HR-only routes](#hr-only-routes).
+
 `GET /api/escalations?status=open` — newest first. Optional `session_id`,
 `limit` 1–200 (default 50).
 
 ```http
 GET /api/escalations?status=open
-Authorization: Bearer <access_token>
+Authorization: Bearer <hr_access_token>
 ```
 
 ```json
@@ -294,7 +319,7 @@ Authorization: Bearer <access_token>
 
 ```http
 PATCH /api/escalations/da78161d307f40868c3b92db5e04223d
-Authorization: Bearer <access_token>
+Authorization: Bearer <hr_access_token>
 Content-Type: application/json
 
 {"status": "resolved", "resolution": "Pointed them at the PTO policy carry-over section."}
@@ -320,7 +345,8 @@ Every chat request writes one `query_logs` row (question hash, scores, refused,
 sources, cache hit, latency). How that log is used is in the README section
 [Learning from the query log](../README.md#learning-from-the-query-log).
 
-`GET /api/reports/gaps` ranks that log for the What People Ask page. `days`
+`GET /api/reports/gaps` ranks that log for the What People Ask page. It needs
+an HR session ([HR-only routes](#hr-only-routes)). `days`
 (1–90, default 30) sets the window back from now; `top` (1–100, default 20)
 caps each list. A window longer than the log's TTL is shortened to it, and
 `days` in the response is the one used.
@@ -378,7 +404,7 @@ in [evaluation.md](evaluation.md#question-grouping-threshold).
 
 ```http
 GET /api/reports/gaps?days=30
-Authorization: Bearer <token>
+Authorization: Bearer <hr_access_token>
 ```
 
 ```json

@@ -7,8 +7,9 @@ import sys
 import urllib.error
 from datetime import UTC, datetime, timedelta
 
+import bcrypt
 import pytest
-from conftest import FAKE_DB, make_passages
+from conftest import FAKE_DB, _bearer, make_passages
 from pymongo.errors import DuplicateKeyError
 
 from sourcebook.api import notify
@@ -179,7 +180,7 @@ class TestCreate:
 
 
 class TestQueue:
-    def test_lists_newest_first_with_filters(self, client, auth, retrieval, delivered):
+    def test_lists_newest_first_with_filters(self, client, auth, hr_auth, retrieval, delivered):
         sessions = []
         for question in ("q1", "q2", "q3"):
             sid = client.post("/api/conversations", json={"title": question}, headers=auth).json()[
@@ -190,37 +191,42 @@ class TestQueue:
             sessions.append(sid)
         ids = [_create(client, auth, sid).json()["escalation_id"] for sid in sessions]
 
-        client.patch(f"/api/escalations/{ids[1]}", json={"status": "resolved"}, headers=auth)
+        client.patch(f"/api/escalations/{ids[1]}", json={"status": "resolved"}, headers=hr_auth)
 
-        everything = client.get("/api/escalations", headers=auth).json()
+        everything = client.get("/api/escalations", headers=hr_auth).json()
         assert everything["total"] == 3
         assert [e["escalation_id"] for e in everything["items"]] == ids[::-1]
 
-        open_queue = client.get("/api/escalations", params={"status": "open"}, headers=auth).json()
+        open_queue = client.get(
+            "/api/escalations", params={"status": "open"}, headers=hr_auth
+        ).json()
         assert [e["escalation_id"] for e in open_queue["items"]] == [ids[2], ids[0]]
 
         mine = client.get(
-            "/api/escalations", params={"session_id": sessions[1]}, headers=auth
+            "/api/escalations", params={"session_id": sessions[1]}, headers=hr_auth
         ).json()
         assert [e["escalation_id"] for e in mine["items"]] == [ids[1]]
 
         assert (
-            len(client.get("/api/escalations", params={"limit": 2}, headers=auth).json()["items"])
+            len(
+                client.get("/api/escalations", params={"limit": 2}, headers=hr_auth).json()["items"]
+            )
             == 2
         )
         assert (
-            client.get("/api/escalations", params={"status": "weird"}, headers=auth).status_code
+            client.get("/api/escalations", params={"status": "weird"}, headers=hr_auth).status_code
             == 422
         )
 
-    def test_get_one(self, client, auth, refused, delivered):
+    def test_get_one(self, client, auth, hr_auth, refused, delivered):
         record = _create(client, auth, refused).json()
         assert (
-            client.get(f"/api/escalations/{record['escalation_id']}", headers=auth).json() == record
+            client.get(f"/api/escalations/{record['escalation_id']}", headers=hr_auth).json()
+            == record
         )
-        assert client.get("/api/escalations/missing", headers=auth).status_code == 404
+        assert client.get("/api/escalations/missing", headers=hr_auth).status_code == 404
 
-    def test_resolve_and_reopen(self, client, auth, refused, delivered):
+    def test_resolve_and_reopen(self, client, auth, hr_auth, refused, delivered):
         escalation_id = _create(client, auth, refused).json()["escalation_id"]
 
         resolved = client.patch(
@@ -229,27 +235,27 @@ class TestQueue:
                 "status": "resolved",
                 "resolution": "Assistance animals are allowed; policy added.",
             },
-            headers=auth,
+            headers=hr_auth,
         ).json()
         assert resolved["status"] == "resolved"
         assert resolved["resolution"] == "Assistance animals are allowed; policy added."
         assert resolved["resolved_at"] is not None
 
         reopened = client.patch(
-            f"/api/escalations/{escalation_id}", json={"status": "open"}, headers=auth
+            f"/api/escalations/{escalation_id}", json={"status": "open"}, headers=hr_auth
         ).json()
         assert reopened["status"] == "open" and reopened["resolved_at"] is None
         assert reopened["resolution"] == resolved["resolution"]  # untouched when absent
 
         assert (
             client.patch(
-                "/api/escalations/missing", json={"status": "open"}, headers=auth
+                "/api/escalations/missing", json={"status": "open"}, headers=hr_auth
             ).status_code
             == 404
         )
         assert (
             client.patch(
-                f"/api/escalations/{escalation_id}", json={"status": "closed"}, headers=auth
+                f"/api/escalations/{escalation_id}", json={"status": "closed"}, headers=hr_auth
             ).status_code
             == 422
         )
@@ -323,7 +329,7 @@ class TestDeliveryStatus:
         assert stored["delivery_attempts"] == 0
         assert stored["delivery_last_attempt_at"] is None
 
-    def test_retry_failed_delivery_until_success(self, client, auth, refused, monkeypatch):
+    def test_retry_failed_delivery_until_success(self, client, auth, hr_auth, refused, monkeypatch):
         monkeypatch.setattr(notify, "ESCALATION_WEBHOOK_URL", WEBHOOK_URL)
         monkeypatch.setattr(
             notify.urllib.request,
@@ -339,7 +345,7 @@ class TestDeliveryStatus:
         monkeypatch.setattr(
             notify.urllib.request, "urlopen", lambda *a, **k: _FakeWebhookResponse()
         )
-        retried = client.post(f"/api/escalations/{escalation_id}/retry-delivery", headers=auth)
+        retried = client.post(f"/api/escalations/{escalation_id}/retry-delivery", headers=hr_auth)
         assert retried.status_code == 200
         body = retried.json()
         assert body["delivery_status"] == "delivered"
@@ -360,7 +366,7 @@ class TestDeliveryStatus:
         )
 
     def test_retry_rejects_delivered_and_exhausted_attempts(
-        self, client, auth, refused, monkeypatch
+        self, client, auth, hr_auth, refused, monkeypatch
     ):
         monkeypatch.setattr(notify, "ESCALATION_WEBHOOK_URL", WEBHOOK_URL)
         monkeypatch.setattr(
@@ -369,7 +375,7 @@ class TestDeliveryStatus:
         escalation_id = _create(client, auth, refused).json()["escalation_id"]
         assert (
             client.post(
-                f"/api/escalations/{escalation_id}/retry-delivery", headers=auth
+                f"/api/escalations/{escalation_id}/retry-delivery", headers=hr_auth
             ).status_code
             == 409
         )
@@ -383,12 +389,12 @@ class TestDeliveryStatus:
                 }
             },
         )
-        exhausted = client.post(f"/api/escalations/{escalation_id}/retry-delivery", headers=auth)
+        exhausted = client.post(f"/api/escalations/{escalation_id}/retry-delivery", headers=hr_auth)
         assert exhausted.status_code == 409
         assert "Maximum delivery attempts" in exhausted.json()["detail"]
         assert WEBHOOK_URL not in exhausted.text
 
-    def test_concurrent_retry_only_one_sends(self, client, auth, refused, monkeypatch):
+    def test_concurrent_retry_only_one_sends(self, client, auth, hr_auth, refused, monkeypatch):
         monkeypatch.setattr(notify, "ESCALATION_WEBHOOK_URL", WEBHOOK_URL)
         monkeypatch.setattr(
             notify.urllib.request,
@@ -409,8 +415,8 @@ class TestDeliveryStatus:
 
         monkeypatch.setattr(notify, "deliver_escalation", fake_deliver)
 
-        first = client.post(f"/api/escalations/{escalation_id}/retry-delivery", headers=auth)
-        second = client.post(f"/api/escalations/{escalation_id}/retry-delivery", headers=auth)
+        first = client.post(f"/api/escalations/{escalation_id}/retry-delivery", headers=hr_auth)
+        second = client.post(f"/api/escalations/{escalation_id}/retry-delivery", headers=hr_auth)
         assert first.status_code == 200
         assert first.json()["delivery_status"] == "delivered"
         assert second.status_code == 409
@@ -418,26 +424,26 @@ class TestDeliveryStatus:
         assert len(sends) == 1
 
     def test_unconfigured_pending_delivery_can_be_claimed_after_configuration(
-        self, client, auth, refused, monkeypatch
+        self, client, auth, hr_auth, refused, monkeypatch
     ):
         monkeypatch.setattr(notify, "ESCALATION_WEBHOOK_URL", "")
         escalation_id = _create(client, auth, refused).json()["escalation_id"]
 
         monkeypatch.setattr(notify, "ESCALATION_WEBHOOK_URL", WEBHOOK_URL)
         monkeypatch.setattr(notify, "deliver_escalation", lambda _record: True)
-        retried = client.post(f"/api/escalations/{escalation_id}/retry-delivery", headers=auth)
+        retried = client.post(f"/api/escalations/{escalation_id}/retry-delivery", headers=hr_auth)
 
         assert retried.status_code == 200
         assert retried.json()["delivery_status"] == "delivered"
         assert retried.json()["delivery_attempts"] == 1
 
     def test_retry_without_webhook_does_not_mutate_store_only_record(
-        self, client, auth, refused, monkeypatch
+        self, client, auth, hr_auth, refused, monkeypatch
     ):
         monkeypatch.setattr(notify, "ESCALATION_WEBHOOK_URL", "")
         escalation_id = _create(client, auth, refused).json()["escalation_id"]
 
-        retried = client.post(f"/api/escalations/{escalation_id}/retry-delivery", headers=auth)
+        retried = client.post(f"/api/escalations/{escalation_id}/retry-delivery", headers=hr_auth)
 
         assert retried.status_code == 409
         assert retried.json()["detail"] == "Webhook delivery is not configured."
@@ -446,7 +452,9 @@ class TestDeliveryStatus:
         assert stored["delivery_attempts"] == 0
         assert stored["delivery_claimed_at"] is None
 
-    def test_stale_pending_claim_can_be_recovered(self, client, auth, refused, monkeypatch):
+    def test_stale_pending_claim_can_be_recovered(
+        self, client, auth, hr_auth, refused, monkeypatch
+    ):
         monkeypatch.setattr(notify, "ESCALATION_WEBHOOK_URL", "")
         escalation_id = _create(client, auth, refused).json()["escalation_id"]
         FAKE_DB["escalations"].update_one(
@@ -461,7 +469,7 @@ class TestDeliveryStatus:
         monkeypatch.setattr(notify, "ESCALATION_WEBHOOK_URL", WEBHOOK_URL)
         monkeypatch.setattr(notify, "deliver_escalation", lambda _record: True)
 
-        retried = client.post(f"/api/escalations/{escalation_id}/retry-delivery", headers=auth)
+        retried = client.post(f"/api/escalations/{escalation_id}/retry-delivery", headers=hr_auth)
         assert retried.status_code == 200
         assert retried.json()["delivery_status"] == "delivered"
 
@@ -519,7 +527,7 @@ class TestDeliveryStatus:
         assert "ESCALATION_WEBHOOK_" in result.stderr
 
     def test_legacy_record_without_delivery_fields_can_be_claimed(
-        self, client, auth, refused, monkeypatch
+        self, client, auth, hr_auth, refused, monkeypatch
     ):
         monkeypatch.setattr(notify, "ESCALATION_WEBHOOK_URL", "")
         escalation_id = _create(client, auth, refused).json()["escalation_id"]
@@ -536,15 +544,16 @@ class TestDeliveryStatus:
 
         monkeypatch.setattr(notify, "ESCALATION_WEBHOOK_URL", WEBHOOK_URL)
         monkeypatch.setattr(notify, "deliver_escalation", lambda _record: True)
-        retried = client.post(f"/api/escalations/{escalation_id}/retry-delivery", headers=auth)
+        retried = client.post(f"/api/escalations/{escalation_id}/retry-delivery", headers=hr_auth)
 
         assert retried.status_code == 200
         assert retried.json()["delivery_status"] == "delivered"
         assert retried.json()["delivery_attempts"] == 1
 
-    def test_missing_escalation_retry_is_404(self, client, auth):
+    def test_missing_escalation_retry_is_404(self, client, hr_auth):
         assert (
-            client.post("/api/escalations/missing/retry-delivery", headers=auth).status_code == 404
+            client.post("/api/escalations/missing/retry-delivery", headers=hr_auth).status_code
+            == 404
         )
 
 
@@ -554,25 +563,94 @@ def _stored(escalation_id: str) -> dict:
     )
 
 
+# The queue shows every employee's escalated question and note, so only the HR
+# password reads or changes it. Filing one stays open to every signed-in user.
+HR_ROUTES = [
+    ("get", "/api/escalations", None),
+    ("get", "/api/escalations/{id}", None),
+    ("patch", "/api/escalations/{id}", {"status": "resolved"}),
+    ("post", "/api/escalations/{id}/retry-delivery", None),
+]
+
+
+class TestHrOnly:
+    @pytest.mark.parametrize(("method", "path", "body"), HR_ROUTES)
+    def test_no_token_is_rejected(self, client, auth, refused, delivered, method, path, body):
+        escalation_id = _create(client, auth, refused).json()["escalation_id"]
+        response = client.request(method, path.format(id=escalation_id), json=body)
+        assert response.status_code in (401, 403)
+        assert _stored(escalation_id)["status"] == "open"
+
+    # The reviewer's password is an employee one too, unless a deployment gives
+    # HR_PASSWORD_HASH the same hash (see test_auth.py).
+    @pytest.mark.parametrize("cred", ["APP_PASSWORD_HASH", "APP_PASSWORD_HASH_2"])
+    @pytest.mark.parametrize(("method", "path", "body"), HR_ROUTES)
+    def test_an_employee_token_is_forbidden(
+        self, client, auth, refused, delivered, monkeypatch, method, path, body, cred
+    ):
+        monkeypatch.setenv(
+            "APP_PASSWORD_HASH_2", bcrypt.hashpw(b"reviewer", bcrypt.gensalt(4)).decode()
+        )
+        escalation_id = _create(client, auth, refused).json()["escalation_id"]
+        headers = _bearer(cred)
+        response = client.request(method, path.format(id=escalation_id), json=body, headers=headers)
+        assert response.status_code == 403
+        assert response.json()["detail"] == "Human Resources sign-in required."
+        # Refused before the route ran: the record is still open.
+        assert _stored(escalation_id)["status"] == "open"
+
+    @pytest.mark.parametrize(("method", "path", "body"), HR_ROUTES)
+    def test_an_hr_token_is_let_through(
+        self, client, auth, hr_auth, refused, delivered, monkeypatch, method, path, body
+    ):
+        monkeypatch.setattr(notify, "ESCALATION_WEBHOOK_URL", WEBHOOK_URL)
+        monkeypatch.setattr(
+            notify.urllib.request, "urlopen", lambda *a, **k: _FakeWebhookResponse()
+        )
+        escalation_id = _create(client, auth, refused).json()["escalation_id"]
+        response = client.request(method, path.format(id=escalation_id), json=body, headers=hr_auth)
+        assert response.status_code == 200
+
+    @pytest.mark.parametrize(("method", "path", "body"), HR_ROUTES)
+    def test_forbidden_to_employees_without_an_hr_password_configured(
+        self, client, auth, refused, delivered, monkeypatch, method, path, body
+    ):
+        monkeypatch.delenv("HR_PASSWORD_HASH", raising=False)
+        escalation_id = _create(client, auth, refused).json()["escalation_id"]
+        response = client.request(method, path.format(id=escalation_id), json=body, headers=auth)
+        assert response.status_code == 403
+
+    def test_employees_still_file_from_the_chat_without_an_hr_password(
+        self, client, auth, refused, delivered, monkeypatch
+    ):
+        monkeypatch.delenv("HR_PASSWORD_HASH", raising=False)
+        response = _create(client, auth, refused)
+        assert response.status_code == 200
+        assert response.json()["status"] == "open"
+
+    def test_an_hr_token_can_file_one_too(self, client, hr_auth, refused, delivered):
+        assert _create(client, hr_auth, refused).status_code == 200
+
+
 class TestDeliveryView:
     """What responses say about delivery, computed per response and never stored."""
 
     def test_configuring_a_webhook_later_makes_the_record_pending_and_retryable(
-        self, client, auth, refused, monkeypatch, delivered
+        self, client, auth, hr_auth, refused, monkeypatch, delivered
     ):
         monkeypatch.setattr(notify, "ESCALATION_WEBHOOK_URL", "")
         escalation_id = _create(client, auth, refused).json()["escalation_id"]
-        before = client.get(f"/api/escalations/{escalation_id}", headers=auth).json()
+        before = client.get(f"/api/escalations/{escalation_id}", headers=hr_auth).json()
         assert before["delivery_status"] == "not_configured"
 
         monkeypatch.setattr(notify, "ESCALATION_WEBHOOK_URL", WEBHOOK_URL)
-        after = client.get(f"/api/escalations/{escalation_id}", headers=auth).json()
+        after = client.get(f"/api/escalations/{escalation_id}", headers=hr_auth).json()
         assert after["delivery_status"] == "pending"
         assert after["delivery_retryable"] is True
         assert _stored(escalation_id)["delivery_status"] == "pending"
 
     def test_legacy_record_reads_not_configured_with_zero_attempts(
-        self, client, auth, refused, monkeypatch, delivered
+        self, client, auth, hr_auth, refused, monkeypatch, delivered
     ):
         monkeypatch.setattr(notify, "ESCALATION_WEBHOOK_URL", "")
         escalation_id = _create(client, auth, refused).json()["escalation_id"]
@@ -585,7 +663,7 @@ class TestDeliveryView:
         ):
             stored.pop(field, None)
 
-        items = client.get("/api/escalations?status=open", headers=auth).json()["items"]
+        items = client.get("/api/escalations?status=open", headers=hr_auth).json()["items"]
         (record,) = [item for item in items if item["escalation_id"] == escalation_id]
         assert record["delivery_status"] == "not_configured"
         assert record["delivery_attempts"] == 0
@@ -593,7 +671,7 @@ class TestDeliveryView:
         assert record["delivery_retryable"] is False
 
     def test_a_failed_attempt_stays_failed_after_the_webhook_is_removed(
-        self, client, auth, refused, monkeypatch, delivered
+        self, client, auth, hr_auth, refused, monkeypatch, delivered
     ):
         """Only never-attempted records are relabeled; history is not rewritten."""
         monkeypatch.setattr(notify, "ESCALATION_WEBHOOK_URL", "")
@@ -602,12 +680,12 @@ class TestDeliveryView:
             {"escalation_id": escalation_id},
             {"$set": {"delivery_status": "failed", "delivery_attempts": 1}},
         )
-        record = client.get(f"/api/escalations/{escalation_id}", headers=auth).json()
+        record = client.get(f"/api/escalations/{escalation_id}", headers=hr_auth).json()
         assert record["delivery_status"] == "failed"
         assert record["delivery_retryable"] is False
 
     def test_retryable_tracks_the_attempt_limit(
-        self, client, auth, refused, monkeypatch, delivered
+        self, client, auth, hr_auth, refused, monkeypatch, delivered
     ):
         monkeypatch.setattr(notify, "ESCALATION_WEBHOOK_URL", WEBHOOK_URL)
         escalation_id = _create(client, auth, refused).json()["escalation_id"]
@@ -618,16 +696,16 @@ class TestDeliveryView:
                 {"escalation_id": escalation_id},
                 {"$set": {"delivery_status": "failed", "delivery_attempts": attempts}},
             )
-            record = client.get(f"/api/escalations/{escalation_id}", headers=auth).json()
+            record = client.get(f"/api/escalations/{escalation_id}", headers=hr_auth).json()
             assert record["delivery_retryable"] is retryable
 
     def test_resolve_response_carries_the_delivery_view(
-        self, client, auth, refused, monkeypatch, delivered
+        self, client, auth, hr_auth, refused, monkeypatch, delivered
     ):
         monkeypatch.setattr(notify, "ESCALATION_WEBHOOK_URL", "")
         escalation_id = _create(client, auth, refused).json()["escalation_id"]
         resolved = client.patch(
-            f"/api/escalations/{escalation_id}", json={"status": "resolved"}, headers=auth
+            f"/api/escalations/{escalation_id}", json={"status": "resolved"}, headers=hr_auth
         ).json()
         assert resolved["delivery_status"] == "not_configured"
         assert resolved["delivery_retryable"] is False
@@ -647,7 +725,7 @@ class TestDeliveryView:
         ],
     )
     def test_retryable_agrees_with_the_claim_filter(
-        self, client, auth, refused, monkeypatch, delivered, fields, naive
+        self, client, auth, hr_auth, refused, monkeypatch, delivered, fields, naive
     ):
         """`_claimable` restates `_claim_delivery`'s Mongo filter; they must agree.
 
@@ -670,7 +748,7 @@ class TestDeliveryView:
             claimed_at = datetime.now(UTC) - timedelta(seconds=seconds)
             stored["delivery_claimed_at"] = claimed_at.replace(tzinfo=None) if naive else claimed_at
 
-        reported = client.get(f"/api/escalations/{escalation_id}", headers=auth).json()
+        reported = client.get(f"/api/escalations/{escalation_id}", headers=hr_auth).json()
         if claim_age is not None:
             stored["delivery_claimed_at"] = claimed_at
         claimed = escalations._claim_delivery(escalation_id) is not None
