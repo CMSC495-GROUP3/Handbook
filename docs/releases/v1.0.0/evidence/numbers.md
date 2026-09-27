@@ -6,11 +6,12 @@ Every filled cell names the artifact or GitHub search it came from. Cells
 without a committed artifact use
 `Pending — requires <named artifact/gate>` and do not invent a number.
 
-**Tag status:** `v1.0.0` is not cut. Code freezes on Monday 28 September, and
-`main` at that point is the candidate
+**Tag status:** `v1.0.0` is not cut. The candidate is `main` at
+[`7d3c779`](https://github.com/CMSC495-GROUP3/Sourcebook/commit/7d3c7795c197c5be56b15aebc650576760fd75d1),
+named on 27 September after the last code change merged
 ([plan on #215](https://github.com/CMSC495-GROUP3/Sourcebook/issues/215#issuecomment-5824613941)).
-Every final-release row below is Pending until it is measured on that
-candidate. The alpha and beta rows link into the tagged trees, so they do not
+Final-release rows are filled as each measurement runs on it; the rest stay
+Pending. The alpha and beta rows link into the tagged trees, so they do not
 move when `main` does. The rest of this folder (`README.md`, `coverage.md`)
 and the release pages beside it (`handoff.md`, `release-notes.md`,
 `live-evaluation.md`, `live-benchmark.md`) are drafted in
@@ -31,8 +32,8 @@ search API, and read the total count. The earlier snapshot in
 
 | Figure | Value | Source |
 | --- | --- | --- |
-| Python coverage %, final | Pending — requires the candidate's `python-coverage-<sha>` CI artifact copied into `evidence/coverage.md` ([issue #210](https://github.com/CMSC495-GROUP3/Sourcebook/issues/210); file drafted in [#274](https://github.com/CMSC495-GROUP3/Sourcebook/pull/274)) | Floor today: `--cov-fail-under=80` in [`.github/workflows/ci.yml`](../../../../.github/workflows/ci.yml); see [quality.md § Coverage](../../../quality.md#coverage) |
-| Web coverage %, final | Pending — requires the candidate's `web-coverage-<sha>` CI artifact, same file and issue | Scope is the source files listed in `web/vitest.config.ts`, not all of `web/src`. Say so wherever the figure is quoted |
+| Python coverage %, final | 93% of 2,426 statements on `7d3c779` | [coverage.md](coverage.md), from `python-coverage-7d3c779…` in [CI run 36324854066](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36324854066) ([issue #210](https://github.com/CMSC495-GROUP3/Sourcebook/issues/210)). Floor: `--cov-fail-under=80` in [`.github/workflows/ci.yml`](../../../../.github/workflows/ci.yml); see [quality.md § Coverage](../../../quality.md#coverage) |
+| Web coverage %, final | 92.28% statements; 87.29% branches; 94% functions; 93.93% lines on `7d3c779` | [coverage.md](coverage.md), from `web-coverage-7d3c779…` in the same run. Scope is the source files listed in `web/vitest.config.ts`, not all of `web/src`. Say so wherever the figure is quoted |
 | Web coverage %, pre-freeze (five files only) | 99.46% statements; 96.42% branches; 100% functions; 99.37% lines. Scope is `useChat`, `Message`, `EscalateButton`, `ThemeToggle`, and `theme.ts` | [quality.md § Coverage](../../../quality.md#what-the-suite-covers-and-what-it-does-not), measured on the head of [pull request #252](https://github.com/CMSC495-GROUP3/Sourcebook/pull/252) before it merged. `web/vitest.config.ts` has since added the escalation files, so the final figure covers a wider scope than these five. Not the release figure; cite the final row once filled |
 
 ## Pull requests, reviews, and issues (to date)
@@ -97,17 +98,18 @@ sample, not a quality guarantee.
 
 | Figure | Alpha (`v0.1.0-alpha.1`) | Beta (`v0.2.0`) | Final (`v1.0.0`) |
 | --- | --- | --- | --- |
-| Commit under test | `4e90382` (and `9871e3e`, the commit before #138, which scored the same) | `231e652`, [workflow run 36062704072](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36062704072) | Pending — requires the 28 September candidate |
-| Recall@5 (12 answerable) | 100% | 100% | Pending — requires the candidate smoke run ([#215](https://github.com/CMSC495-GROUP3/Sourcebook/issues/215)) |
-| Citation correctness (12 answerable) | 100% | 100% | Pending — same run |
-| Grounded answer rate (12 answerable) | 100% | 100% | Pending — same run |
-| Unsupported refusal handling (2 unanswerable) | 0% | 100% | Pending — same run |
-| Prompt-injection gate refusal (3 cases) | 0% | 100% | Pending — same run |
-| Full tier | Not run | Not run | Pending — requires the first full-tier run through the workflow on the candidate ([#213](https://github.com/CMSC495-GROUP3/Sourcebook/issues/213)) |
-| Source | [live-evaluation.md](https://github.com/CMSC495-GROUP3/Sourcebook/blob/v0.1.0-alpha.1/docs/alpha/live-evaluation.md), [results JSON](https://github.com/CMSC495-GROUP3/Sourcebook/blob/v0.1.0-alpha.1/docs/alpha/live-evaluation-results.json); "The full tier has not been run" is in its limitations | [live-evaluation.md](https://github.com/CMSC495-GROUP3/Sourcebook/blob/v0.2.0/docs/releases/v0.2.0/live-evaluation.md#results-against-the-alpha), [results JSON](https://github.com/CMSC495-GROUP3/Sourcebook/blob/v0.2.0/docs/releases/v0.2.0/live-evaluation-results.json); full tier not run per [handoff.md](https://github.com/CMSC495-GROUP3/Sourcebook/blob/v0.2.0/docs/releases/v0.2.0/handoff.md#what-this-beta-does-not-establish) | `docs/releases/v1.0.0/live-evaluation.md` (drafted in [#274](https://github.com/CMSC495-GROUP3/Sourcebook/pull/274)) |
+| Commit under test | `4e90382` (and `9871e3e`, the commit before #138, which scored the same) | `231e652`, [workflow run 36062704072](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36062704072) | `7d3c779`, [workflow run 36325342934](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36325342934) |
+| Recall@5 (12 answerable) | 100% | 100% | 100% |
+| Citation correctness (12 answerable) | 100% | 100% | 100% |
+| Grounded answer rate (12 answerable) | 100% | 100% | 100% |
+| Unsupported refusal handling (2 unanswerable) | 0% | 100% | 100% |
+| Prompt-injection gate refusal (3 cases) | 0% | 100% | 100% |
+| Full tier | Not run | Run after the tag, on `383cea5` ([run 36267109629](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36267109629)): Recall@5, citation correctness, and grounded-answer rate 95.9% (47 of 49); unsupported refusal 100% of 4; injection gate refusal 100% of 3 | On `7d3c779` ([run 36325113964](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36325113964)): Recall@5, citation correctness, and grounded-answer rate 95.9% (47 of 49), the same two misses as the beta; unsupported refusal 100% of 4; injection gate refusal 100% of 3 ([#213](https://github.com/CMSC495-GROUP3/Sourcebook/issues/213)) |
+| Source | [live-evaluation.md](https://github.com/CMSC495-GROUP3/Sourcebook/blob/v0.1.0-alpha.1/docs/alpha/live-evaluation.md), [results JSON](https://github.com/CMSC495-GROUP3/Sourcebook/blob/v0.1.0-alpha.1/docs/alpha/live-evaluation-results.json); "The full tier has not been run" is in its limitations | [live-evaluation.md](https://github.com/CMSC495-GROUP3/Sourcebook/blob/v0.2.0/docs/releases/v0.2.0/live-evaluation.md#results-against-the-alpha), [results JSON](https://github.com/CMSC495-GROUP3/Sourcebook/blob/v0.2.0/docs/releases/v0.2.0/live-evaluation-results.json); full tier not run as of the tag per [handoff.md](https://github.com/CMSC495-GROUP3/Sourcebook/blob/v0.2.0/docs/releases/v0.2.0/handoff.md#what-this-beta-does-not-establish); the later full-tier run is in [live-evaluation.md on `main`](https://github.com/CMSC495-GROUP3/Sourcebook/blob/main/docs/releases/v0.2.0/live-evaluation.md#full-tier-run-on-2026-09-26) and `live-evaluation-full-results.json` beside it (#283) | [live-evaluation.md](../live-evaluation.md), with both results JSON files beside it |
 
-Neither tagged release ran the full tier. One full-tier run did happen on the
-host on 14 September, before #245 and #253 changed the refusal gate: all 46
+The alpha never ran the full tier, and the beta's full-tier run came after its
+tag: #283 ran it through the workflow on the tagged commit on 2026-09-26. An
+earlier full-tier run happened on the host on 14 September, before #245 and #253 changed the refusal gate: all 46
 answerable cases answered, and 0 of the 5 unanswerable and prompt-injection
 cases refused ([comment on
 #201](https://github.com/CMSC495-GROUP3/Sourcebook/issues/201#issuecomment-5658446129)).
@@ -125,25 +127,25 @@ and a small burst. It is not a load test.
 
 | Target | Agreed | Alpha, deployed `4352966` | Beta, deployed `231e652` | Final |
 | --- | --- | --- | --- | --- |
-| Generated time to first token, p50 | ≤ 4.0s | 1.21s, pass | 1.21s, pass | Pending — requires the candidate benchmark ([#215](https://github.com/CMSC495-GROUP3/Sourcebook/issues/215)) |
-| Generated total, max | ≤ 30.0s | 4.69s, pass | 4.35s, pass | Pending — same run |
-| Cached time to first token, max | ≤ 1.5s | 0.04s, pass | 0.04s, pass | Pending — same run |
-| Refused total, max | ≤ 3.0s | 0.31s, pass | 0.08s, pass | Pending — same run |
-| Error rate | 0.0 | 0.00, pass | 0.00, pass | Pending — same run |
-| Requests | — | 7 (5 generated, 1 cached, 1 refused), estimated cost $0.05 | 7 (5 generated, 1 cached, 1 refused), estimated cost $0.05 | Pending — same run |
-| Source | [alpha live-benchmark.md § Targets](https://github.com/CMSC495-GROUP3/Sourcebook/blob/v0.1.0-alpha.1/docs/alpha/live-benchmark.md#targets) | [live-benchmark.md](https://github.com/CMSC495-GROUP3/Sourcebook/blob/v0.1.0-alpha.1/docs/alpha/live-benchmark.md#against-the-agreed-targets), [results JSON](https://github.com/CMSC495-GROUP3/Sourcebook/blob/v0.1.0-alpha.1/docs/alpha/live-benchmark-results.json) | [live-benchmark.md](https://github.com/CMSC495-GROUP3/Sourcebook/blob/v0.2.0/docs/releases/v0.2.0/live-benchmark.md#results), [results JSON](https://github.com/CMSC495-GROUP3/Sourcebook/blob/v0.2.0/docs/releases/v0.2.0/live-benchmark-results.json) | `docs/releases/v1.0.0/live-benchmark.md` (drafted in [#274](https://github.com/CMSC495-GROUP3/Sourcebook/pull/274)) |
+| Generated time to first token, p50 | ≤ 4.0s | 1.21s, pass | 1.21s, pass | 1.18s, pass |
+| Generated total, max | ≤ 30.0s | 4.69s, pass | 4.35s, pass | 3.30s, pass |
+| Cached time to first token, max | ≤ 1.5s | 0.04s, pass | 0.04s, pass | 0.10s, pass |
+| Refused total, max | ≤ 3.0s | 0.31s, pass | 0.08s, pass | 0.05s, pass |
+| Error rate | 0.0 | 0.00, pass | 0.00, pass | 0.00, pass |
+| Requests | — | 7 (5 generated, 1 cached, 1 refused), estimated cost $0.05 | 7 (5 generated, 1 cached, 1 refused), estimated cost $0.05 | 7 (5 generated, 1 cached, 1 refused), estimated cost $0.05; run `e6615d05`, deployed `7d3c779` |
+| Source | [alpha live-benchmark.md § Targets](https://github.com/CMSC495-GROUP3/Sourcebook/blob/v0.1.0-alpha.1/docs/alpha/live-benchmark.md#targets) | [live-benchmark.md](https://github.com/CMSC495-GROUP3/Sourcebook/blob/v0.1.0-alpha.1/docs/alpha/live-benchmark.md#against-the-agreed-targets), [results JSON](https://github.com/CMSC495-GROUP3/Sourcebook/blob/v0.1.0-alpha.1/docs/alpha/live-benchmark-results.json) | [live-benchmark.md](https://github.com/CMSC495-GROUP3/Sourcebook/blob/v0.2.0/docs/releases/v0.2.0/live-benchmark.md#results), [results JSON](https://github.com/CMSC495-GROUP3/Sourcebook/blob/v0.2.0/docs/releases/v0.2.0/live-benchmark-results.json) | [live-benchmark.md](../live-benchmark.md), [results JSON](../live-benchmark-results.json) |
 
-The beta's refusal step was refused at the cosine gate, so neither run times
-a refusal by the coverage judge. Seven requests are too few for percentiles.
+The beta's and the final's refusal steps were refused at the cosine gate, so
+no run times a refusal by the coverage judge. Seven requests are too few for percentiles.
 
 ## Load, Lighthouse, and the deployed pilot
 
 | Figure | Value | Source |
 | --- | --- | --- |
-| Pilot load run: req/s, p50/p95 time to first token, errors, host CPU/memory | Pending — requires the load run against the pilot on the candidate ([issue #212](https://github.com/CMSC495-GROUP3/Sourcebook/issues/212)) | Not measured at the beta: "The deployed system has not been load-tested" ([beta release notes](https://github.com/CMSC495-GROUP3/Sourcebook/blob/v0.2.0/docs/releases/v0.2.0/release-notes.md#what-this-beta-does-not-establish)) |
+| Pilot load run: req/s, p50/p95 time to first token, errors, host CPU/memory | 5 / 10 / 20 concurrent: 0 errors, 1.11 / 4.44 / 8.86 req/s, first token p50 3.94 / 1.43 / 1.46 s and p95 4.09 / 1.73 / 1.68 s. 40 concurrent: 33 of 40 failed (20 OpenAI 30k TPM limit, 13 provider bound 503). API CPU peak 80%, memory 138 MiB, load 0.60 | [load-testing-pilot.md § Results](../../../load-testing-pilot.md#results), [pilot-load.json](pilot-load.json), run `3eac2646` on 2026-09-27 against code identical to `7d3c779`. Not measured at the beta: "The deployed system has not been load-tested" ([beta release notes](https://github.com/CMSC495-GROUP3/Sourcebook/blob/v0.2.0/docs/releases/v0.2.0/release-notes.md#what-this-beta-does-not-establish)) |
 | Synthetic load figures (not the pilot) | Generated answers saturate at 14.9 req/s on the default 40-thread pool; the refusal path reaches about 700 req/s. Model faked, database in memory, chat limiter off | [docs/load-testing.md](../../../load-testing.md). Do not cite these as the deployed system's capacity |
-| Lighthouse, light theme (phone and desktop) | Pending — requires the Lighthouse run on the pilot ([issue #214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214)) | Not measured at the beta ([beta handoff](https://github.com/CMSC495-GROUP3/Sourcebook/blob/v0.2.0/docs/releases/v0.2.0/handoff.md#what-this-beta-does-not-establish)) |
-| Lighthouse, dark theme (phone and desktop) | Pending — same run | Same |
+| Lighthouse, light theme (phone and desktop) | Performance 87, 92, 89 on mobile (chat, document, sign-in) and 100 on desktop; accessibility 100; best practices 100; SEO 91 | [lighthouse.md](lighthouse.md), Lighthouse 13.5.0 on `7d3c779`, 2026-09-27. Not measured at the beta ([beta handoff](https://github.com/CMSC495-GROUP3/Sourcebook/blob/v0.2.0/docs/releases/v0.2.0/handoff.md#what-this-beta-does-not-establish)) |
+| Lighthouse, dark theme (phone and desktop) | Performance 91, 91, 96 on mobile (chat, document, sign-in) and 100 on desktop; accessibility 100; best practices 100; SEO 91 | Same run. SEO loses 9 points on `robots-txt` only |
 | Deployed uptime | Pending — requires a host uptime record or monitoring export, sanitized into this folder at the freeze | Nothing committed |
 | Auto-deploys since the alpha | Pending — requires a sanitized deploy journal from the pilot host that covers the time since the alpha tag (the freeze excerpt `auto-deploy-journal.txt` is [issue #207](https://github.com/CMSC495-GROUP3/Sourcebook/issues/207)) | The deploy runs from a systemd timer on the host, not from Actions, so GitHub has no count of it. Gate text in [docs/ci-cd.md](../../../ci-cd.md) |
 

@@ -1,0 +1,152 @@
+{
+  "date": "2026-09-27T14:33:01.349Z",
+  "base_url": "https://sourcebook.duckdns.org",
+  "deployed_commit": "7d3c7795c197c5be56b15aebc650576760fd75d1",
+  "lighthouse_version": "13.5.0",
+  "results": [
+    {
+      "page": "sign-in",
+      "theme": "light",
+      "width": "mobile",
+      "scores": {
+        "performance": 89,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 91
+      },
+      "report": "sign-in-light-mobile.json"
+    },
+    {
+      "page": "chat",
+      "theme": "light",
+      "width": "mobile",
+      "scores": {
+        "performance": 87,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 91
+      },
+      "report": "chat-light-mobile.json"
+    },
+    {
+      "page": "document",
+      "theme": "light",
+      "width": "mobile",
+      "scores": {
+        "performance": 92,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 91
+      },
+      "report": "document-light-mobile.json"
+    },
+    {
+      "page": "sign-in",
+      "theme": "light",
+      "width": "desktop",
+      "scores": {
+        "performance": 100,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 91
+      },
+      "report": "sign-in-light-desktop.json"
+    },
+    {
+      "page": "chat",
+      "theme": "light",
+      "width": "desktop",
+      "scores": {
+        "performance": 100,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 91
+      },
+      "report": "chat-light-desktop.json"
+    },
+    {
+      "page": "document",
+      "theme": "light",
+      "width": "desktop",
+      "scores": {
+        "performance": 100,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 91
+      },
+      "report": "document-light-desktop.json"
+    },
+    {
+      "page": "sign-in",
+      "theme": "dark",
+      "width": "mobile",
+      "scores": {
+        "performance": 96,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 91
+      },
+      "report": "sign-in-dark-mobile.json"
+    },
+    {
+      "page": "chat",
+      "theme": "dark",
+      "width": "mobile",
+      "scores": {
+        "performance": 91,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 91
+      },
+      "report": "chat-dark-mobile.json"
+    },
+    {
+      "page": "document",
+      "theme": "dark",
+      "width": "mobile",
+      "scores": {
+        "performance": 91,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 91
+      },
+      "report": "document-dark-mobile.json"
+    },
+    {
+      "page": "sign-in",
+      "theme": "dark",
+      "width": "desktop",
+      "scores": {
+        "performance": 100,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 91
+      },
+      "report": "sign-in-dark-desktop.json"
+    },
+    {
+      "page": "chat",
+      "theme": "dark",
+      "width": "desktop",
+      "scores": {
+        "performance": 100,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 91
+      },
+      "report": "chat-dark-desktop.json"
+    },
+    {
+      "page": "document",
+      "theme": "dark",
+      "width": "desktop",
+      "scores": {
+        "performance": 100,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 91
+      },
+      "report": "document-dark-desktop.json"
+    }
+  ]
+}

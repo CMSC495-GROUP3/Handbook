@@ -1,0 +1,191 @@
+{
+  "run_id": "e6615d05",
+  "date": "2026-09-27T14:16:11+00:00",
+  "url": "https://sourcebook.duckdns.org",
+  "label": "v1.0.0 candidate",
+  "deployed_sha": "7d3c7795c197c5be56b15aebc650576760fd75d1",
+  "client": {
+    "platform": "macOS-27.0-arm64-arm-64bit-Mach-O",
+    "python": "3.13.2",
+    "location": ""
+  },
+  "plan": {
+    "burst": 3,
+    "max_requests": 8,
+    "max_errors": 2,
+    "pause_s": 2.0
+  },
+  "records": [
+    {
+      "step": "uncached answer",
+      "expected": "generated",
+      "observed": "generated",
+      "session_id": "bench-e6615d05-first",
+      "http_status": 200,
+      "ttft_s": 3.120560833995114,
+      "total_s": 3.303507083997829,
+      "follow_ups_s": 4.1675692919961875,
+      "chunks": 47,
+      "sources": 2,
+      "confidence": 75,
+      "error": null,
+      "answer": null,
+      "started_at": "2026-09-27T14:15:53+00:00",
+      "matched": true
+    },
+    {
+      "step": "cached repeat",
+      "expected": "cached",
+      "observed": "cached",
+      "session_id": "bench-e6615d05-repeat",
+      "http_status": 200,
+      "ttft_s": 0.09851037499902304,
+      "total_s": 0.09885904200200457,
+      "follow_ups_s": 0.11406745899876114,
+      "chunks": 8,
+      "sources": 2,
+      "confidence": 75,
+      "error": null,
+      "answer": null,
+      "started_at": "2026-09-27T14:15:59+00:00",
+      "matched": true
+    },
+    {
+      "step": "follow-up",
+      "expected": "generated",
+      "observed": "generated",
+      "session_id": "bench-e6615d05-first",
+      "http_status": 200,
+      "ttft_s": 1.970939124992583,
+      "total_s": 2.4144412909954553,
+      "follow_ups_s": 3.0695963749894872,
+      "chunks": 66,
+      "sources": 2,
+      "confidence": 77,
+      "error": null,
+      "answer": null,
+      "started_at": "2026-09-27T14:16:01+00:00",
+      "matched": true
+    },
+    {
+      "step": "refusal",
+      "expected": "refused",
+      "observed": "refused",
+      "session_id": "bench-e6615d05-refusal",
+      "http_status": 200,
+      "ttft_s": 0.047576917000696994,
+      "total_s": 0.04762979201041162,
+      "follow_ups_s": null,
+      "chunks": 1,
+      "sources": 0,
+      "confidence": 59,
+      "error": null,
+      "answer": null,
+      "started_at": "2026-09-27T14:16:06+00:00",
+      "matched": true
+    },
+    {
+      "step": "burst 1",
+      "expected": "generated",
+      "observed": "generated",
+      "session_id": "bench-e6615d05-burst-0",
+      "http_status": 200,
+      "ttft_s": 1.1797897500073304,
+      "total_s": 1.832663124994724,
+      "follow_ups_s": 2.526371875006589,
+      "chunks": 59,
+      "sources": 3,
+      "confidence": 75,
+      "error": null,
+      "answer": null,
+      "started_at": "2026-09-27T14:16:08+00:00",
+      "matched": true
+    },
+    {
+      "step": "burst 2",
+      "expected": "generated",
+      "observed": "generated",
+      "session_id": "bench-e6615d05-burst-1",
+      "http_status": 200,
+      "ttft_s": 1.1449240000074496,
+      "total_s": 1.6187147080054274,
+      "follow_ups_s": 2.6411096250085393,
+      "chunks": 75,
+      "sources": 2,
+      "confidence": 74,
+      "error": null,
+      "answer": null,
+      "started_at": "2026-09-27T14:16:08+00:00",
+      "matched": true
+    },
+    {
+      "step": "burst 3",
+      "expected": "generated",
+      "observed": "generated",
+      "session_id": "bench-e6615d05-burst-2",
+      "http_status": 200,
+      "ttft_s": 1.1803995419904822,
+      "total_s": 1.5767056250042515,
+      "follow_ups_s": 2.505704249997507,
+      "chunks": 50,
+      "sources": 3,
+      "confidence": 78,
+      "error": null,
+      "answer": null,
+      "started_at": "2026-09-27T14:16:08+00:00",
+      "matched": true
+    }
+  ],
+  "summary": {
+    "requests": 7,
+    "by_path": {
+      "generated": 5,
+      "cached": 1,
+      "refused": 1
+    },
+    "rate_limited": 0,
+    "errors": 0,
+    "error_rate": 0.0,
+    "path_mismatches": [],
+    "generated_ttft_s": {
+      "n": 5,
+      "p50": 1.1803995419904822,
+      "max": 3.120560833995114
+    },
+    "generated_total_s": {
+      "n": 5,
+      "p50": 1.832663124994724,
+      "max": 3.303507083997829
+    },
+    "cached_ttft_s": {
+      "n": 1,
+      "max": 0.09851037499902304
+    },
+    "refused_total_s": {
+      "n": 1,
+      "max": 0.04762979201041162
+    },
+    "estimated_cost_usd": 0.05,
+    "targets": {
+      "generated_ttft_p50_s": 4.0,
+      "generated_total_max_s": 30.0,
+      "cached_ttft_max_s": 1.5,
+      "refused_total_max_s": 3.0,
+      "error_rate_max": 0.0
+    },
+    "observed": {
+      "generated_ttft_p50_s": 1.1803995419904822,
+      "generated_total_max_s": 3.303507083997829,
+      "cached_ttft_max_s": 0.09851037499902304,
+      "refused_total_max_s": 0.04762979201041162,
+      "error_rate_max": 0.0
+    },
+    "checks": {
+      "generated_ttft_p50_s": true,
+      "generated_total_max_s": true,
+      "cached_ttft_max_s": true,
+      "refused_total_max_s": true,
+      "error_rate_max": true
+    }
+  }
+}
