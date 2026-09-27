@@ -28,6 +28,24 @@ from sourcebook.rag.config import (
     QUERY_LOG_TTL_SECONDS,
 )
 from sourcebook.rag.mongo import get_collection
+from sourcebook.rag.query_log_rollup import (
+    COVERING_INDEX as QUERY_LOG_DAILY_COVERING_INDEX,
+)
+from sourcebook.rag.query_log_rollup import (
+    COVERING_INDEX_NAME as QUERY_LOG_DAILY_COVERING_INDEX_NAME,
+)
+from sourcebook.rag.query_log_rollup import (
+    DAILY_COLLECTION as QUERY_LOG_DAILY_COLLECTION,
+)
+from sourcebook.rag.query_log_rollup import (
+    SESSIONS_COLLECTION as QUERY_LOG_SESSIONS_COLLECTION,
+)
+from sourcebook.rag.report_snapshots import (
+    SNAPSHOT_COLLECTION as QUERY_LOG_REPORT_COLLECTION,
+)
+from sourcebook.rag.report_snapshots import (
+    SNAPSHOT_TTL_SECONDS as QUERY_LOG_REPORT_TTL_SECONDS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +68,15 @@ documents_col = get_collection("documents")
 
 # One record per chat request. The substrate for content-gap and FAQ analytics.
 query_logs_col = get_collection("query_logs")
+
+# The What People Ask report's counts, one record per question and UTC day,
+# and one marker per (question, conversation) deciding which ask counts it.
+# See rag/query_log_rollup.py (issue #291).
+query_log_daily_col = get_collection(QUERY_LOG_DAILY_COLLECTION)
+query_log_sessions_col = get_collection(QUERY_LOG_SESSIONS_COLLECTION)
+# The report's 7, 30, and 90-day windows, precomputed in the background.
+# See rag/report_snapshots.py.
+query_log_report_col = get_collection(QUERY_LOG_REPORT_COLLECTION)
 
 # One record per hand-off to a person. See api/routes/escalations.py.
 escalations_col = get_collection("escalations")
@@ -134,6 +161,29 @@ def ensure_indexes() -> None:
     )
     query_logs_col.create_index([("refused", ASCENDING), ("created_at", DESCENDING)])
     query_logs_col.create_index([("question_hash", ASCENDING), ("created_at", DESCENDING)])
+
+    # The report's rollup (#291). The route reads a window of days, then the
+    # session ids of up to a few hundred questions in it. A day expires one
+    # day after the TTL on the rows it counts, so it outlives its last row;
+    # the window never reaches past the TTL anyway. A marker expires with the
+    # first ask it records, after which the conversation can count again.
+    query_log_daily_col.create_index(
+        [("day", ASCENDING)], expireAfterSeconds=QUERY_LOG_TTL_SECONDS + 86400
+    )
+    query_log_daily_col.create_index([("question_hash", ASCENDING), ("day", ASCENDING)])
+    # The report sums a window's counts from this index alone, never reading
+    # the day documents and their session ids.
+    query_log_daily_col.create_index(
+        QUERY_LOG_DAILY_COVERING_INDEX, name=QUERY_LOG_DAILY_COVERING_INDEX_NAME
+    )
+    query_log_sessions_col.create_index(
+        [("created_at", ASCENDING)], expireAfterSeconds=QUERY_LOG_TTL_SECONDS
+    )
+    # Snapshots expire a day after they were taken. The refresh lease has no
+    # computed_at, so it stays.
+    query_log_report_col.create_index(
+        [("computed_at", ASCENDING)], expireAfterSeconds=QUERY_LOG_REPORT_TTL_SECONDS
+    )
 
     # escalations — point lookup by id, the open queue newest first, and the
     # per-conversation lookup the chat UI uses when reopening a conversation

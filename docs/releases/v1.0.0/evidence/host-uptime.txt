@@ -1,0 +1,9 @@
+# Pilot host (EC2) uptime, pulled 2026-09-27 at about 20:00 UTC
+# From: uptime -s, and journalctl --list-boots -o short-iso. Boot IDs are systemd's random per-boot ids.
+# This is the host, not the site. Nothing outside the host monitored the site, so availability is not measured.
+$ uptime -s
+2026-09-02 03:35:03
+$ journalctl --list-boots --no-pager -o short-iso
+IDX BOOT ID                          FIRST ENTRY                 LAST ENTRY
+ -1 41ba831ebf444a0f856922d5d91fc5cc Tue 2026-09-01 19:54:24 UTC Wed 2026-09-02 03:34:56 UTC
+  0 0e9eaca7fd3548589bb77c1a2a6aae8a Wed 2026-09-02 03:35:05 UTC Sun 2026-09-27 20:00:50 UTC

@@ -497,6 +497,19 @@ typo.
 lists. `query_logs` rows expire after 90 days (`QUERY_LOG_TTL_SECONDS`), so a
 window that ends earlier than that prints an empty report rather than an error.
 
+The page does not read the raw rows. At the planned volume they are too many to
+group inside the route's five seconds (#291), so each ask also updates a count
+per question and UTC day (`sourcebook/rag/query_log_rollup.py`). A 90-day
+window of those counts is still too slow at that volume, so the API
+recomputes the page's 7, 30, and 90-day windows in the background every
+`REPORT_REFRESH_SECONDS` (five minutes by default) and the page reads the
+result (`sourcebook/rag/report_snapshots.py`). The terminal report still reads
+the rows. Rows logged before that rollup existed need a
+one-time backfill on the host after the deploy that adds it. Rerunning it is
+safe:
+
+    python -m sourcebook.rag.query_log_rollup --backfill
+
 This is deliberately not fine-tuning. Retraining on interaction data would
 contradict the reason RAG was chosen, and no pilot produces the volume it would
 need. Improving what gets retrieved, and knowing what to write next, delivers

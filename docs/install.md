@@ -208,6 +208,7 @@ default first.
 | `CHAT_RATE_LIMIT` | per-address limit on chat requests |
 | `REINDEX_RATE_LIMIT` | per-address limit on reindex requests |
 | `MANAGER_MIN_CONVERSATIONS` | fewest conversations a question needs before a manager sees it on What People Ask (default 3) |
+| `REPORT_REFRESH_SECONDS` | seconds between background refreshes of What People Ask's 7, 30, and 90-day windows, so its counts are up to this old; 0 computes every load live (default 300) |
 
 Two names in the file belong to the fake provider and mean nothing on a
 real-services host: `FAKE_STREAM_DELAY_MS` and `FAKE_UTILITY_DELAY_MS` slow

@@ -35,7 +35,16 @@ way each list ranks. A wording outside that cap cannot join a group, which at
 pilot volume is every wording there is. Vectors fetched or embedded here are
 kept in a bounded per-process memo, so a repeat load costs no provider call.
 
-The window counts back ``days`` from now, at most 90. ``query_logs`` rows
+The counts come from ``sourcebook.rag.query_log_rollup``, one document per
+question and UTC day kept as each ask is logged, not from the raw rows. At
+the volume config.py plans for, the raw log is too big to group inside
+``QUERY_TIMEOUT_MS`` for any window, and so is a 90-day window of the rollup
+(#291). So the page's windows are read from snapshots that a background
+thread refreshes every ``REPORT_REFRESH_SECONDS``
+(``sourcebook.rag.report_snapshots``), and ``until`` in the response is when
+the snapshot was taken. Any other window, or one whose snapshot is missing or
+stale, is computed live. The window is ``days`` whole UTC
+days, today included, at most 90. ``query_logs`` rows
 expire after ``QUERY_LOG_TTL_SECONDS``, so a window longer than the TTL is
 shortened to it and the response's ``days`` says what was used. The bound on
 the parameter stays fixed, so a short TTL cannot turn every request into a 422.
@@ -66,13 +75,14 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pymongo.errors import ExecutionTimeout, OperationFailure
 
-from sourcebook.api.db import query_logs_col
+from sourcebook.api.db import query_log_daily_col, query_log_report_col
 from sourcebook.api.limiter import limiter
 from sourcebook.api.routes.auth import MANAGER_PASSWORD_HASH_VAR
 from sourcebook.api.routes.deps import (
     REPORT_READER_RESPONSES,
     require_report_reader,
 )
+from sourcebook.rag import report_snapshots
 from sourcebook.rag.cache import embedding_cache_key, get_cached_embeddings
 from sourcebook.rag.config import (
     CACHE_ENABLED,
@@ -82,13 +92,19 @@ from sourcebook.rag.config import (
     QUESTION_JUDGE_FLOOR,
     QUESTION_JUDGE_MAX_PAIRS,
     REPORT_PROVIDER_TIMEOUT_SECONDS,
+    REPORT_REFRESH_SECONDS,
 )
 from sourcebook.rag.llm import get_provider
 from sourcebook.rag.query_log_reports import (
     DEFAULT_MIN_REPEAT,
     DEFAULT_TOP,
     MAX_TOP,
-    wording_pipeline,
+)
+from sourcebook.rag.query_log_rollup import (
+    ROLLUP_SESSION_SAMPLE,
+    read_report,
+    session_samples,
+    window_start,
 )
 from sourcebook.rag.question_groups import (
     QuestionGroup,
@@ -108,15 +124,21 @@ MAX_WINDOW_DAYS = 90
 # Rows older than the TTL are gone, so no window reaches past it. Never below
 # one day, or a TTL under a day would leave an empty window.
 TTL_DAYS = max(1, QUERY_LOG_TTL_SECONDS // 86400)
-# Per query. At the volume the TTL comment in config.py plans for, a 90-day
-# $group is not free, and a manager or HR session can ask for one 30 times a
-# minute.
+# Per query. The rollup keeps a 90-day $group to one document per question
+# and day, but that is still not free, and a manager or HR session can ask
+# for one 30 times a minute.
 QUERY_TIMEOUT_MS = 5000
-# MongoDB's ExceededMemoryLimit. An $addToSet accumulator cannot spill to disk,
-# so one question asked in about 1.6M conversations stops the pipeline with it
-# (docs/load-testing.md, #291). A shorter window fixes it like a timeout does.
-# Code 292 is the same failure when allowDiskUse is false; nothing here sets
-# that and the server default is true, so add it if that ever changes.
+# Per query in the background refresh. A 90-day window at 50k questions a day
+# took about 7 s locally (docs/load-testing.md); this stops a runaway one.
+REFRESH_TIMEOUT_MS = 120_000
+# A snapshot older than this means the refresh has stopped, and the route
+# computes live rather than show stale counts.
+SNAPSHOT_MAX_AGE = timedelta(seconds=3 * REPORT_REFRESH_SECONDS)
+# MongoDB's ExceededMemoryLimit. The rollup's $group holds only sums, so it
+# can spill to disk and should not hit this; it is kept so a pipeline change
+# that brings back an array accumulator answers 503, not 500
+# (docs/load-testing.md, #291). Code 292 is the same failure when allowDiskUse
+# is false; nothing here sets that and the server default is true.
 EXCEEDED_MEMORY_LIMIT = 146
 # Hash groups per list that go into grouping. Two lists of 200 is at most 400
 # texts in one embed_many call. Listing the judge's candidates checks every pair
@@ -153,15 +175,85 @@ def _question(row: dict[str, Any]) -> str | None:
     return None
 
 
-def _wording(row: dict[str, Any]) -> Wording:
+def _wording(row: dict[str, Any], sessions: dict[str | None, frozenset[str | None]]) -> Wording:
     return Wording(
         question_hash=row.get("_id"),
         question=_question(row),
         count=int(row.get("count") or 0),
         refused=int(row.get("refused_count") or 0),
-        sessions=frozenset(row.get("sessions") or ()),
+        sessions=sessions.get(row.get("_id"), frozenset()),
         session_count=int(row.get("session_count") or 0),
     )
+
+
+def _wordings(
+    rows: list[dict[str, Any]], since: datetime, until: datetime, *, refused_only: bool
+) -> list[Wording]:
+    """Wordings with their conversation ids, for the union across a group.
+
+    Ids are read only for wordings at or under ``ROLLUP_SESSION_SAMPLE``
+    conversations, where the rollup holds all of them. A bigger wording
+    keeps an empty set, and its exact ``session_count`` is the group's floor.
+    """
+    small = [
+        row.get("_id") for row in rows if (row.get("session_count") or 0) <= ROLLUP_SESSION_SAMPLE
+    ]
+    sessions = session_samples(
+        query_log_daily_col,
+        since,
+        until,
+        small,
+        refused_only=refused_only,
+        max_time_ms=QUERY_TIMEOUT_MS,
+    )
+    return [_wording(row, sessions) for row in rows]
+
+
+def _report(days: int, now: datetime) -> tuple[datetime, datetime, dict[str, Any]]:
+    """The window's start, end, and ``read_report`` result: the stored
+    snapshot when there is a fresh one, else computed live under
+    ``QUERY_TIMEOUT_MS``."""
+    limits = {"limit": CANDIDATE_LIMIT, "min_sessions": MANAGER_MIN_CONVERSATIONS}
+    if REPORT_REFRESH_SECONDS > 0:
+        snapshot = report_snapshots.load(
+            query_log_report_col, days, now=now, max_age=SNAPSHOT_MAX_AGE, **limits
+        )
+        if snapshot:
+            return snapshot["since"], snapshot["until"], snapshot["report"]
+    since = window_start(now, days)
+    return (
+        since,
+        now,
+        read_report(query_log_daily_col, since, now, max_time_ms=QUERY_TIMEOUT_MS, **limits),
+    )
+
+
+def refresh_snapshots() -> None:
+    """Refresh the page's windows if this worker holds the lease. Runs on
+    the background thread that ``start_refresh`` starts."""
+    now = datetime.now(UTC)
+    windows = sorted({min(days, TTL_DAYS) for days in report_snapshots.WINDOWS})
+    # Long enough to cover every window at its timeout, so a slow refresh
+    # cannot outlive the lease and let a second worker start one alongside it.
+    hold = timedelta(seconds=max(REPORT_REFRESH_SECONDS, len(windows) * REFRESH_TIMEOUT_MS / 1000))
+    if not report_snapshots.acquire_lease(query_log_report_col, now, hold):
+        return
+    report_snapshots.refresh(
+        query_log_daily_col,
+        query_log_report_col,
+        windows=windows,
+        limit=CANDIDATE_LIMIT,
+        min_sessions=MANAGER_MIN_CONVERSATIONS,
+        now=now,
+        max_time_ms=REFRESH_TIMEOUT_MS,
+    )
+
+
+def start_refresh() -> threading.Event | None:
+    """Start the background refresh, or None when ``REPORT_REFRESH_SECONDS`` is 0."""
+    if REPORT_REFRESH_SECONDS <= 0:
+        return None
+    return report_snapshots.start(REPORT_REFRESH_SECONDS, refresh_snapshots)
 
 
 def _remember(vectors: dict[str, list[float]]) -> None:
@@ -354,30 +446,15 @@ def coverage_gaps(
 ):
     """Refused and repeated questions over the last ``days`` days, grouped by meaning."""
     days = min(days, TTL_DAYS)
-    until = datetime.now(UTC)
-    since = until - timedelta(days=days)
-    window = {"created_at": {"$gte": since, "$lt": until}}
-    min_conversations = MANAGER_MIN_CONVERSATIONS if cred == MANAGER_PASSWORD_HASH_VAR else None
-    candidates = {"min_sessions": min_conversations or 1}
+    now = datetime.now(UTC)
+    manager = cred == MANAGER_PASSWORD_HASH_VAR
+    min_conversations = MANAGER_MIN_CONVERSATIONS if manager else None
 
-    limit = {"maxTimeMS": QUERY_TIMEOUT_MS}
     try:
-        # Listed here, not lazily in the response, so a timeout while the
-        # cursor is read is caught below too.
-        refused_rows = list(
-            query_logs_col.aggregate(
-                wording_pipeline(since, until, CANDIDATE_LIMIT, refused_only=True, **candidates),
-                **limit,
-            )
-        )
-        all_rows = list(
-            query_logs_col.aggregate(
-                wording_pipeline(since, until, CANDIDATE_LIMIT, refused_only=False, **candidates),
-                **limit,
-            )
-        )
-        total = query_logs_col.count_documents(window, **limit)
-        refused = query_logs_col.count_documents({**window, "refused": True}, **limit)
+        since, until, report = _report(days, now)
+        lists = ("manager_gaps", "manager_faq") if manager else ("gaps", "faq")
+        refused_wordings = _wordings(report[lists[0]], since, until, refused_only=True)
+        all_wordings = _wordings(report[lists[1]], since, until, refused_only=False)
     except ExecutionTimeout:
         raise HTTPException(
             status_code=503,
@@ -391,8 +468,8 @@ def coverage_gaps(
             detail="This report needs too much memory. Try a shorter window.",
         ) from None
 
-    refused_wordings = [_wording(row) for row in refused_rows]
-    all_wordings = [_wording(row) for row in all_rows]
+    total = int(report.get("total") or 0)
+    refused = int(report.get("refused") or 0)
     texts = sorted({w.question for w in refused_wordings + all_wordings if w.question})
     gap_groups, faq_groups, grouping, unjudged = _grouped(
         refused_wordings, all_wordings, _vectors(texts)

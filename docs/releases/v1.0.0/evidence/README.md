@@ -6,7 +6,10 @@ token, or session id may be visible in any image.
 
 | File | What it holds | State |
 | --- | --- | --- |
-| [numbers.md](numbers.md) | the shared figures for the position papers ([#217](https://github.com/CMSC495-GROUP3/Sourcebook/issues/217)) | Pending rows filled after the freeze |
+| [numbers.md](numbers.md) | the shared figures for the position papers ([#217](https://github.com/CMSC495-GROUP3/Sourcebook/issues/217)) | Every row filled; the last three on 2026-09-27 |
+| [review-events.csv](review-events.csv) | every human review of someone else's pull request, from the reviews API, up to the `v1.0.0` tag | Pulled 2026-09-27 |
+| [auto-deploys-since-alpha.txt](auto-deploys-since-alpha.txt) | each auto-deploy and refusal on the pilot host from the alpha tag to the `v1.0.0` tag, from its `auto-deploy.service` journal | Pulled 2026-09-27 |
+| [host-uptime.txt](host-uptime.txt) | the pilot host's boot record: up without a reboot since 2026-09-02 | Pulled 2026-09-27 |
 | [coverage.md](coverage.md) | Python and web coverage for the candidate ([#210](https://github.com/CMSC495-GROUP3/Sourcebook/issues/210)) | Done on `7d3c779` |
 | [lighthouse.md](lighthouse.md) | Lighthouse on the pilot, both themes, phone and desktop ([#214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214)), with [lighthouse-summary.json](lighthouse-summary.json) | Done on `7d3c779` |
 | [pilot-load.json](pilot-load.json), [pilot-load-host.csv](pilot-load-host.csv) | the load run against the pilot and the host samples during it ([#212](https://github.com/CMSC495-GROUP3/Sourcebook/issues/212)); results in [../../../load-testing-pilot.md](../../../load-testing-pilot.md#results) | Done, code identical to `7d3c779` |

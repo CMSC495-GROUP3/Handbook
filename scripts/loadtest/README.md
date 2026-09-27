@@ -10,5 +10,8 @@ load protocol and results are in
 [docs/load-testing-pilot.md](../../docs/load-testing-pilot.md).
 
 `report_timing.py` seeds a throwaway MongoDB with one popular question and
-times the What People Ask pipelines against it (issue #291). Results are in
-the last section of [docs/load-testing.md](../../docs/load-testing.md).
+times the What People Ask pipelines that grouped raw `query_logs` rows (issue
+#291, PR #296). `rollup_timing.py` seeds the per-day rollup that replaced them
+at 7M asks a day, and times the background refresh and the route's snapshot
+reads (PR #308). Results for both are in the "Report aggregation at planned
+volume" section of [docs/load-testing.md](../../docs/load-testing.md).

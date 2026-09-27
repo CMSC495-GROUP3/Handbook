@@ -223,6 +223,11 @@ REPORT_PROVIDER_TIMEOUT_SECONDS = float(os.getenv("REPORT_PROVIDER_TIMEOUT_SECON
 # manager, unlike HR, is not the confidential channel. Repeated questions are
 # the ones worth covering in training anyway. HR sees every wording.
 MANAGER_MIN_CONVERSATIONS = max(1, int(os.getenv("MANAGER_MIN_CONVERSATIONS", "3")))
+# Seconds between background refreshes of the What People Ask report's 7, 30,
+# and 90-day windows (sourcebook/rag/report_snapshots.py, #291). The page shows
+# counts up to this old. 0 turns the refresh off, and every load computes live,
+# which fits pilot volume but not the volume planned above.
+REPORT_REFRESH_SECONDS = max(0, int(os.getenv("REPORT_REFRESH_SECONDS", "300")))
 
 # ── Conversation limits ───────────────────────────────────────────────────────
 # Turns of history replayed to the model, and turns used to rewrite a follow-up
