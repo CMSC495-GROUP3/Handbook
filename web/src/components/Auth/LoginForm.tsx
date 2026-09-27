@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { useState } from 'react'
 import { AlertCircle, BookOpen, LifeBuoy, Quote } from 'lucide-react'
-import client, { TOKEN_KEY } from '../../api/client'
+import client, { browserId, TOKEN_KEY } from '../../api/client'
 import { ESCALATION_CONTACT } from '../../config'
 import { BrandMark, Wordmark } from '../Layout/Brand'
 import ThemeToggle from '../Layout/ThemeToggle'
@@ -36,7 +36,7 @@ export default function LoginForm({ onSuccess }: Props) {
     setError('')
     setLoading(true)
     try {
-      const res = await client.post('/api/auth/login', { password })
+      const res = await client.post('/api/auth/login', { password, client_id: browserId() })
       localStorage.setItem(TOKEN_KEY, res.data.access_token)
       onSuccess()
     } catch (err) {
