@@ -54,8 +54,8 @@ def is_bcrypt_hash(value: str) -> bool:
 # (require_hr in deps.py); and an optional one for managers and supervisors,
 # which opens the What People Ask report and nothing else HR-only
 # (require_report_reader). HR can read that report too. This is a fixed set,
-# not a list: another password means editing this tuple, .env.example, and the
-# README together. Separate variables rather than one delimited list because a
+# not a list: another password means editing this tuple, .env.example, and
+# docs/install.md together. Separate variables rather than one delimited list because a
 # bcrypt hash is full of `$`, which makes a list painful to quote in .env.
 #
 # Order matters. Login takes the first match. The shared password comes first,

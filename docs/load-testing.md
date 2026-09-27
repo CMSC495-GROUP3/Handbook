@@ -189,6 +189,26 @@ later step, justified by measurement rather than by principle. Async remains the
 better answer if per-request thread-time grows a lot (slower models, slower
 database) or if memory becomes the constraint.
 
+### Rate limit and provider bounds
+
+Interactive chat is also capped by `CHAT_RATE_LIMIT` (default 30/minute per
+remote address per API worker). That limiter is the binding ceiling for shared
+NAT offices; the figures above are what the thread pool can sustain before the
+per-address cap. The synthetic load-test stub disables the limiter so
+`make loadtest` still measures pool capacity.
+
+Two related bounds keep a stalled provider from taking the whole site down with
+the chat pool. The OpenAI client is built with `OPENAI_TIMEOUT_SECONDS` (default
+30) and `OPENAI_MAX_RETRIES` (default 1) so an idle hang fails the request. A
+continuously trickling stream is bounded by `OPENAI_STREAM_DEADLINE_SECONDS`
+(default 90), while `OPENAI_MAX_CONCURRENT_REQUESTS` (default 20) and
+`OPENAI_CAPACITY_WAIT_SECONDS` (default 1) keep provider saturation from
+occupying every application worker. Login runs on its own
+`LOGIN_THREADPOOL_TOKENS` pool (default 10), so bcrypt still answers when every
+chat slot is occupied. Nginx `proxy_read_timeout` on `/api/` is 90s, above the
+provider timeout plus a follow-up call, so the reverse proxy does not cut a
+stream that is still legitimately waiting.
+
 ## Reproducing
 
 ```bash

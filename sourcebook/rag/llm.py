@@ -91,7 +91,7 @@ class LLMProvider(ABC):
 
         The dimensionality must match the Atlas Vector Search index. Changing
         providers therefore means re-embedding the corpus and rebuilding the
-        index — see the migration note in the README.
+        index; see Vendor lock-in in docs/architecture.md.
         """
 
     def embed_many(self, texts: list[str], *, timeout: float | None = None) -> list[list[float]]:

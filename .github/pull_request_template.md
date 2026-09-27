@@ -14,7 +14,7 @@
 - [ ] `make check` passes locally (tests, ruff, ESLint, tsc, build)
 - [ ] Tests added or updated for the behaviour that changed; `make cov` is still over 80%
 - [ ] Tested by hand: <!-- what, how -->
-- [ ] README or CONTRIBUTING updated if this changes setup, config, or behaviour worth knowing
+- [ ] README, CONTRIBUTING, or the `docs/` page that owns it updated if this changes setup, config, or behaviour worth knowing
 - [ ] If answers or refusals change: `evaluation/questions.json` updated, or a note here on why not
 - [ ] No `.env`, key, password hash, or real policy document in the diff
 

@@ -74,8 +74,8 @@ back in on the same browser keeps its history. A client that sends no
 and chat route, and filing an escalation, sees only the caller's own records;
 someone else's session id or project id answers 404, the same as one that does
 not exist. HR sessions are no exception. Records stored before owners existed
-match no one; `scripts/purge_ownerless_conversations.py` deletes them (see the
-README's Configure section). A token without an owner id in `sub`, which is every token issued
+match no one; `scripts/purge_ownerless_conversations.py` deletes them (see
+[install.md](install.md#removing-ownerless-conversations)). A token without an owner id in `sub`, which is every token issued
 before this change, gets 401.
 
 Both chat routes answer HTTP 503 when the model provider is at its
@@ -290,6 +290,31 @@ stored:
 now: a webhook is configured, attempts are under
 `ESCALATION_WEBHOOK_MAX_ATTEMPTS`, and no live claim holds the record.
 
+### Webhook delivery
+
+Records land in the `escalations` collection with status `open`. If
+`ESCALATION_WEBHOOK_URL` is set, each one is also posted there in a background
+task after the response is sent. The payload has a
+top-level `text` field, so a Slack or Teams incoming webhook renders it with no
+adapter. Each attempt updates non-secret delivery fields on the record
+(`pending` / `delivered` / `failed`, attempt count, last-attempt time). Delivery
+is best effort and logged on failure; the webhook URL is never stored, logged,
+or returned. The record is already stored, and a webhook outage must not turn a
+successful hand-off into an error. Failed deliveries can be retried with
+`POST /api/escalations/{id}/retry-delivery` up to
+`ESCALATION_WEBHOOK_MAX_ATTEMPTS`, with an atomic claim so concurrent retries
+cannot double-send. Claims older than `ESCALATION_WEBHOOK_LEASE_SECONDS`
+(default 30) can be recovered after a worker interruption. The lease must be
+greater than `ESCALATION_WEBHOOK_TIMEOUT_SECONDS`; invalid configuration fails
+at startup. Records created before delivery tracking can be claimed as legacy
+work. Delivery is at-least-once: a receiver that accepts a request immediately before the worker
+dies may see the same escalation again, so consumers should deduplicate by
+`escalation_id`.
+
+Because `not_configured` and `delivery_retryable` are computed rather than
+stored, setting `ESCALATION_WEBHOOK_URL` later turns records that were never
+attempted back into `pending`, and the HR Requests page can send them.
+
 ## Human Resources queue and resolve
 
 Every route in this section needs an HR session; see
@@ -364,8 +389,8 @@ webhook. With no webhook configured the stub returns:
 ## Coverage report
 
 Every chat request writes one `query_logs` row (question hash, scores, refused,
-sources, cache hit, latency). How that log is used is in the README section
-[Learning from the query log](../README.md#learning-from-the-query-log).
+sources, cache hit, latency). How that log is used is in
+[architecture.md § Learning from the query log](architecture.md#learning-from-the-query-log).
 
 `GET /api/reports/gaps` ranks that log for the What People Ask page. It needs
 a manager or HR session ([HR-only routes](#hr-only-routes)). `days`

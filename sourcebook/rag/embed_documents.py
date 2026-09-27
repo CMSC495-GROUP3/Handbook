@@ -152,7 +152,7 @@ def embed_and_store() -> None:
     print(
         "\nIf you have not created it yet, add an Atlas Vector Search index named "
         f'"{os.getenv("VECTOR_INDEX_NAME", "vector_index")}" on the '
-        f'"{PASSAGES_COLLECTION}" collection — see the README.'
+        f'"{PASSAGES_COLLECTION}" collection; see docs/install.md, Load the corpus.'
     )
 
 

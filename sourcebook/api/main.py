@@ -55,7 +55,7 @@ try:
 except PasswordHashError as exc:
     raise RuntimeError(
         f"{exc}. A hash must be the full 60-character $2b$ string with no "
-        "surrounding whitespace; see the README for how to generate one."
+        "surrounding whitespace; see docs/install.md, Configure, for how to generate one."
     ) from None
 
 

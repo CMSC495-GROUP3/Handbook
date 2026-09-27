@@ -1,22 +1,42 @@
 # Documentation
 
-Narrative docs live here. New to the project? Start with
-[install.md](install.md). The [README](../README.md) explains what the system
-is and why, [CONTRIBUTING.md](../CONTRIBUTING.md) covers changing it, and
-[SECURITY.md](../SECURITY.md) covers reporting a vulnerability.
+Narrative docs live here, grouped by what you want to do, in the same order
+as the [README](../README.md#start-here)'s Start here table. The README is the
+short version of what the system is and why.
+
+## Use it
 
 | Page | Covers |
 | --- | --- |
-| [install.md](install.md) | the live site, the offline stub, real services with every `.env` variable, deployment |
 | [user-guide.md](user-guide.md) | using the app: asking, checking sources, escalating, the HR Requests page, and What People Ask |
+
+## Run it
+
+| Page | Covers |
+| --- | --- |
+| [install.md](install.md) | the live site, the offline stub, real services with every `.env` variable, deployment, and maintenance on the host |
+| [ci-cd.md](ci-cd.md) | the five workflows, the merge-to-deploy path on the pilot host, and the tag and release procedure |
+
+## Understand and judge it
+
+| Page | Covers |
+| --- | --- |
+| [architecture.md](architecture.md) | how a question is answered, the four risks the design answers, the query log, and the limitations in full |
+| [evaluation.md](evaluation.md) | the labeled question sets in `evaluation/` and how to run the live evaluation |
+| [load-testing.md](load-testing.md) | throughput measurements from `scripts/loadtest/`, the `THREADPOOL_TOKENS` decision, and the What People Ask report at planned volume |
+| [load-testing-pilot.md](load-testing-pilot.md) | the concurrent load run against the deployed pilot with the real model, and how to repeat it |
+| [quality.md](quality.md) | code review, coverage, and performance evidence, each number tied to a file, PR, or run |
+| [team.md](team.md) | each member's role, commits, pull requests, and reviews |
+
+## Change it
+
+| Page | Covers |
+| --- | --- |
+| [../CONTRIBUTING.md](../CONTRIBUTING.md) | checks, conventions, the repository layout, and the things that bite |
 | [api.md](api.md) | every HTTP route, with a stub request and response |
 | [openapi.json](openapi.json) | the committed OpenAPI document; `make openapi` regenerates it, CI fails if it drifts |
 | [design.md](design.md) | the paper-and-ink design system for `web/` |
-| [evaluation.md](evaluation.md) | the labeled question sets in `evaluation/` and how to run the live evaluation |
-| [load-testing.md](load-testing.md) | throughput measurements from `scripts/loadtest/` and the `THREADPOOL_TOKENS` decision |
-| [load-testing-pilot.md](load-testing-pilot.md) | the concurrent load run against the deployed pilot with the real model, and how to repeat it |
-| [ci-cd.md](ci-cd.md) | the five workflows, the merge-to-deploy path on the pilot host, and the `v1.0.0` tag procedure |
-| [quality.md](quality.md) | code review, coverage, and performance evidence, each number tied to a file, PR, or run |
+| [../SECURITY.md](../SECURITY.md) | reporting a vulnerability; what the Security workflow scans |
 
 ## Releases
 
