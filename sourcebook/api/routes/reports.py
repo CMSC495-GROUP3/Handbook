@@ -66,6 +66,7 @@ from sourcebook.rag.config import (
     QUESTION_GROUP_THRESHOLD,
     QUESTION_JUDGE_FLOOR,
     QUESTION_JUDGE_MAX_PAIRS,
+    REPORT_PROVIDER_TIMEOUT_SECONDS,
 )
 from sourcebook.rag.llm import get_provider
 from sourcebook.rag.query_log_reports import (
@@ -183,7 +184,15 @@ def _vectors(texts: list[str]) -> dict[str, Sequence[float]] | None:
         cached = get_cached_embeddings([text for text in texts if text not in known])
         missing = [text for text in texts if text not in known and text not in cached]
         fresh = (
-            dict(zip(missing, get_provider().embed_many(missing), strict=True)) if missing else {}
+            dict(
+                zip(
+                    missing,
+                    get_provider().embed_many(missing, timeout=REPORT_PROVIDER_TIMEOUT_SECONDS),
+                    strict=True,
+                )
+            )
+            if missing
+            else {}
         )
     except Exception:
         # Deliberately broad: the provider raises its own busy error, OpenAI's
@@ -201,13 +210,19 @@ def _verdict_key(pair: tuple[str, str]) -> tuple[str, str, str, str]:
     return (get_provider().utility_fingerprint(), QUESTION_JUDGE_PROMPT_VERSION, *pair)
 
 
-def _same_pairs(candidates: dict[tuple[str, str], float]) -> tuple[set[tuple[str, str]], bool]:
-    """The candidate pairs the utility model says are one question, and
-    whether every pair it was asked about got a verdict.
+def _same_pairs(
+    candidates: dict[tuple[str, str], float],
+) -> tuple[set[tuple[str, str]], bool, int]:
+    """The candidate pairs the utility model says are one question, whether
+    every pair it was asked about got a verdict, and how many candidates this
+    load left without one.
 
     Memoized verdicts are free. Of the rest, the closest
     ``QUESTION_JUDGE_MAX_PAIRS`` go in one call; pairs past the cap count as
-    different on this load and are judged on a later one.
+    different on this load and are judged on a later one. The count lets the
+    page say so (#300). It is 0 with the memo off, since a later load would
+    judge the same pairs again. A failed call merges nothing below the
+    threshold, memoized verdicts included.
     """
     known: dict[tuple[str, str], bool] = {}
     if CACHE_ENABLED:
@@ -217,25 +232,26 @@ def _same_pairs(candidates: dict[tuple[str, str], float]) -> tuple[set[tuple[str
                 if key in _verdict_memo:
                     _verdict_memo.move_to_end(key)
                     known[pair] = _verdict_memo[key]
-    pending = sorted(
+    unknown = sorted(
         (pair for pair in candidates if pair not in known),
         key=lambda pair: (-candidates[pair], pair),
-    )[:QUESTION_JUDGE_MAX_PAIRS]
+    )
+    pending = unknown[:QUESTION_JUDGE_MAX_PAIRS]
     same = {pair for pair, verdict in known.items() if verdict}
     if not pending:
-        return same, True
+        return same, True, 0
     try:
-        verdicts = judge_pairs(pending)
+        verdicts = judge_pairs(pending, timeout=REPORT_PROVIDER_TIMEOUT_SECONDS)
     except Exception:
         # Deliberately broad, as in _vectors: any provider or transport error
         # means "group on cosine alone", never a failed report.
         logger.warning("Question judge failed; grouping on cosine alone.", exc_info=True)
         # Drop the memoized merges too, so "cosine" describes what the page
         # shows: nothing below the threshold merges on a failed load.
-        return set(), False
+        return set(), False, len(unknown)
     if verdicts is None:
         logger.warning("Question judge reply did not parse; grouping on cosine alone.")
-        return set(), False
+        return set(), False, len(unknown)
     fresh = dict(zip(pending, verdicts, strict=True))
     if CACHE_ENABLED:
         with _verdict_memo_lock:
@@ -245,20 +261,28 @@ def _same_pairs(candidates: dict[tuple[str, str], float]) -> tuple[set[tuple[str
                 _verdict_memo.move_to_end(key)
             while len(_verdict_memo) > VERDICT_MEMO_SIZE:
                 _verdict_memo.popitem(last=False)
-    return same | {pair for pair, verdict in fresh.items() if verdict}, True
+    # With the memo off, a reload sends the same closest pairs again, so the
+    # ones past the cap never get judged and the page must not promise it.
+    return (
+        same | {pair for pair, verdict in fresh.items() if verdict},
+        True,
+        len(unknown) - len(pending) if CACHE_ENABLED else 0,
+    )
 
 
 def _grouped(
     refused_wordings: list[Wording],
     all_wordings: list[Wording],
     vectors: dict[str, Sequence[float]] | None,
-) -> tuple[list[QuestionGroup], list[QuestionGroup], str]:
-    """Both lists' groups and the ``grouping`` value that describes them."""
+) -> tuple[list[QuestionGroup], list[QuestionGroup], str, int]:
+    """Both lists' groups, the ``grouping`` value that describes them, and how
+    many candidate pairs went unjudged."""
     if vectors is None:
-        return exact_groups(refused_wordings), exact_groups(all_wordings), "exact"
+        return exact_groups(refused_wordings), exact_groups(all_wordings), "exact", 0
     same: set[tuple[str, str]] = set()
     # With the judge off, grouping is cosine alone, and the page says so.
     judged = False
+    unjudged = 0
     if QUESTION_JUDGE_MAX_PAIRS > 0:
         candidates = {
             **candidate_pairs(
@@ -268,14 +292,15 @@ def _grouped(
                 all_wordings, vectors, QUESTION_JUDGE_FLOOR, QUESTION_GROUP_THRESHOLD
             ),
         }
-        same, judged = _same_pairs(candidates)
+        same, judged, unjudged = _same_pairs(candidates)
 
     def group(wordings: list[Wording]) -> list[QuestionGroup]:
         return group_by_meaning(
             wordings, vectors, QUESTION_GROUP_THRESHOLD, floor=QUESTION_JUDGE_FLOOR, same=same
         )
 
-    return group(refused_wordings), group(all_wordings), "meaning" if judged else "cosine"
+    grouping = "meaning" if judged else "cosine"
+    return group(refused_wordings), group(all_wordings), grouping, unjudged
 
 
 def _serialize(group: QuestionGroup) -> dict[str, Any]:
@@ -348,7 +373,9 @@ def coverage_gaps(
     refused_wordings = [_wording(row) for row in refused_rows]
     all_wordings = [_wording(row) for row in all_rows]
     texts = sorted({w.question for w in refused_wordings + all_wordings if w.question})
-    gap_groups, faq_groups, grouping = _grouped(refused_wordings, all_wordings, _vectors(texts))
+    gap_groups, faq_groups, grouping, unjudged = _grouped(
+        refused_wordings, all_wordings, _vectors(texts)
+    )
 
     repeated = [group for group in faq_groups if group.conversations >= DEFAULT_MIN_REPEAT]
     return {
@@ -356,6 +383,7 @@ def coverage_gaps(
         "until": until.isoformat(),
         "days": days,
         "grouping": grouping,
+        "unjudged": unjudged,
         "total": total,
         "refused": refused,
         "gaps": [_serialize(group) for group in _by_count(gap_groups)[:top]],

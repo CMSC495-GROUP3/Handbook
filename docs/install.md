@@ -188,6 +188,7 @@ default first.
 | `OPENAI_STREAM_DEADLINE_SECONDS` | wall-clock limit on a stream that keeps trickling |
 | `OPENAI_MAX_CONCURRENT_REQUESTS` | how many provider calls may be in flight |
 | `OPENAI_CAPACITY_WAIT_SECONDS` | how long a request waits for one of those slots |
+| `REPORT_PROVIDER_TIMEOUT_SECONDS` | how long each What People Ask provider call may take, with no retry, before the page falls back to coarser grouping |
 | `MONGO_MAX_POOL_SIZE` | connections per process; the arithmetic against the Atlas cap is in `sourcebook/rag/mongo.py` |
 | `SIMILARITY_THRESHOLD` | refuse when the best passage scores below this; tune it from `query_logs`, never from the stub |
 | `RETRIEVAL_K` | how many passages the model sees |

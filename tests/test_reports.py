@@ -343,7 +343,7 @@ def vectors(monkeypatch, table: dict[str, list[float]]) -> list[list[str]]:
     """Serve `table` through the provider; return the batches it was asked for."""
     calls: list[list[str]] = []
 
-    def embed_many(texts):
+    def embed_many(texts, **_kwargs):
         calls.append(list(texts))
         return [table[text] for text in texts]
 
@@ -422,7 +422,7 @@ def test_cached_vectors_are_used_and_nothing_is_written(client, hr_auth, monkeyp
 def test_a_provider_failure_falls_back_to_exact_wording(client, hr_auth, monkeypatch):
     from sourcebook.rag.llm import ProviderBusyError
 
-    def busy(_texts):
+    def busy(_texts, **_kwargs):
         raise ProviderBusyError("busy")
 
     monkeypatch.setattr(reports.get_provider(), "embed_many", busy)
@@ -537,6 +537,35 @@ def test_a_rewording_the_model_confirms_shares_a_row(client, hr_auth, monkeypatc
     assert len(calls) == 1 and len(calls[0]) == 1
 
 
+def test_both_provider_calls_get_the_report_timeout(client, hr_auth, monkeypatch):
+    # A slow provider costs the page a few seconds, not the chat timeouts (#300).
+    seen: dict[str, dict] = {}
+
+    def embed_many(texts, **kwargs):
+        seen["embed"] = kwargs
+        return [
+            {
+                "How much PTO do I get?": PTO,
+                "What is my annual paid time off allowance?": PTO_REWORDED,
+            }[text]
+            for text in texts
+        ]
+
+    def complete(messages, **kwargs):
+        seen["judge"] = kwargs
+        return '{"same": [1]}'
+
+    monkeypatch.setattr(reports.get_provider(), "embed_many", embed_many)
+    monkeypatch.setattr(reports.get_provider(), "complete", complete)
+    monkeypatch.setattr(reports, "REPORT_PROVIDER_TIMEOUT_SECONDS", 3.5)
+    log("How much PTO do I get?", refused=True)
+    log("What is my annual paid time off allowance?", refused=True)
+
+    assert client.get(URL, headers=hr_auth).json()["grouping"] == "meaning"
+    assert seen["embed"] == {"timeout": 3.5}
+    assert seen["judge"]["timeout"] == 3.5
+
+
 def test_a_pair_the_model_calls_different_stays_apart(client, hr_auth, monkeypatch):
     vectors(
         monkeypatch,
@@ -591,6 +620,8 @@ def test_a_judge_failure_falls_back_to_cosine_and_says_so(client, hr_auth, monke
 
     assert response.status_code == 200
     assert response.json()["grouping"] == "cosine"
+    # The pair the failed call was asked about still has no verdict.
+    assert response.json()["unjudged"] == 1
     # Cosine still merges what clears the threshold on its own.
     assert [g["count"] for g in response.json()["gaps"]] == [3, 1]
 
@@ -645,12 +676,15 @@ def test_only_the_closest_pairs_go_in_one_call(client, hr_auth, monkeypatch):
     log("What is my annual paid time off allowance?", refused=True)
     log("Does unused PTO carry over?", refused=True)
 
-    client.get(URL, headers=hr_auth)
-    client.get(URL, headers=hr_auth)
+    first = client.get(URL, headers=hr_auth).json()
+    second = client.get(URL, headers=hr_auth).json()
 
     assert [len(batch) for batch in calls] == [1, 1]
     assert calls[0] == [("Does unused PTO carry over?", "How much PTO do I get?")]
     assert calls[1] != calls[0]
+    # The page can say a pair is still waiting (#300), until a later load judges it.
+    assert (first["grouping"], first["unjudged"]) == ("meaning", 1)
+    assert (second["grouping"], second["unjudged"]) == ("meaning", 0)
 
 
 def test_a_zero_pair_cap_turns_the_judge_off(client, hr_auth, monkeypatch):
@@ -666,6 +700,7 @@ def test_a_zero_pair_cap_turns_the_judge_off(client, hr_auth, monkeypatch):
     body = client.get(URL, headers=hr_auth).json()
 
     assert (body["grouping"], len(body["gaps"]), calls) == ("cosine", 2, [])
+    assert body["unjudged"] == 0
 
 
 def test_wording_pipeline_returns_a_capped_sample_of_session_ids(monkeypatch):
@@ -706,7 +741,7 @@ def test_a_wording_past_the_sample_cap_reports_its_exact_conversations(
 
 def test_a_failed_judge_merges_nothing_below_the_threshold(client, hr_auth, monkeypatch):
     # A pair confirmed on an earlier load must not merge on a load whose call
-    # fails, or the page would say "cosine" while showing a band merge.
+    # fails, or the page would say "cosine" while showing a band merge (#300).
     from sourcebook.rag.llm import ProviderBusyError
 
     vectors(
@@ -734,3 +769,28 @@ def test_a_failed_judge_merges_nothing_below_the_threshold(client, hr_auth, monk
     second = client.get(URL, headers=hr_auth).json()
 
     assert (second["grouping"], len(second["gaps"])) == ("cosine", 3)
+
+
+def test_with_the_memo_off_no_pairs_are_promised_to_a_later_load(client, hr_auth, monkeypatch):
+    # Without the memo every load judges the same closest pairs, so reloading
+    # never reaches the rest and the page must not say it will.
+    monkeypatch.setattr(reports, "CACHE_ENABLED", False)
+    monkeypatch.setattr(reports, "QUESTION_JUDGE_MAX_PAIRS", 1)
+    vectors(
+        monkeypatch,
+        {
+            "How much PTO do I get?": PTO,
+            "What is my annual paid time off allowance?": PTO_REWORDED,
+            "Does unused PTO carry over?": PTO_CARRYOVER,
+        },
+    )
+    calls = verdicts(monkeypatch)
+    log("How much PTO do I get?", refused=True)
+    log("What is my annual paid time off allowance?", refused=True)
+    log("Does unused PTO carry over?", refused=True)
+
+    first = client.get(URL, headers=hr_auth).json()
+    second = client.get(URL, headers=hr_auth).json()
+
+    assert calls[0] == calls[1]
+    assert (first["unjudged"], second["unjudged"]) == (0, 0)

@@ -84,10 +84,12 @@ def parse_verdicts(raw: str, expected: int) -> list[bool] | None:
     return [number in numbers for number in range(1, expected + 1)]
 
 
-def judge_pairs(pairs: Sequence[tuple[str, str]]) -> list[bool] | None:
+def judge_pairs(
+    pairs: Sequence[tuple[str, str]], *, timeout: float | None = None
+) -> list[bool] | None:
     """One utility call for the whole batch. Returns a verdict per pair, or
-    None when the reply does not parse. Provider errors propagate so the caller
-    can fall back to cosine alone and say so."""
+    None when the reply does not parse. Provider errors, a timeout included,
+    propagate so the caller can fall back to cosine alone and say so."""
     if not pairs:
         return []
     raw = get_provider().complete(
@@ -97,5 +99,6 @@ def judge_pairs(pairs: Sequence[tuple[str, str]]) -> list[bool] | None:
         ],
         role="utility",
         temperature=0,
+        timeout=timeout,
     )
     return parse_verdicts(raw, len(pairs))

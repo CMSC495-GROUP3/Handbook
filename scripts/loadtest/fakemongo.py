@@ -296,6 +296,9 @@ class FakeCollection:
     def create_index(self, *args, **kwargs):
         return "index"
 
+    def drop_index(self, name):
+        return None
+
     def aggregate(self, pipeline, **kwargs):
         """The $match / $group / $addFields / $project / $sort / $limit subset
         the coverage report runs.

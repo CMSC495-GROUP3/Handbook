@@ -34,6 +34,8 @@ PASSAGE_IDENTITY_KEYS = [("source", 1), ("chunk_index", 1)]
 # MongoDB's IndexOptionsConflict code, raised when an index with these keys
 # already exists under other options (non-unique, or another name).
 INDEX_OPTIONS_CONFLICT = 85
+# MongoDB's IndexNotFound code, raised when dropping an index that is not there.
+INDEX_NOT_FOUND = 27
 
 # MongoDB collection holding one record per source document: its metadata and
 # the full parsed body. Passages are what retrieval sees; this is what a person
@@ -209,6 +211,11 @@ QUESTION_JUDGE_FLOOR = float(os.getenv("QUESTION_JUDGE_FLOOR", "0.7"))
 # Pairs judged per page load, in one utility call, closest first. The rest wait
 # for a later load. 0 turns the judge off.
 QUESTION_JUDGE_MAX_PAIRS = int(os.getenv("QUESTION_JUDGE_MAX_PAIRS", "50"))
+# Seconds each provider call on What People Ask may take, with no retries. The
+# page falls back to coarser grouping rather than wait out the chat timeouts
+# (30 s plus a retry). The embed call and the judge call each get this, so a
+# load waits at most about twice it on the provider (#300).
+REPORT_PROVIDER_TIMEOUT_SECONDS = float(os.getenv("REPORT_PROVIDER_TIMEOUT_SECONDS", "8"))
 
 # ── Conversation limits ───────────────────────────────────────────────────────
 # Turns of history replayed to the model, and turns used to rewrite a follow-up

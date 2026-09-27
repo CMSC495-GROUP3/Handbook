@@ -10,6 +10,8 @@ during module loading rather than as a clear startup failure. `main.py` calls
 `ensure_indexes()` from the application lifespan instead.
 """
 
+import logging
+
 from pymongo import ASCENDING, DESCENDING
 from pymongo.errors import OperationFailure
 
@@ -18,6 +20,7 @@ from sourcebook.rag.config import (
     ANSWER_CACHE_TTL_SECONDS,
     DOCUMENT_BODIES_COLLECTION,
     EMBEDDING_CACHE_TTL_SECONDS,
+    INDEX_NOT_FOUND,
     INDEX_OPTIONS_CONFLICT,
     PASSAGE_IDENTITY_KEYS,
     PASSAGES_COLLECTION,
@@ -25,6 +28,8 @@ from sourcebook.rag.config import (
     QUERY_LOG_TTL_SECONDS,
 )
 from sourcebook.rag.mongo import get_collection
+
+logger = logging.getLogger(__name__)
 
 # Constructing a collection handle performs no I/O — pymongo connects on the
 # first real operation — so binding these at import is safe.
@@ -58,6 +63,10 @@ embedding_cache_col = get_collection("embedding_cache")
 meta_col = get_collection("meta")
 
 
+# The name MongoDB gave the old single-field index on conversations.updated_at.
+LEGACY_CONVERSATIONS_UPDATED_AT_INDEX = "updated_at_-1"
+
+
 def ensure_indexes() -> None:
     """Create indexes if they don't already exist (idempotent).
 
@@ -68,11 +77,22 @@ def ensure_indexes() -> None:
     index, not a regular one, and must be created in the Atlas UI or CLI. See
     the README.
     """
-    # conversations — point lookup by session_id, sorted by updated_at for the sidebar
+    # conversations — point lookup by session_id, and the sidebar lists one
+    # owner's conversations, newest first (issue #290).
     conversations_col.create_index("session_id", unique=True)
-    conversations_col.create_index([("updated_at", DESCENDING)])
-    # The sidebar lists one owner's conversations, newest first (issue #290).
     conversations_col.create_index([("owner", 1), ("updated_at", DESCENDING)])
+    # Nothing sorts every conversation by updated_at any more, so the index
+    # that did is dropped from databases that still have it (#300). It only
+    # costs writes, so a failure to drop it is logged, not fatal.
+    try:
+        conversations_col.drop_index(LEGACY_CONVERSATIONS_UPDATED_AT_INDEX)
+    except OperationFailure as exc:
+        if exc.code != INDEX_NOT_FOUND:
+            logger.warning(
+                "Could not drop the unused %s index on conversations: %s",
+                LEGACY_CONVERSATIONS_UPDATED_AT_INDEX,
+                exc,
+            )
 
     # projects — point lookup by project_id, and one owner's list
     projects_col.create_index("project_id", unique=True)
