@@ -38,7 +38,7 @@ Several people commit under more than one Git name. Author commits are grouped b
 
 | Member | GitHub | Role (Unit 5 pitch) | Author commits | Merged PRs authored | Others' PRs reviewed | Open PRs |
 | --- | --- | --- | ---: | ---: | ---: | ---: |
-| Taylor Shahan | [@t-shahan](https://github.com/t-shahan) | Lead Architect | 277 [^claude] [^projected] | 97 [^projected] | 59 | 0 [^projected] |
+| Taylor Shahan | [@t-shahan](https://github.com/t-shahan) | Lead Architect | 278 [^claude] [^projected] | 97 [^projected] | 59 | 0 [^projected] |
 | Chris | [@threshi-art](https://github.com/threshi-art) | Integration Lead | 129 | 52 | 1 | 0 |
 | Daniel Tsang | [@DanielTsang26](https://github.com/DanielTsang26) | Interface Designer | 4 | 1 | 1 | 0 |
 | George Struder | [@Lazzy-dev](https://github.com/Lazzy-dev) | Administration (EC2, S3, Atlas), locks, MongoDB | 11 | 3 | 4 | 0 |
@@ -57,7 +57,7 @@ Open at 2026-09-27 21:58 UTC, and assumed finished by 2026-10-04:
 | Item | Owner | State at the snapshot | Assumed by 2026-10-04 |
 | --- | --- | --- | --- |
 | [PR #292](https://github.com/CMSC495-GROUP3/Sourcebook/pull/292) `docs: add lighthouse metrics to quality.md` | Dominick ([@fudgepop01](https://github.com/fudgepop01)) | Five non-merge commits. Taylor requested changes on 2026-09-26; Dominick pushed two fixes after that review (`8dd650c`, `c63df06`). Conflicts with `main` | Merged |
-| [PR #312](https://github.com/CMSC495-GROUP3/Sourcebook/pull/312) `docs: describe Sourcebook as the capstone it is, not a workplace tool` | Taylor ([@t-shahan](https://github.com/t-shahan)) | Three non-merge commits, this page's update among them | Merged |
+| [PR #312](https://github.com/CMSC495-GROUP3/Sourcebook/pull/312) `docs: describe Sourcebook as the capstone it is, not a workplace tool` | Taylor ([@t-shahan](https://github.com/t-shahan)) | Four non-merge commits, this page's update among them | Merged |
 | [Issue #214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214) Lighthouse per theme | Dominick and Taylor | Measured in [lighthouse.md](releases/v1.0.0/evidence/lighthouse.md); #292 is "Part of #214", so merging it does not close the issue | Closed |
 | [Issue #216](https://github.com/CMSC495-GROUP3/Sourcebook/issues/216) the stakeholder video | Unassigned; the whole team records it | Script and shot list merged in [#262](https://github.com/CMSC495-GROUP3/Sourcebook/pull/262), updated in [#304](https://github.com/CMSC495-GROUP3/Sourcebook/pull/304) | Recorded, published, and closed |
 
@@ -67,7 +67,7 @@ What the projection changes:
 
 | Row and metric | Counted at `aacec66` | Projected for 2026-10-04 | Why |
 | --- | ---: | ---: | --- |
-| Taylor, author commits | 274 | 277 | #312's three non-merge commits land under `t-shahan`. The merge commit is not counted |
+| Taylor, author commits | 274 | 278 | #312's four non-merge commits land under `t-shahan`. The merge commit is not counted |
 | Taylor, merged PRs authored | 96 | 97 | #312 |
 | Taylor, open PRs | 1 | 0 | #312 leaves the open list |
 | Dominick, author commits | 0 | 5 | #292's five non-merge commits (`8ff6bec`, `9ef947d`, `e77d288`, `8dd650c`, `c63df06`) land under `fudgepop01`. The two merges of `main` into the branch are not counted |
@@ -81,7 +81,7 @@ already in Taylor's 59, and merging a pull request adds no review.
 The projection changes if:
 
 - #292 or #312 is squash-merged. Its author gains one commit, not five or
-  three.
+  four.
 - Either pull request gains commits, for example to fix #292's conflict or to
   answer review. Each non-merge commit adds one; a merge of `main` into the
   branch adds none.

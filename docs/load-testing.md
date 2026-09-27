@@ -307,8 +307,11 @@ A result document is capped at 16 MB, so the full list fails at roughly
 #296 capped the list at 1,000 ids per wording (`WORDING_SESSION_SAMPLE`) with
 the exact `session_count` beside it. A merged group reports the larger of the
 union and its biggest wording's count: exact below the cap, a lower bound
-above it. #308 replaced that pipeline with the per-day rollup below, which keeps
-the same 1,000-id cap per wording as `ROLLUP_SESSION_SAMPLE`.
+above it. #308 replaced that pipeline with the per-day rollup below. It keeps
+at most 1,000 ids per question per day (`ROLLUP_SESSION_SAMPLE`), and the
+route reads ids only for wordings with at most 1,000 conversations in the
+window, so the union is exact there; a bigger wording's exact count is the
+floor.
 
 ### Reproducing
 
@@ -394,9 +397,12 @@ What this says:
 - **The refresh costs about 56 s of database time every five minutes at 200k
   questions a day**, about a fifth of the interval. Each window stops at
   `REFRESH_TIMEOUT_MS` (120 s), and the lease is held long enough to cover
-  all three at that limit, so two workers never refresh at once.
-- **Counts on the page are up to one interval old.** `until` in the response
-  says when the snapshot was taken.
+  all three aggregations at that limit. The sample-text lookups after each
+  aggregation have their own timeout that the lease does not budget for, so
+  in a very slow refresh two workers could overlap.
+- **Counts on the page are normally up to one interval old**, and never more
+  than three: past that the route computes the window live. `until` in the
+  response says when the snapshot was taken.
 
 **Not measured on Atlas.** The seed writes about 30 GB, which does not belong
 in the production cluster, so these runs used the local container. Point

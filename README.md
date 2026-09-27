@@ -192,8 +192,9 @@ generation.
 ## Evidence
 
 The `v1.0.0` release was tagged on 2026-09-27. Its figures come from the
-release candidate `7d3c779`, and every number links to a committed file or a
-workflow run in the [shared evidence sheet](docs/releases/v1.0.0/evidence/numbers.md).
+release candidate `7d3c779`. Each row links its source, and all but the
+stubbed throughput figures are also in the
+[shared evidence sheet](docs/releases/v1.0.0/evidence/numbers.md).
 
 | What | Result | Where |
 | --- | --- | --- |
@@ -202,7 +203,7 @@ workflow run in the [shared evidence sheet](docs/releases/v1.0.0/evidence/number
 | Latency on the demo site | first token 1.18 s at p50; generated answers 3.3 s at most; refusals 0.05 s at most | [live benchmark](docs/releases/v1.0.0/live-benchmark.md) |
 | Load on the demo site | 0 errors at 5, 10, and 20 concurrent users; at 40, 33 requests failed on the OpenAI rate limit and the app's own provider cap | [demo-site load run](docs/load-testing-demo.md) |
 | Throughput, model stubbed | 14.9 req/s on the default thread pool, 98.7 req/s at 320 threads, against an 83 req/s target | [load-testing.md](docs/load-testing.md) |
-| Test coverage | Python 93%; web 92% of statements | [coverage](docs/releases/v1.0.0/evidence/coverage.md) |
+| Test coverage | Python 93%; web 92% of statements in the files `web/vitest.config.ts` lists, not all of `web/src` | [coverage](docs/releases/v1.0.0/evidence/coverage.md) |
 | Accessibility and performance | Lighthouse accessibility 100 in both themes | [Lighthouse](docs/releases/v1.0.0/evidence/lighthouse.md) |
 
 The [handoff](docs/releases/v1.0.0/handoff.md) says what the release does and

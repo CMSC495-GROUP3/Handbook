@@ -624,18 +624,20 @@ window that ends earlier than that prints an empty report rather than an error.
 What People Ask reads per-day counts rather than the rows
 ([architecture.md](architecture.md#learning-from-the-query-log)). Rows logged
 before those counts existed need a one-time backfill after the deploy that
-adds them. Rerunning it is safe, since it skips rows it has already recorded:
+adds them. Rerunning it skips rows it has already recorded. A run
+interrupted between recording a row and marking it counts that one ask twice
+on the next run, so let it finish:
 
     python -m sourcebook.rag.query_log_rollup --backfill
 
-On the demo site, run both inside the API container so they read the app's
+On the demo host, run both inside the API container so they read the app's
 settings: `docker compose exec -T api python -m ... < /dev/null`.
 
 ### Removing ownerless conversations
 
 Conversations and projects stored before each browser had an owner id stay in
 Mongo, and nothing in the app can reach or delete them. They still hold the
-questions employees typed, so remove them once the upgrade has settled. The
+questions people typed, so remove them once the upgrade has settled. The
 script counts them and changes nothing until it is given `--delete`:
 
 ```bash
