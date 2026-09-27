@@ -261,11 +261,14 @@ without `maxTimeMS`. Where both sides finished, the ranked `_id`, `count`,
 - **The `$addToSet` version fails differently.** One accumulator cannot spill,
   so at 1.6M conversations for one question the FAQ pipeline stopped with
   `ExceededMemoryLimit` (code 146) in one run of three and timed out in the
-  other two. The route catches only `ExecutionTimeout`, so that error would be
-  a 500, not the 503.
+  other two. The route now answers that error with a 503 too, like a
+  timeout.
 - Neither version answers a 90-day window inside 5 s at the 7M rows a day the
   TTL comment in `sourcebook/rag/config.py` plans for. That volume needs a
   pre-aggregated count or a shorter window, not a different `$group`.
+- **So the route keeps `$addToSet`.** The two-pass version was reverted before
+  merge. `report_timing.py` keeps a copy of it as the "after" pipeline so the
+  comparison can be rerun.
 
 ### Reproducing
 

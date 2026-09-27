@@ -3,8 +3,9 @@
 Seeds ``query_logs`` with one popular question asked across many conversations
 over a 90-day window, plus a spread of other questions, then runs the gaps and
 FAQ pipelines the way ``GET /api/reports/gaps`` does, with the route's
-``maxTimeMS``. It runs both the current two-pass pipelines and the single-pass
-``$addToSet`` ones they replaced, and checks that they agree.
+``maxTimeMS``. It runs both the shipped single-pass ``$addToSet`` pipelines and
+the two-pass ``$group`` alternative #291 proposed, which measured slower and was
+not adopted, and checks that they agree.
 
 Point it at a throwaway server only. It drops the database it seeds:
 
@@ -42,37 +43,49 @@ QUERY_TIMEOUT_MS = 5000
 HOT_HASH = "hot-question"
 
 
-def _legacy_group(extra: dict[str, Any]) -> list[dict[str, Any]]:
-    """The single $group from #286 that #291 replaced, kept for comparison."""
+def _two_pass_group(extra: dict[str, Any]) -> list[dict[str, Any]]:
+    """The two-pass count #291 proposed, kept here for comparison only.
+
+    First on (hash, session), then on the hash with ``session_count`` as
+    ``{$sum: 1}``, so no stage holds an array of session ids. ``extra`` holds
+    per-row ``$sum`` accumulators, summed in both passes.
+    """
     return [
         {
             "$group": {
-                "_id": "$question_hash",
+                "_id": {"hash": "$question_hash", "session": "$session_id"},
                 "count": {"$sum": 1},
-                "sessions": {"$addToSet": "$session_id"},
+                **extra,
                 "sample_raw": {"$first": "$question_raw"},
                 "sample_condensed": {"$first": "$question_condensed"},
-                **extra,
             }
         },
-        {"$addFields": {"session_count": {"$size": "$sessions"}}},
-        {"$project": {"sessions": 0}},
+        {
+            "$group": {
+                "_id": "$_id.hash",
+                "count": {"$sum": "$count"},
+                "session_count": {"$sum": 1},
+                **{field: {"$sum": f"${field}"} for field in extra},
+                "sample_raw": {"$first": "$sample_raw"},
+                "sample_condensed": {"$first": "$sample_condensed"},
+            }
+        },
     ]
 
 
-def legacy_pipelines(since: datetime, until: datetime) -> dict[str, list[dict[str, Any]]]:
+def two_pass_pipelines(since: datetime, until: datetime) -> dict[str, list[dict[str, Any]]]:
     window = {"created_at": {"$gte": since, "$lt": until}}
     refused = {"refused_count": {"$sum": {"$cond": [{"$eq": ["$refused", True]}, 1, 0]}}}
     return {
         "gaps": [
             {"$match": {**window, "refused": True}},
-            *_legacy_group({}),
+            *_two_pass_group({}),
             {"$sort": {"count": -1, "_id": 1}},
             {"$limit": DEFAULT_TOP},
         ],
         "faq": [
             {"$match": window},
-            *_legacy_group(refused),
+            *_two_pass_group(refused),
             {"$match": {"session_count": {"$gte": DEFAULT_MIN_REPEAT}}},
             {"$sort": {"session_count": -1, "count": -1, "_id": 1}},
             {"$limit": DEFAULT_TOP},
@@ -231,7 +244,7 @@ def main(argv: list[str] | None = None) -> int:
 
     until = datetime.now(UTC)
     since = until - timedelta(days=args.days)
-    before, after = legacy_pipelines(since, until), current_pipelines(since, until)
+    before, after = current_pipelines(since, until), two_pass_pipelines(since, until)
     for name in ("gaps", "faq"):
         # One untimed pass each to warm the cache, so neither side pays for disk reads.
         time_pipeline(col, before[name], 1)
