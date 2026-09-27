@@ -321,12 +321,11 @@ def test_another_browser_cannot_see_use_or_delete_a_project(client, auth, other_
         "/api/conversations", json={"title": "Filed", "project_id": project_id}, headers=auth
     ).json()["session_id"]
 
-    assert client.get("/api/projects", headers=other_auth).json() == []
-    assert (
-        client.post(
-            "/api/conversations", json={"title": "x", "project_id": project_id}, headers=other_auth
-        ).status_code
-        == 404
+    filed = client.post(
+        "/api/conversations", json={"title": "x", "project_id": project_id}, headers=other_auth
     )
-    assert client.delete(f"/api/projects/{project_id}", headers=other_auth).status_code == 404
+    deleted = client.delete(f"/api/projects/{project_id}", headers=other_auth)
+
+    assert client.get("/api/projects", headers=other_auth).json() == []
+    assert (filed.status_code, deleted.status_code) == (404, 404)
     assert client.get(f"/api/conversations/{sid}", headers=auth).json()["project_id"] == project_id

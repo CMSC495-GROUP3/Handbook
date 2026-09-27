@@ -138,7 +138,8 @@ class TestCreate:
 
         assert response.status_code == 404
         assert "Private reply" not in response.text
-        assert _create(client, auth, refused).json()["resolution"] == "Private reply"
+        repeat = _create(client, auth, refused)
+        assert repeat.json()["resolution"] == "Private reply"
 
     def test_losing_a_race_returns_the_winner_without_a_second_webhook(
         self, client, auth, refused, delivered, monkeypatch
