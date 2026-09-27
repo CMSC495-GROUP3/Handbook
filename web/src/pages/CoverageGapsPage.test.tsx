@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
-import type { AxiosResponse } from 'axios'
+import { AxiosError, type AxiosResponse } from 'axios'
 import client from '../api/client'
 import type { CoverageReport } from '../types'
 import CoverageGapsPage from './CoverageGapsPage'
@@ -112,6 +112,31 @@ describe('CoverageGapsPage', () => {
     expect(await screen.findByText('No questions were asked in the last 30 days.')).toBeInTheDocument()
     expect(screen.getByText('Every question in this window had a policy to answer it.')).toBeInTheDocument()
     expect(screen.getByText('No question came up in more than one conversation in this window.')).toBeInTheDocument()
+  })
+
+  it('marks the page as Human Resources only', async () => {
+    vi.spyOn(client, 'get').mockResolvedValue(ok(report()))
+    renderPage()
+
+    const heading = screen.getByRole('heading', { level: 1, name: 'What People Ask' })
+    expect(heading.parentElement).toHaveTextContent('HR only')
+    expect(screen.getByText(/Only Human Resources can open this page/)).toBeInTheDocument()
+    expect(await screen.findByRole('list', { name: 'Not answered yet' })).toBeInTheDocument()
+  })
+
+  it('tells a session without the HR password who the page is for', async () => {
+    const forbidden = new AxiosError('Forbidden', 'ERR_BAD_REQUEST', undefined, undefined, {
+      status: 403,
+    } as AxiosResponse)
+    vi.spyOn(client, 'get').mockRejectedValue(forbidden)
+    renderPage()
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'This page is for Human Resources. Sign out and sign in with the HR password to see it.',
+    )
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Time window' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/Only Human Resources can open this page/)).not.toBeInTheDocument()
   })
 
   it('offers a retry after a failed load', async () => {
