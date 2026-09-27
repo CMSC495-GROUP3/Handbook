@@ -9,7 +9,6 @@ Sibling pages own adjacent evidence and are not duplicated here:
 - React component tests: [issue #211](https://github.com/CMSC495-GROUP3/Sourcebook/issues/211).
 - Deployed-pilot load run: [issue #212](https://github.com/CMSC495-GROUP3/Sourcebook/issues/212).
 - Full evaluation tier: [issue #213](https://github.com/CMSC495-GROUP3/Sourcebook/issues/213). The beta run is recorded; the final run is not.
-- Lighthouse per theme: [issue #214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214).
 - `v1.0.0` freeze scaffold: [issue #215](https://github.com/CMSC495-GROUP3/Sourcebook/issues/215).
 
 ## Code review
@@ -104,7 +103,7 @@ The suite is the real application with Mongo, the model, and vector search repla
 | Alpha smoke evaluation | Two host runs of the 20-case smoke tier (`9871e3e` vs `4e90382`). Recall@5, citation correctness, and grounded-answer rate are 100% of 12 answerable cases on both commits. Unsupported-refusal handling and prompt-injection grounding-gate refusal are **0%** of their cases on both commits. | A product-quality PASS. The zeros are [issue #192](https://github.com/CMSC495-GROUP3/Sourcebook/issues/192), which is still open. [Issue #189](https://github.com/CMSC495-GROUP3/Sourcebook/issues/189) (follow-ups scored only the rewrite) was closed by [PR #245](https://github.com/CMSC495-GROUP3/Sourcebook/pull/245); that does not close #192. The full tier was first run on the beta; see the beta full-tier row. | [live-evaluation.md](releases/v0.1.0-alpha.1/live-evaluation.md), [results JSON](releases/v0.1.0-alpha.1/live-evaluation-results.json), [docs/evaluation.md](evaluation.md) |
 | Beta full-tier evaluation | [Run 36267109629](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36267109629) on the `v0.2.0` tag `383cea5`, 2026-09-26: 59 cases. Recall@5, citation correctness, and grounded-answer rate are 95.9% (47 of 49 answerable); unsupported-refusal handling is 100% of 4 and prompt-injection gate refusal 100% of 3. Both misses retrieved an overlapping policy; one exposes a contradiction between two sample policies on the incident-reporting window. | The final's full tier ([issue #213](https://github.com/CMSC495-GROUP3/Sourcebook/issues/213)), or anything about a real corpus. | [live-evaluation.md](releases/v0.2.0/live-evaluation.md#full-tier-run-on-2026-09-26), [results JSON](releases/v0.2.0/live-evaluation-full-results.json) |
 | Live evaluation workflow | Manual Actions job against real secrets. [PR #226](https://github.com/CMSC495-GROUP3/Sourcebook/pull/226) merged on 2026-09-13 (`112c96e`) and closed [issue #223](https://github.com/CMSC495-GROUP3/Sourcebook/issues/223): `scripts/validate_live_evaluation.py` and [evaluation.yml](https://github.com/CMSC495-GROUP3/Sourcebook/blob/main/.github/workflows/evaluation.yml) fail-close on empty or illegal `MONGODB_DB`, empty secrets, a nonzero evaluator exit, and missing or malformed results. CI also runs the synthetic checks in `scripts/test_live_evaluation_fail_closed.sh`. [PR #229](https://github.com/CMSC495-GROUP3/Sourcebook/pull/229) was closed as a duplicate of #226 and was not merged. A green workflow means the instrument recorded a trustworthy results file, not that refusals passed. Latest successful run: [run 34801818927](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/34801818927) at `534a661` (after #245). | Refusal-quality PASS. [Issue #192](https://github.com/CMSC495-GROUP3/Sourcebook/issues/192) remains open. | [evaluation.yml](https://github.com/CMSC495-GROUP3/Sourcebook/blob/main/.github/workflows/evaluation.yml), [PR #181](https://github.com/CMSC495-GROUP3/Sourcebook/pull/181), [PR #226](https://github.com/CMSC495-GROUP3/Sourcebook/pull/226) |
-| Lighthouse | Not run. | — | [issue #214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214) |
+| Lighthouse | The Performance, Accessibility, Best-Practices, and SEO according to the measurements made by the lighthouse feature of chromium browsers. | — | [issue #214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214) |
 | Beta / final live-benchmark.md | Not on `main`. Alpha is the only committed live-benchmark folder. | — | [issue #203](https://github.com/CMSC495-GROUP3/Sourcebook/issues/203), [issue #215](https://github.com/CMSC495-GROUP3/Sourcebook/issues/215) |
 
 ### Local quality loop
@@ -120,32 +119,33 @@ make audit    # pip-audit and npm audit; accepted advisories in scripts/audit.sh
 
 ## Lighthouse Audit Report
 
-*Scores are Light Mode / Dark Mode*
+*Dark mode scores are obtained by using the toggle*
+recorded from commit [`936dad7`](https://github.com/CMSC495-GROUP3/Sourcebook/commit/936dad711d974084423d885ccaac437af3f9e376) at 	2026-09-26T23:46:22Z.
 
 ### Login Page
 
-| | Performance | Accessibility | Best Practices | SEO |
-| :--- | :---: | :---: | :---: | :---: | 
-| **Mobile** | 98/98 | 100/100 | 100/100 | 91/91 | 
-| **Desktop** | 100/100 | 100/100 | 100/100 | 91/91 | 
+| | Performance (light) | Performance (dark) | Accessibility | Best Practices | SEO |
+| :--- | :---: | :---: | :---: | :---: | :---: | 
+| **Desktop** | 100 | 100 | 100 | 100 | 91 | 
+| **Mobile**  | 97 | 97 | 100 | 100 | 91 | 
 
 ### Chat Page + Answer
 
-| | Performance | Accessibility | Best Practices | SEO |
-| :--- | :---: | :---: | :---: | :---: | 
-| **Mobile** | 89/89 | 100/100 | 100/100 | 91/91 | 
-| **Desktop** | 100/100 | 100/100 | 100/100 | 91/91 | 
+| | Performance (light) | Performance (dark) | Accessibility | Best Practices | SEO |
+| :--- | :---: | :---: | :---: | :---: | :---: | 
+| **Desktop** | 99 | 99 | 100 | 100 | 91 | 
+| **Mobile**  | 89 | 89 | 100 | 100 | 91 | 
 
-improvements:
+mobile improvements:
 - defer css file load?
 - use responsive images for the logo icon, shrinking it and reducing the download size
 
 ### Document View
 
-| | Performance | Accessibility | Best Practices | SEO |
-| :--- | :---: | :---: | :---: | :---: | 
-| **Mobile** | 87/87 | 100/100 | 100/100 | 91/91 | 
-| **Desktop** | 100/100 | 100/100 | 100/100 | 91/91 | 
+| | Performance (light) | Performance (dark) | Accessibility | Best Practices | SEO |
+| :--- | :---: | :---: | :---: | :---: | :---: | 
+| **Desktop** | 100 | 100 | 100 | 100 | 91 | 
+| **Mobile**  | 90 | 90 | 100 | 100 | 91 | 
 
 improvements:
 - defer css file load?
@@ -153,4 +153,4 @@ improvements:
 
 ## What this page will gain later
 
-When `docs/releases/v1.0.0/evidence/coverage.md` holds the candidate's tables (#210), add the Python and web totals and the run link to the coverage section above. When #212, #213, and #214 produce artifacts, add rows to the table above. #226 already merged the fail-closed Live evaluation instrument; a green workflow is still not a refusal-quality PASS while #192 is open.
+When `docs/releases/v1.0.0/evidence/coverage.md` holds the candidate's tables (#210), add the Python and web totals and the run link to the coverage section above. When #212 and #213 produce artifacts, add rows to the table above. #226 already merged the fail-closed Live evaluation instrument; a green workflow is still not a refusal-quality PASS while #192 is open.
