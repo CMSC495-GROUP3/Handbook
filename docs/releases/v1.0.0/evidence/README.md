@@ -9,6 +9,7 @@ token, or session id may be visible in any image.
 | [numbers.md](numbers.md) | the shared figures for the position papers ([#217](https://github.com/CMSC495-GROUP3/Sourcebook/issues/217)) | Pending rows filled after the freeze |
 | [coverage.md](coverage.md) | Python and web coverage for the candidate ([#210](https://github.com/CMSC495-GROUP3/Sourcebook/issues/210)) | Done on `7d3c779` |
 | [lighthouse.md](lighthouse.md) | Lighthouse on the pilot, both themes, phone and desktop ([#214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214)), with [lighthouse-summary.json](lighthouse-summary.json) | Done on `7d3c779` |
+| [pilot-load.json](pilot-load.json), [pilot-load-host.csv](pilot-load-host.csv) | the load run against the pilot and the host samples during it ([#212](https://github.com/CMSC495-GROUP3/Sourcebook/issues/212)); results in [../../../load-testing-pilot.md](../../../load-testing-pilot.md#results) | Done, code identical to `7d3c779` |
 | End-to-end pass screenshots | the 22 files below, from the pass in [../handoff.md](../handoff.md#end-to-end-pass-by-hand) | Done on `7d3c779` |
 | CI/CD screenshots | green CI, Security, and auto-deploy runs on the candidate ([#207](https://github.com/CMSC495-GROUP3/Sourcebook/issues/207)) | Pending |
 
