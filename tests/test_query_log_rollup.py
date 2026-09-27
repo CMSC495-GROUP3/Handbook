@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
 from conftest import FAKE_DB, make_passages
+from pymongo.errors import ExecutionTimeout, OperationFailure
 
 from sourcebook.api import analytics
 from sourcebook.rag import query_log_rollup
@@ -283,3 +284,70 @@ def test_backfill_records_old_rows_oldest_first_and_once():
 def test_backfill_cli_needs_the_flag():
     with pytest.raises(SystemExit):
         query_log_rollup.main([])
+
+
+# ── Review follow-ups ─────────────────────────────────────────────────────────
+
+
+def test_a_missing_covering_index_reads_the_day_documents(monkeypatch, caplog):
+    """A hint naming a missing index raises BadValue; the report still answers."""
+    ask("pto", "a")
+    real = daily().aggregate
+    calls = []
+
+    def aggregate(pipeline, **kwargs):
+        calls.append(kwargs)
+        if "hint" in kwargs:
+            raise OperationFailure("hint provided does not correspond to an existing index", code=2)
+        return real(pipeline, **kwargs)
+
+    monkeypatch.setattr(daily(), "aggregate", aggregate)
+    with caplog.at_level(logging.WARNING):
+        result = report()
+
+    assert [row["_id"] for row in result["faq"]] == ["pto"]
+    assert [("hint" in kwargs) for kwargs in calls] == [True, False]
+    assert "Covering index" in caplog.text
+
+
+def test_other_bad_values_are_not_retried(monkeypatch):
+    def aggregate(_pipeline, **_kwargs):
+        raise OperationFailure("$match needs an object", code=2)
+
+    monkeypatch.setattr(daily(), "aggregate", aggregate)
+    with pytest.raises(OperationFailure):
+        report()
+
+
+def test_sample_lookups_share_one_time_budget(monkeypatch):
+    """max_time_ms bounds every lookup together, so the refresh lease can
+    budget for them."""
+    for name in ("a", "b", "c"):
+        ask(name, "s")
+    # The deadline is set at 0.0 s; the third lookup starts at 1.2 s, past it.
+    clock = iter([0.0, 0.0, 0.6, 1.2])
+    monkeypatch.setattr(query_log_rollup.time, "monotonic", lambda: next(clock))
+
+    with pytest.raises(ExecutionTimeout):
+        read_report(
+            daily(), NOW - timedelta(days=89), NOW, limit=10, min_sessions=2, max_time_ms=1000
+        )
+
+
+def test_a_backfill_interrupted_before_marking_never_counts_a_row_twice(monkeypatch):
+    logs = FAKE_DB["query_logs"]
+    logs.insert_one(_row("a", NOW))
+    real = logs.update_one
+
+    def crash(*_args, **_kwargs):
+        raise RuntimeError("killed after counting, before marking")
+
+    monkeypatch.setattr(logs, "update_one", crash)
+    with pytest.raises(RuntimeError):
+        backfill(logs, daily(), FAKE_DB[SESSIONS_COLLECTION])
+    monkeypatch.setattr(logs, "update_one", real)
+
+    assert backfill(logs, daily(), FAKE_DB[SESSIONS_COLLECTION]) == 0
+    [doc] = daily().find({})
+    assert doc["count"] == 1
+    assert logs.count_documents({"rolled_up": True}) == 1

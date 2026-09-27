@@ -233,9 +233,12 @@ def refresh_snapshots() -> None:
     the background thread that ``start_refresh`` starts."""
     now = datetime.now(UTC)
     windows = sorted({min(days, TTL_DAYS) for days in report_snapshots.WINDOWS})
-    # Long enough to cover every window at its timeout, so a slow refresh
-    # cannot outlive the lease and let a second worker start one alongside it.
-    hold = timedelta(seconds=max(REPORT_REFRESH_SECONDS, len(windows) * REFRESH_TIMEOUT_MS / 1000))
+    # Long enough to cover every window at its timeouts, the aggregation and
+    # the sample lookups each (read_report), so a slow refresh cannot outlive
+    # the lease and let a second worker start one alongside it.
+    hold = timedelta(
+        seconds=max(REPORT_REFRESH_SECONDS, len(windows) * 2 * REFRESH_TIMEOUT_MS / 1000)
+    )
     if not report_snapshots.acquire_lease(query_log_report_col, now, hold):
         return
     report_snapshots.refresh(

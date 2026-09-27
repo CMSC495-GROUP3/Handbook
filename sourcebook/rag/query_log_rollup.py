@@ -50,7 +50,11 @@ deploying, from the repository root on the EC2 host:
     python -m sourcebook.rag.query_log_rollup --backfill
 
 It records every ``query_logs`` row not yet marked ``rolled_up`` and marks
-it, oldest first, so it is safe to run again or while the app is logging.
+it, oldest first. Each row also leaves a marker before it is counted, so a
+rerun after an interruption never counts a row twice; the one row in flight
+when it stopped may be left out. It is safe to run while the app is logging,
+but an ask logged live claims its conversation's marker first, so that
+conversation counts on the later day, an undercount like the one above.
 """
 
 from __future__ import annotations
@@ -59,12 +63,13 @@ import argparse
 import json
 import logging
 import sys
+import time
 from collections.abc import Iterable
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from dotenv import load_dotenv
-from pymongo.errors import DuplicateKeyError, PyMongoError
+from pymongo.errors import DuplicateKeyError, ExecutionTimeout, OperationFailure, PyMongoError
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +87,8 @@ BACKFILL_PROGRESS_EVERY = 10_000
 COUNT_FIELDS = ("count", "refused_count", "session_count", "refused_session_count")
 COVERING_INDEX = [("day", 1), ("question_hash", 1), *((field, 1) for field in COUNT_FIELDS)]
 COVERING_INDEX_NAME = "day_question_counts"
+# MongoDB's BadValue, which a hint naming a missing index raises.
+BAD_VALUE = 2
 # The lists read_report returns: gaps and FAQ, each for HR (every wording) and
 # for a manager (only wordings asked in at least min_sessions conversations).
 REPORT_LISTS = ("gaps", "faq", "manager_gaps", "manager_faq")
@@ -107,6 +114,12 @@ def _marker_id(question_hash: str | None, session_id: str | None, scope: str) ->
     # a missing session (None) is its own key, as it was one member of the
     # raw log's $addToSet.
     return json.dumps([question_hash, session_id, scope])
+
+
+def _row_marker_id(row_id: Any) -> str:
+    # A backfill's own marker, apart from the per-conversation ones: the
+    # three-element conversation ids can never equal this two-element one.
+    return json.dumps(["row", str(row_id)])
 
 
 def _first_ask(markers, question_hash, session_id, scope: str, created_at: datetime) -> bool:
@@ -256,11 +269,18 @@ def _samples(
 
     One indexed lookup per hash on (``question_hash``, ``day``), reading one
     day document each, so the cost is the number of listed wordings (at most
-    four lists of ``limit``), not the window.
+    four lists of ``limit``), not the window. ``max_time_ms`` bounds all of
+    the lookups together, not each one, so a caller can budget for them.
     """
-    kwargs = {"max_time_ms": max_time_ms} if max_time_ms is not None else {}
+    deadline = None if max_time_ms is None else time.monotonic() + max_time_ms / 1000
     found = {}
     for question_hash in dict.fromkeys(question_hashes):
+        kwargs = {}
+        if deadline is not None:
+            remaining = int((deadline - time.monotonic()) * 1000)
+            if remaining <= 0:
+                raise ExecutionTimeout("sample text lookups exceeded their time budget")
+            kwargs["max_time_ms"] = remaining
         query = {**_day_match(since, until), "question_hash": question_hash}
         cursor = daily.find(query, {"sample_raw": 1, "sample_condensed": 1}, **kwargs)
         for doc in cursor.sort("day", 1).limit(1):
@@ -284,13 +304,22 @@ def read_report(
     ranks them, with sample text on every row.
 
     Returns ``REPORT_LISTS`` (each a list of rows) plus ``total`` and
-    ``refused``, the window's asks and refused asks.
+    ``refused``, the window's asks and refused asks. ``max_time_ms`` bounds
+    the aggregation and, separately, the sample lookups, so a call takes at
+    most about twice it.
     """
-    kwargs: dict[str, Any] = {"hint": COVERING_INDEX_NAME}
-    if max_time_ms is not None:
-        kwargs["maxTimeMS"] = max_time_ms
+    kwargs: dict[str, Any] = {} if max_time_ms is None else {"maxTimeMS": max_time_ms}
     pipeline = report_pipeline(since, until, limit, min_sessions=min_sessions)
-    [facets] = list(daily.aggregate(pipeline, **kwargs))
+    try:
+        [facets] = list(daily.aggregate(pipeline, hint=COVERING_INDEX_NAME, **kwargs))
+    except OperationFailure as exc:
+        if exc.code != BAD_VALUE or "hint" not in str(exc):
+            raise
+        # The covering index is missing, say before ensure_indexes has run
+        # against a new database. The same pipeline answers from the day
+        # documents instead: slower, but a report rather than a 500.
+        logger.warning("Covering index %s is missing; reading day documents.", COVERING_INDEX_NAME)
+        [facets] = list(daily.aggregate(pipeline, **kwargs))
     hashes = [row["_id"] for name in REPORT_LISTS for row in facets[name]]
     samples = _samples(daily, since, until, hashes, max_time_ms)
     totals = next(iter(facets["totals"]), {})
@@ -336,16 +365,24 @@ def backfill(query_logs, daily, markers) -> int:
     """Record every ``query_logs`` row not yet marked ``rolled_up``, oldest
     first, and mark it. Returns how many rows it recorded.
 
-    Oldest first, so a conversation's first ask lands on the right day. Each
-    row is marked right after it is recorded, so a rerun after a failure
-    picks up where this stopped. Rows the app logs while this runs are
-    already marked and skipped.
+    Oldest first, so a conversation's first ask lands on the right day,
+    unless the app has already logged a later ask of it live. Before a row
+    is counted it leaves a marker keyed by its ``_id``, so a rerun after an
+    interruption skips a row it counted but did not get to mark, rather than
+    counting it twice. Rows the app logs while this runs are already marked
+    and skipped.
     """
     done = 0
     cursor = query_logs.find({"rolled_up": {"$exists": False}}).sort("created_at", 1)
     for row in cursor:
         created_at = row.get("created_at")
         if not isinstance(created_at, datetime):
+            continue
+        try:
+            markers.insert_one({"_id": _row_marker_id(row["_id"]), "created_at": created_at})
+        except DuplicateKeyError:
+            # Counted by an earlier run that stopped before marking the row.
+            query_logs.update_one({"_id": row["_id"]}, {"$set": {"rolled_up": True}})
             continue
         record_ask(
             daily,

@@ -277,7 +277,10 @@ class FakeCollection:
                 _apply_update(doc, update, inserted=False)
                 return type("R", (), {"matched_count": 1, "modified_count": 1})()
         if upsert:
-            doc = {k: v for k, v in query.items() if not isinstance(v, dict)}
+            # Equality fields only; operators such as $or are not stored.
+            doc = {
+                k: v for k, v in query.items() if not isinstance(v, dict) and not k.startswith("$")
+            }
             doc.setdefault("_id", next(self._ids))
             # As in Mongo: an upsert whose filter missed an existing _id
             # inserts a duplicate, which fails. The report's refresh lease

@@ -9,8 +9,8 @@ windows every ``REPORT_REFRESH_SECONDS`` and stores each as one document in
 ``query_log_report``. The route reads the stored document, which costs one
 lookup whatever the volume.
 
-A snapshot is up to one refresh interval old, and ``until`` in the response
-says when it was taken. The route computes live instead when a window has no
+A snapshot is normally up to one refresh interval old, and ``until`` in the
+response says when it was taken. The route computes live instead when a window has no
 snapshot, when the stored one is older than ``max_age`` (the thread stopped),
 or when a snapshot was taken with a different candidate cap or manager
 threshold, which are part of its key. At pilot volume the live path is well
