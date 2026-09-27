@@ -138,21 +138,23 @@ def _vectors(texts: list[str]) -> dict[str, Sequence[float]] | None:
     In order: this process's memo, then ``embedding_cache``, then one
     ``embed_many`` call for the rest. Nothing is written to Mongo.
     """
+    known = _recall(texts)
     try:
-        known = _recall(texts)
         cached = get_cached_embeddings([text for text in texts if text not in known])
         missing = [text for text in texts if text not in known and text not in cached]
         fresh = (
             dict(zip(missing, get_provider().embed_many(missing), strict=True)) if missing else {}
         )
-        _remember({**cached, **fresh})
-        return {**known, **cached, **fresh}
     except Exception:
         # Deliberately broad: the provider raises its own busy error, OpenAI's
-        # API errors, and httpx transport errors. Any of them means "show exact
-        # wording", never a failed report.
+        # API errors, and httpx transport errors, and the cache read can raise
+        # PyMongoError. Any of them means "show exact wording", never a failed
+        # report. The memo is outside this block, so a bug in it surfaces
+        # instead of hiding behind the fallback.
         logger.warning("Question grouping fell back to exact wording.", exc_info=True)
         return None
+    _remember({**cached, **fresh})
+    return {**known, **cached, **fresh}
 
 
 def _serialize(group: QuestionGroup) -> dict[str, Any]:

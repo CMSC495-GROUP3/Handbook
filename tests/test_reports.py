@@ -370,3 +370,12 @@ def test_asked_most_candidates_are_picked_by_conversations(client, auth, monkeyp
     faq = client.get(URL, headers=auth).json()["faq"]
 
     assert [row["question"] for row in faq] == ["Asked by three"]
+
+
+def test_the_vector_memo_evicts_the_least_recently_used(monkeypatch):
+    monkeypatch.setattr(reports, "VECTOR_MEMO_SIZE", 2)
+    reports._remember({"a": PTO, "b": PARKING})
+    reports._recall(["a"])  # "a" is now the most recently used
+    reports._remember({"c": PTO_REPHRASED})
+
+    assert set(reports._recall(["a", "b", "c"])) == {"a", "c"}
