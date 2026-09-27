@@ -152,10 +152,25 @@ Talking points:
 
 - Employee path: refusal or unhelpful answer to escalation record (+ optional
   webhook).
+- Sign in with the **HR password** before this segment and keep it out of
+  frame. HR Requests needs it
+  ([#295](https://github.com/CMSC495-GROUP3/Sourcebook/pull/295)). A session
+  opened with the shared or reviewer password shows no HR Requests link; on
+  the pilot the reviewer password is the manager one
+  ([#302](https://github.com/CMSC495-GROUP3/Sourcebook/pull/302)).
 - Handler path: open **HR Requests** (`/escalations`) as shipped on current
   `main` (two-pane queue from [#264](https://github.com/CMSC495-GROUP3/Sourcebook/pull/264)).
   Confirm the tagged deploy still exposes that page at rehearsal. Mark resolved
   after a human answer.
+- Last 30 seconds: open **What People Ask** (`/gaps`,
+  [#286](https://github.com/CMSC495-GROUP3/Sourcebook/pull/286),
+  [#288](https://github.com/CMSC495-GROUP3/Sourcebook/pull/288)). It ranks the
+  questions the corpus did not answer and the ones asked most, over 7, 30, or
+  90 days, with rewordings of one question on one row. Say that managers can
+  sign in to this page alone with their own password, and that their view
+  leaves out any wording asked in fewer than three conversations. Read
+  whatever rows the pilot's query log shows; do not seed or describe rows
+  that are not on screen.
 - Say what the alpha / final notes still limit: do not claim a full Slack/Teams
   operator console unless that UI is actually on the tagged build.
 
@@ -207,8 +222,10 @@ Talking points:
 
 - **Employees:** faster answers with sources they can open.
 - **HR:** fewer repeat tickets; escalations arrive with question context.
-- **Policy owners:** query-log / knowledge-gap signal shows where the corpus is
-  silent (reports as shipped on the tagged build — do not over-claim).
+- **Policy owners and managers:** What People Ask shows where the corpus is
+  silent and what people keep asking, so a policy owner knows what to write
+  next and a manager knows what to cover in onboarding (point back at the
+  page shown in the HR segment; do not over-claim).
 
 Close: "Video URL and README link land after upload. MP4 retained for the
 submission form. End of stakeholder pass."
@@ -219,6 +236,8 @@ submission form. End of stakeholder pass."
 - [ ] Confirm deployed SHA matches the intended tag
 - [ ] Confirm `unanswerable_01` shows the refusal card (not alpha prose+chips)
 - [ ] Confirm PTO follow-up chip or typed fallback against the PTO policy
+- [ ] Confirm the HR password opens HR Requests and What People Ask on the
+      host, and that What People Ask has rows for the 30-day window
 - [ ] Assign living names to the four role labels; put them on the opening slide
 - [ ] Run the five demo beats; record expected outcome class only
 - [ ] 1080p, one take per segment, cut together
