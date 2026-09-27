@@ -13,8 +13,9 @@ onto a per-day rollup with background snapshots, and #311's edits to code
 comments and message strings.
 
 **The roster is projected to the end of the course, 2026-10-04.** It assumes
-every pull request and issue open at the snapshot is finished by then: #292
-and #312 merge with a merge commit, and issues #214 and #216 close. Cells that
+every pull request and issue open at the snapshot is finished by then, along
+with #313, opened just after it: #292, #312, and #313 merge with a merge
+commit, and issues #214 and #216 close. Cells that
 change under that assumption carry a footnote, and
 [Open work and the projection](#open-work-and-the-projection) gives the
 counted value beside each one and what would change it.
@@ -38,7 +39,7 @@ Several people commit under more than one Git name. Author commits are grouped b
 
 | Member | GitHub | Role (Unit 5 pitch) | Author commits | Merged PRs authored | Others' PRs reviewed | Open PRs |
 | --- | --- | --- | ---: | ---: | ---: | ---: |
-| Taylor Shahan | [@t-shahan](https://github.com/t-shahan) | Lead Architect | 278 [^claude] [^projected] | 97 [^projected] | 59 | 0 [^projected] |
+| Taylor Shahan | [@t-shahan](https://github.com/t-shahan) | Lead Architect | 280 [^claude] [^projected] | 98 [^projected] | 59 | 0 [^projected] |
 | Chris | [@threshi-art](https://github.com/threshi-art) | Integration Lead | 129 | 52 | 1 | 0 |
 | Daniel Tsang | [@DanielTsang26](https://github.com/DanielTsang26) | Interface Designer | 4 | 1 | 1 | 0 |
 | George Struder | [@Lazzy-dev](https://github.com/Lazzy-dev) | Administration (EC2, S3, Atlas), locks, MongoDB | 11 | 3 | 4 | 0 |
@@ -57,7 +58,8 @@ Open at 2026-09-27 21:58 UTC, and assumed finished by 2026-10-04:
 | Item | Owner | State at the snapshot | Assumed by 2026-10-04 |
 | --- | --- | --- | --- |
 | [PR #292](https://github.com/CMSC495-GROUP3/Sourcebook/pull/292) `docs: add lighthouse metrics to quality.md` | Dominick ([@fudgepop01](https://github.com/fudgepop01)) | Five non-merge commits. Taylor requested changes on 2026-09-26; Dominick pushed two fixes after that review (`8dd650c`, `c63df06`). Conflicts with `main` | Merged |
-| [PR #312](https://github.com/CMSC495-GROUP3/Sourcebook/pull/312) `docs: describe Sourcebook as the capstone it is, not a workplace tool` | Taylor ([@t-shahan](https://github.com/t-shahan)) | Four non-merge commits, this page's update among them | Merged |
+| [PR #312](https://github.com/CMSC495-GROUP3/Sourcebook/pull/312) `docs: describe Sourcebook as the capstone it is, not a workplace tool` | Taylor ([@t-shahan](https://github.com/t-shahan)) | Five non-merge commits, this page's updates among them | Merged |
+| [PR #313](https://github.com/CMSC495-GROUP3/Sourcebook/pull/313) `fix: close the gaps a review found in the report refresh` | Taylor ([@t-shahan](https://github.com/t-shahan)) | Opened after the snapshot, stacked on #312. One non-merge commit | Merged |
 | [Issue #214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214) Lighthouse per theme | Dominick and Taylor | Measured in [lighthouse.md](releases/v1.0.0/evidence/lighthouse.md); #292 is "Part of #214", so merging it does not close the issue | Closed |
 | [Issue #216](https://github.com/CMSC495-GROUP3/Sourcebook/issues/216) the stakeholder video | Unassigned; the whole team records it | Script and shot list merged in [#262](https://github.com/CMSC495-GROUP3/Sourcebook/pull/262), updated in [#304](https://github.com/CMSC495-GROUP3/Sourcebook/pull/304) | Recorded, published, and closed |
 
@@ -67,9 +69,9 @@ What the projection changes:
 
 | Row and metric | Counted at `aacec66` | Projected for 2026-10-04 | Why |
 | --- | ---: | ---: | --- |
-| Taylor, author commits | 274 | 278 | #312's four non-merge commits land under `t-shahan`. The merge commit is not counted |
-| Taylor, merged PRs authored | 96 | 97 | #312 |
-| Taylor, open PRs | 1 | 0 | #312 leaves the open list |
+| Taylor, author commits | 274 | 280 | #312's five non-merge commits and #313's one land under `t-shahan`. Merge commits are not counted |
+| Taylor, merged PRs authored | 96 | 98 | #312 and #313 |
+| Taylor, open PRs | 1 | 0 | #312 leaves the open list. #313 opened after the snapshot and is merged by 2026-10-04 |
 | Dominick, author commits | 0 | 5 | #292's five non-merge commits (`8ff6bec`, `9ef947d`, `e77d288`, `8dd650c`, `c63df06`) land under `fudgepop01`. The two merges of `main` into the branch are not counted |
 | Dominick, merged PRs authored | 0 | 1 | #292 |
 | Dominick, open PRs | 1 | 0 | #292 leaves the open list |
@@ -80,12 +82,11 @@ already in Taylor's 59, and merging a pull request adds no review.
 
 The projection changes if:
 
-- #292 or #312 is squash-merged. Its author gains one commit, not five or
-  four.
-- Either pull request gains commits, for example to fix #292's conflict or to
-  answer review. Each non-merge commit adds one; a merge of `main` into the
+- #292 or #312 is squash-merged. Its author gains one commit, not five.
+- Any of these pull requests gains commits, for example to fix #292's
+  conflict or to answer review. Each non-merge commit adds one; a merge of `main` into the
   branch adds none.
-- Either is closed without merging. That row keeps its counted values.
+- One is closed without merging. Its author's row keeps the counted values for it.
 - Publishing the video adds a pull request, for example to link the recording.
   Its author's row gains that pull request and its commits.
 
@@ -106,6 +107,7 @@ The projection changes if:
 - The What People Ask report: the page, [PR #286](https://github.com/CMSC495-GROUP3/Sourcebook/pull/286), grouping by meaning, [PR #288](https://github.com/CMSC495-GROUP3/Sourcebook/pull/288), and its caption, [PR #297](https://github.com/CMSC495-GROUP3/Sourcebook/pull/297); counting conversations at volume, [PR #296](https://github.com/CMSC495-GROUP3/Sourcebook/pull/296), and serving it from a per-day rollup and background snapshots at the planned 7M questions a day, [PR #308](https://github.com/CMSC495-GROUP3/Sourcebook/pull/308); the question judge, [PR #298](https://github.com/CMSC495-GROUP3/Sourcebook/pull/298), and its 0.91 threshold, [PR #303](https://github.com/CMSC495-GROUP3/Sourcebook/pull/303).
 - The `v1.0.0` release folder, [PR #274](https://github.com/CMSC495-GROUP3/Sourcebook/pull/274), and its follow-ups through the tag and run write-back, [PR #304](https://github.com/CMSC495-GROUP3/Sourcebook/pull/304), [PR #305](https://github.com/CMSC495-GROUP3/Sourcebook/pull/305), [PR #306](https://github.com/CMSC495-GROUP3/Sourcebook/pull/306).
 - Documentation after the tag: the team page refresh, [PR #307](https://github.com/CMSC495-GROUP3/Sourcebook/pull/307); the What People Ask docs follow-up, [PR #309](https://github.com/CMSC495-GROUP3/Sourcebook/pull/309); the last rows of the evidence sheet, [PR #310](https://github.com/CMSC495-GROUP3/Sourcebook/pull/310); the README reorganized by reader, with `docs/architecture.md`, [PR #311](https://github.com/CMSC495-GROUP3/Sourcebook/pull/311); and the capstone framing across the docs, [PR #312](https://github.com/CMSC495-GROUP3/Sourcebook/pull/312), projected.
+- Fixes from an independent review of the What People Ask refresh: a missing index, the lease budget, and backfill reruns, [PR #313](https://github.com/CMSC495-GROUP3/Sourcebook/pull/313), projected.
 - Access: the HR password, [PR #295](https://github.com/CMSC495-GROUP3/Sourcebook/pull/295); conversations scoped to the browser that started them, [PR #299](https://github.com/CMSC495-GROUP3/Sourcebook/pull/299); the manager password, [PR #302](https://github.com/CMSC495-GROUP3/Sourcebook/pull/302); and the review follow-ups for both, [PR #301](https://github.com/CMSC495-GROUP3/Sourcebook/pull/301).
 
 The 61 `Claude`-authored commits at `aacec66` (among them the JWT `exp` work from [PR #154](https://github.com/CMSC495-GROUP3/Sourcebook/pull/154), facing-page icon fix [PR #202](https://github.com/CMSC495-GROUP3/Sourcebook/pull/202), lock-check follow-up on [PR #157](https://github.com/CMSC495-GROUP3/Sourcebook/pull/157), second-password and auto-deploy follow-ups, and review fixes on the What People Ask and access pull requests above) are counted with Taylor, as [issue #201](https://github.com/CMSC495-GROUP3/Sourcebook/issues/201) asked; Taylor directed that work and is accountable for it.
@@ -199,6 +201,6 @@ Unconfirmed: Dominick had not confirmed this row by the 27 September deadline.
 - Review counts are other people's pull requests GitHub marks `reviewed-by`, not every comment.
 - Issue assignment is cited as ownership, not as authored work.
 
-[^projected]: Projected for 2026-10-04, not yet counted. Assumes [PR #292](https://github.com/CMSC495-GROUP3/Sourcebook/pull/292) and [PR #312](https://github.com/CMSC495-GROUP3/Sourcebook/pull/312) merge with a merge commit and their commits at the snapshot. The counted values at `aacec66` are in [Open work and the projection](#open-work-and-the-projection).
+[^projected]: Projected for 2026-10-04, not yet counted. Assumes [PR #292](https://github.com/CMSC495-GROUP3/Sourcebook/pull/292), [PR #312](https://github.com/CMSC495-GROUP3/Sourcebook/pull/312), and [PR #313](https://github.com/CMSC495-GROUP3/Sourcebook/pull/313) merge with a merge commit and the commits listed in [Open work and the projection](#open-work-and-the-projection). The counted values at `aacec66` are in [Open work and the projection](#open-work-and-the-projection).
 
 [^claude]: This total includes 61 Claude-authored commits Taylor directed and accepted responsibility for.
