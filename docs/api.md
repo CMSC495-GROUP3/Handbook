@@ -332,10 +332,8 @@ caps each list. A window longer than the log's TTL is shortened to it, and
 
 Each row carries `count` (every ask, including one person asking again) and
 `conversations` (distinct `session_id` values). A conversation is not a
-person, but it is the closest the log gets. Rows group by `question_hash`, the
-exact wording after lowercasing and folding whitespace, so a rephrased
-question is its own row; grouping by meaning is
-[#287](https://github.com/CMSC495-GROUP3/Sourcebook/issues/287).
+person, but it is the closest the log gets. Near-identical wordings share a
+row; see [Grouping by meaning](#grouping-by-meaning) below.
 
 `question` is the logged condensed question, or the truncated raw one, or
 `null` when neither was logged. No session ids are returned, but the question
@@ -350,6 +348,34 @@ One that passes MongoDB's per-stage memory limit (one question asked in about
 1.6M conversations, see [load testing](load-testing.md)) returns 503 with
 `{"detail": "This report needs too much memory. Try a shorter window."}`.
 
+### Grouping by meaning
+
+Both lists merge near-identical wordings of one question into one row (#287). The log's
+`question_hash` groups identical text. The route then merges hash groups whose
+question embeddings are within `QUESTION_GROUP_THRESHOLD` cosine, default 0.85.
+Each wording joins the most asked group it is close to, compared with that
+group's first wording only, so a chain of near neighbours cannot drift into one
+row. `question` is the most asked wording. `count`, `refused`, and
+`conversations` cover every wording in the row, and a conversation that used
+two wordings counts once. `other_wordings` lists up to five more, most asked
+first, and `other_wording_count` says how many there are in all.
+
+Only the top 200 hash groups per list are grouped: refused wordings by asks,
+all wordings by conversations. Their vectors come from `embedding_cache`,
+where retrieval stored them. That cache keeps 30 days, so on a 90-day window
+the older wordings are embedded in one provider call. Those vectors are kept
+in a bounded in-process memo (5,000 entries, off when `CACHE_ENABLED=0`) and never written to Mongo, so a
+repeat load makes no provider call and the route writes nothing.
+If that call fails, `grouping` is `"exact"` and every wording has its own row.
+
+Merging two different questions ("How does PTO accrue?" and "Does unused PTO
+carry over?") hides a gap behind a covered neighbour, which is worse than
+splitting one question into two rows. On 80 labelled pairs the closest two
+different questions score 0.833, so 0.85 merges none of them, but it merges
+only 4 of 40 paraphrases: a missing question mark, a change of case, and two
+close rewordings. Most rephrasings still get their own row. The measurement is
+in [evaluation.md](evaluation.md#question-grouping-threshold).
+
 ```http
 GET /api/reports/gaps?days=30
 Authorization: Bearer <token>
@@ -360,13 +386,29 @@ Authorization: Bearer <token>
   "since": "2026-08-27T14:00:00+00:00",
   "until": "2026-09-26T14:00:00+00:00",
   "days": 30,
+  "grouping": "meaning",
   "total": 412,
   "refused": 37,
   "gaps": [
-    {"question_hash": "5c1e…", "question": "Does the company pay for pet insurance?", "count": 6, "conversations": 4}
+    {
+      "question_hash": "5c1e…",
+      "question": "Does the company pay for pet insurance?",
+      "count": 6,
+      "conversations": 5,
+      "other_wordings": [{"question": "Is pet insurance a benefit?", "count": 2}],
+      "other_wording_count": 1
+    }
   ],
   "faq": [
-    {"question_hash": "a07b…", "question": "How much PTO do I get?", "count": 19, "conversations": 12, "refused": 0}
+    {
+      "question_hash": "a07b…",
+      "question": "How much PTO do I get?",
+      "count": 19,
+      "conversations": 16,
+      "other_wordings": [{"question": "How many vacation days do I have?", "count": 4}],
+      "other_wording_count": 1,
+      "refused": 0
+    }
   ]
 }
 ```

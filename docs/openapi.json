@@ -1326,7 +1326,7 @@
     },
     "/api/reports/gaps": {
       "get": {
-        "description": "Refused and repeated questions over the last ``days`` days.",
+        "description": "Refused and repeated questions over the last ``days`` days, grouped by meaning.",
         "operationId": "coverage_gaps_api_reports_gaps_get",
         "parameters": [
           {
