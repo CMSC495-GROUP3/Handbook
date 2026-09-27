@@ -575,9 +575,12 @@ it is the only one that can open the HR Requests queue and the What People Ask
 report, both of which show questions employees typed. Every other token gets
 403 on those routes, and the web app hides their links unless the stored
 token's `cred` claim is `HR_PASSWORD_HASH`. Leave it unset and nobody can open
-either page. Use a password different from the other two: login checks
+either page. Use a password different from the shared one: login checks
 `APP_PASSWORD_HASH` first, so an HR hash of the shared password never matches
-and grants nobody HR access. Tokens issued before an upgrade carry the shared
+and grants nobody HR access. Login checks `HR_PASSWORD_HASH` before
+`APP_PASSWORD_HASH_2`, so setting both to the same hash makes the second
+password the HR one. The course deployment does this, so the grader can open
+both HR pages. Tokens issued before an upgrade carry the shared
 `cred`, so HR staff sign out and back in with the HR password. The HR password
 does not protect conversations; see [Known limitations](#known-limitations).
 

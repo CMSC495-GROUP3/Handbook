@@ -256,6 +256,19 @@ def test_the_shared_password_wins_when_hr_reuses_it(client, monkeypatch):
     assert decode_claims(token)["cred"] == "APP_PASSWORD_HASH"
 
 
+def test_hr_wins_when_it_shares_the_second_hash(client, monkeypatch):
+    """The course deployment gives the reviewer's password HR access this way."""
+    second = _second_hash()
+    monkeypatch.setenv("APP_PASSWORD_HASH_2", second)
+    monkeypatch.setenv("HR_PASSWORD_HASH", second)
+    token = client.post("/api/auth/login", json={"password": SECOND_PASSWORD}).json()[
+        "access_token"
+    ]
+    assert decode_claims(token)["cred"] == "HR_PASSWORD_HASH"
+    headers = {"Authorization": f"Bearer {token}"}
+    assert client.get("/api/reports/gaps", headers=headers).status_code == 200
+
+
 def test_malformed_hr_hash_is_a_server_error(client, monkeypatch, caplog):
     monkeypatch.setenv("HR_PASSWORD_HASH", "not-a-bcrypt-hash")
     with caplog.at_level(logging.ERROR, logger="sourcebook.api.routes.auth"):
@@ -274,8 +287,8 @@ def test_startup_accepts_all_three_hashes(monkeypatch):
     monkeypatch.setenv("APP_PASSWORD_HASH_2", _second_hash())
     assert [name for name, _ in auth_routes.validate_password_hashes()] == [
         "APP_PASSWORD_HASH",
-        "APP_PASSWORD_HASH_2",
         "HR_PASSWORD_HASH",
+        "APP_PASSWORD_HASH_2",
     ]
 
 

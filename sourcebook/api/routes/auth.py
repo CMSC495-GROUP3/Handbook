@@ -55,11 +55,12 @@ def is_bcrypt_hash(value: str) -> bool:
 # README together. Separate variables rather than one delimited list because a
 # bcrypt hash is full of `$`, which makes a list painful to quote in .env.
 #
-# Order matters. Login takes the first match, so if the HR hash is made from
-# the shared password, the shared variable wins and nobody gets HR access by
-# accident.
+# Order matters. Login takes the first match. The shared password comes first,
+# so an HR hash made from it grants nobody HR access. HR comes before the
+# second password, so a deployment can make the reviewer's password the HR one
+# by setting both variables to the same hash (the course deployment does).
 HR_PASSWORD_HASH_VAR = "HR_PASSWORD_HASH"
-PASSWORD_HASH_VARS = ("APP_PASSWORD_HASH", "APP_PASSWORD_HASH_2", HR_PASSWORD_HASH_VAR)
+PASSWORD_HASH_VARS = ("APP_PASSWORD_HASH", HR_PASSWORD_HASH_VAR, "APP_PASSWORD_HASH_2")
 PRIMARY_PASSWORD_HASH_VAR = PASSWORD_HASH_VARS[0]
 
 

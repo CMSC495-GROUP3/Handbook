@@ -119,7 +119,9 @@ handing one to a reviewer.
 
 Set `HR_PASSWORD_HASH` too if anyone will work escalations or read the
 coverage report in the web app. It is the Human Resources password, generated
-the same way and different from the other two. Only a session opened with it
+the same way and different from `APP_PASSWORD_HASH`. It may be the same hash
+as `APP_PASSWORD_HASH_2`, which makes the second password the HR one; the
+course deployment does this for the grader. Only a session opened with it
 can use the HR Requests queue (`GET`, `PATCH`, and retry on
 `/api/escalations`) and What People Ask (`GET /api/reports/gaps`); every
 other token gets 403 there, and the sidebar hides both links from it. With it
