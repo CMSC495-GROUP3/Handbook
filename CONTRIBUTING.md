@@ -29,7 +29,8 @@ make stub           # terminal 1: API on :8000, fake model, in-memory Mongo
 make web            # terminal 2: React on :5173 with hot reload
 ```
 
-Open http://localhost:5173 and log in with the password `dev`.
+Open http://localhost:5173 and log in with the password `dev`, or `hr` to also
+see the HR Requests and What People Ask pages.
 
 What is fake in this mode, so you are not surprised:
 
@@ -63,7 +64,8 @@ Needed for anything touching retrieval quality, ingestion, or the provider.
    A bcrypt hash contains `$`. Paste it into `.env` with an editor, not `echo`.
    An optional second password goes in `APP_PASSWORD_HASH_2`, hashed the same
    way; the README's Configure section, under the hash one-liner, says what that
-   implies before you hand one out.
+   implies before you hand one out. The HR Requests and What People Ask pages
+   open only for the password in `HR_PASSWORD_HASH`, also hashed the same way.
 3. Load the corpus, then create the vector index in the Atlas UI (the README's
    "Load the corpus" section has the exact JSON). The driver cannot create a
    search index; this step is manual and it is the one people forget.
