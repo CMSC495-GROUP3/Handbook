@@ -2,11 +2,15 @@
 
 CMSC 495 Group 3. This page is the per-person record that the README [Team](../README.md#team) section summarizes.
 
-Counts below are a snapshot against `main` at the `v1.0.0` candidate,
+Counts below are a snapshot against `main` at
+[`10fe58b`](https://github.com/CMSC495-GROUP3/Sourcebook/commit/10fe58b5e5b80b24a1df08838e1f69a3437980c6)
+(the merge of #306, 2026-09-27). Commit counts come from that commit; pull
+request and review counts are GitHub search totals taken at 2026-09-27 16:31
+UTC. Everything merged between the `v1.0.0` candidate
 [`7d3c779`](https://github.com/CMSC495-GROUP3/Sourcebook/commit/7d3c7795c197c5be56b15aebc650576760fd75d1)
-(the merge of #303, 2026-09-27). Commit counts come from that commit; pull
-request and review counts are GitHub search totals taken at 2026-09-27 14:57
-UTC, when no code had merged after it.
+and `10fe58b` is documentation (#231, #259, #274, #304, #305, #306). Work still in
+an open pull request is listed under [In progress](#in-progress), not in the
+merged columns.
 
 Each member confirmed their own row on
 [PR #231](https://github.com/CMSC495-GROUP3/Sourcebook/pull/231), except Gavin
@@ -15,28 +19,39 @@ marked unconfirmed.
 
 | How counted | Command or query |
 | --- | --- |
-| Author commits | `git log --no-merges --format='%an <%ae>'` on `7d3c779`, grouped by person |
+| Author commits | `git log --no-merges --format='%an <%ae>'` on `10fe58b`, grouped by person |
 | Merged pull requests authored | `gh` search `repo:CMSC495-GROUP3/Sourcebook type:pr author:<login> is:merged` |
 | Others' pull requests reviewed | `gh` search `repo:CMSC495-GROUP3/Sourcebook type:pr reviewed-by:<login> -author:<login>`. GitHub records a reply in a review thread on your own pull request as a review, so the `-author:` filter leaves those out. It counts other people's pull requests with at least one review, not review events |
+| Open pull requests | `gh` search `repo:CMSC495-GROUP3/Sourcebook type:pr author:<login> is:open` |
 | Issues assigned | `gh issue list --assignee <login> --state all` on this repository |
 
 Several people commit under more than one Git name. Author commits are grouped by person: `t-shahan`, `Taylor`, `Taylor Shahan`, and `Claude` under **Taylor Shahan**; `Lokias` under **Chris**; `RoNUO` under **Rob**; `DanielTsang26` and `Daniel Tsang` under **Daniel Tsang**. `dependabot[bot]` is not grouped with anyone.
 
 ## Roster
 
-| Member | GitHub | Role (Unit 5 pitch) | Author commits | Merged PRs authored | Others' PRs reviewed |
-| --- | --- | --- | ---: | ---: | ---: |
-| Taylor Shahan | [@t-shahan](https://github.com/t-shahan) | Lead Architect | 240 [^claude] | 88 | 59 |
-| Chris | [@threshi-art](https://github.com/threshi-art) | Integration Lead | 118 | 50 | 1 |
-| Daniel Tsang | [@DanielTsang26](https://github.com/DanielTsang26) | Interface Designer | 4 | 1 | 1 |
-| George Struder | [@Lazzy-dev](https://github.com/Lazzy-dev) | Administration (EC2, S3, Atlas), locks, MongoDB | 11 | 3 | 4 |
-| Rob | [@RoNUO](https://github.com/RoNUO) | Corpus availability and passage index | 4 | 3 | 2 |
-| Gavin (unconfirmed) | [@gavinwathen](https://github.com/gavinwathen) | React components, design and styling | 2 | 1 | 0 |
-| Dominick (unconfirmed) | [@fudgepop01](https://github.com/fudgepop01) | React components, design and styling | 0 | 0 | 0 |
+| Member | GitHub | Role (Unit 5 pitch) | Author commits | Merged PRs authored | Others' PRs reviewed | Open PRs |
+| --- | --- | --- | ---: | ---: | ---: | ---: |
+| Taylor Shahan | [@t-shahan](https://github.com/t-shahan) | Lead Architect | 266 [^claude] | 91 | 59 | 0 |
+| Chris | [@threshi-art](https://github.com/threshi-art) | Integration Lead | 129 | 52 | 1 | 0 |
+| Daniel Tsang | [@DanielTsang26](https://github.com/DanielTsang26) | Interface Designer | 4 | 1 | 1 | 0 |
+| George Struder | [@Lazzy-dev](https://github.com/Lazzy-dev) | Administration (EC2, S3, Atlas), locks, MongoDB | 11 | 3 | 4 | 0 |
+| Rob | [@RoNUO](https://github.com/RoNUO) | Corpus availability and passage index | 4 | 3 | 2 | 0 |
+| Gavin (unconfirmed) | [@gavinwathen](https://github.com/gavinwathen) | React components, design and styling | 2 | 1 | 0 | 0 |
+| Dominick (unconfirmed) | [@fudgepop01](https://github.com/fudgepop01) | React components, design and styling | 0 | 0 | 0 | 1 ([#292](https://github.com/CMSC495-GROUP3/Sourcebook/pull/292)) |
 
 `dependabot[bot]` has 20 author commits and 20 merged PRs on the same snapshot. It is not a team member.
 
-Grouped this way, `7d3c779` shows six people plus Dependabot. Dominick has no author commits on `main`.
+Grouped this way, `10fe58b` shows six people plus Dependabot. Dominick has no author commits on `main`; his five commits are on the open [PR #292](https://github.com/CMSC495-GROUP3/Sourcebook/pull/292).
+
+## In progress
+
+Open pull requests at 2026-09-27 16:31 UTC. These move to the merged columns when they merge; update this table as that changes.
+
+| Pull request | Author | Commits | Issue | State |
+| --- | --- | ---: | --- | --- |
+| [#292](https://github.com/CMSC495-GROUP3/Sourcebook/pull/292) `docs: add lighthouse metrics to quality.md` | Dominick ([@fudgepop01](https://github.com/fudgepop01)) | 5 non-merge | [#214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214) | Changes requested by Taylor on 2026-09-26; Dominick pushed two fixes after that review (`8dd650c`, `c63df06`); reviews requested from George and Daniel |
+
+No other branch on the repository carries commits that are not on `main`.
 
 ## Taylor Shahan
 
@@ -53,9 +68,10 @@ Grouped this way, `7d3c779` shows six people plus Dependabot. Dominick has no au
 - Follow-up grounding on the question as asked, [PR #245](https://github.com/CMSC495-GROUP3/Sourcebook/pull/245), which closed [issue #189](https://github.com/CMSC495-GROUP3/Sourcebook/issues/189).
 - Finished and merged the HR escalation queue Gavin started, [PR #250](https://github.com/CMSC495-GROUP3/Sourcebook/pull/250).
 - The What People Ask report: the page, [PR #286](https://github.com/CMSC495-GROUP3/Sourcebook/pull/286), grouping by meaning, [PR #288](https://github.com/CMSC495-GROUP3/Sourcebook/pull/288), and its caption, [PR #297](https://github.com/CMSC495-GROUP3/Sourcebook/pull/297); counting conversations at volume, [PR #296](https://github.com/CMSC495-GROUP3/Sourcebook/pull/296); the question judge, [PR #298](https://github.com/CMSC495-GROUP3/Sourcebook/pull/298), and its 0.91 threshold, [PR #303](https://github.com/CMSC495-GROUP3/Sourcebook/pull/303).
+- The `v1.0.0` release folder, [PR #274](https://github.com/CMSC495-GROUP3/Sourcebook/pull/274), and its follow-ups through the tag and run write-back, [PR #304](https://github.com/CMSC495-GROUP3/Sourcebook/pull/304), [PR #305](https://github.com/CMSC495-GROUP3/Sourcebook/pull/305), [PR #306](https://github.com/CMSC495-GROUP3/Sourcebook/pull/306).
 - Access: the HR password, [PR #295](https://github.com/CMSC495-GROUP3/Sourcebook/pull/295); conversations scoped to the browser that started them, [PR #299](https://github.com/CMSC495-GROUP3/Sourcebook/pull/299); the manager password, [PR #302](https://github.com/CMSC495-GROUP3/Sourcebook/pull/302); and the review follow-ups for both, [PR #301](https://github.com/CMSC495-GROUP3/Sourcebook/pull/301).
 
-The 48 `Claude`-authored commits at `7d3c779` (among them the JWT `exp` work from [PR #154](https://github.com/CMSC495-GROUP3/Sourcebook/pull/154), facing-page icon fix [PR #202](https://github.com/CMSC495-GROUP3/Sourcebook/pull/202), lock-check follow-up on [PR #157](https://github.com/CMSC495-GROUP3/Sourcebook/pull/157), second-password and auto-deploy follow-ups, and review fixes on the What People Ask and access pull requests above) are counted with Taylor, as [issue #201](https://github.com/CMSC495-GROUP3/Sourcebook/issues/201) asked; Taylor directed that work and is accountable for it.
+The 58 `Claude`-authored commits at `10fe58b` (among them the JWT `exp` work from [PR #154](https://github.com/CMSC495-GROUP3/Sourcebook/pull/154), facing-page icon fix [PR #202](https://github.com/CMSC495-GROUP3/Sourcebook/pull/202), lock-check follow-up on [PR #157](https://github.com/CMSC495-GROUP3/Sourcebook/pull/157), second-password and auto-deploy follow-ups, and review fixes on the What People Ask and access pull requests above) are counted with Taylor, as [issue #201](https://github.com/CMSC495-GROUP3/Sourcebook/issues/201) asked; Taylor directed that work and is accountable for it.
 
 ## Chris
 
@@ -70,6 +86,7 @@ The 48 `Claude`-authored commits at `7d3c779` (among them the JWT `exp` work fro
 - Clarify-and-escalate prompt, [PR #138](https://github.com/CMSC495-GROUP3/Sourcebook/pull/138); lifecycle corpus, [PR #139](https://github.com/CMSC495-GROUP3/Sourcebook/pull/139).
 - Empty-corpus library cleanup, [PR #132](https://github.com/CMSC495-GROUP3/Sourcebook/pull/132); prompt-injection hygiene for retrieved text, [PR #155](https://github.com/CMSC495-GROUP3/Sourcebook/pull/155).
 - Query-log analysis reports, [PR #171](https://github.com/CMSC495-GROUP3/Sourcebook/pull/171) / [issue #160](https://github.com/CMSC495-GROUP3/Sourcebook/issues/160).
+- The user guide, [PR #259](https://github.com/CMSC495-GROUP3/Sourcebook/pull/259), and this team record, [PR #231](https://github.com/CMSC495-GROUP3/Sourcebook/pull/231).
 - The grounding-gate fix for [issue #192](https://github.com/CMSC495-GROUP3/Sourcebook/issues/192), [PR #253](https://github.com/CMSC495-GROUP3/Sourcebook/pull/253), merged on 2026-09-22.
 
 [Issue #189](https://github.com/CMSC495-GROUP3/Sourcebook/issues/189) is closed; it was completed by Taylor's [PR #245](https://github.com/CMSC495-GROUP3/Sourcebook/pull/245), so it is not counted as Chris's merged authorship.
@@ -137,7 +154,7 @@ Unconfirmed: Dominick had not confirmed this row by the 27 September deadline.
 
 **Owns, per the README.** React components, design, and styling, with Gavin.
 
-**What GitHub shows.** Zero author commits, zero merged pull requests, and zero reviews of others' pull requests under `fudgepop01`. Assigned on the same design and frontend cluster ([#41](https://github.com/CMSC495-GROUP3/Sourcebook/issues/41)–[#53](https://github.com/CMSC495-GROUP3/Sourcebook/issues/53), [#82](https://github.com/CMSC495-GROUP3/Sourcebook/issues/82), [#84](https://github.com/CMSC495-GROUP3/Sourcebook/issues/84), [#159](https://github.com/CMSC495-GROUP3/Sourcebook/issues/159), [#174](https://github.com/CMSC495-GROUP3/Sourcebook/issues/174), [#175](https://github.com/CMSC495-GROUP3/Sourcebook/issues/175)), plus [#214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214) (Lighthouse accessibility and performance per theme, still open). Assigned [#175](https://github.com/CMSC495-GROUP3/Sourcebook/issues/175) is ownership, not merged authorship; the merged facing-page fix on `main` (`c00b30c`) is Daniel's commit and is recorded on his row. No author commits under Dominick's name appear on `main` at `7d3c779`. He opened [PR #292](https://github.com/CMSC495-GROUP3/Sourcebook/pull/292) (`docs: add lighthouse metrics to quality.md`, for [#214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214)) on 2026-09-26; at the snapshot it was open, with changes requested.
+**What GitHub shows.** Zero author commits, zero merged pull requests, and zero reviews of others' pull requests under `fudgepop01`. Assigned on the same design and frontend cluster ([#41](https://github.com/CMSC495-GROUP3/Sourcebook/issues/41)–[#53](https://github.com/CMSC495-GROUP3/Sourcebook/issues/53), [#82](https://github.com/CMSC495-GROUP3/Sourcebook/issues/82), [#84](https://github.com/CMSC495-GROUP3/Sourcebook/issues/84), [#159](https://github.com/CMSC495-GROUP3/Sourcebook/issues/159), [#174](https://github.com/CMSC495-GROUP3/Sourcebook/issues/174), [#175](https://github.com/CMSC495-GROUP3/Sourcebook/issues/175)), plus [#214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214) (Lighthouse accessibility and performance per theme, still open). Assigned [#175](https://github.com/CMSC495-GROUP3/Sourcebook/issues/175) is ownership, not merged authorship; the merged facing-page fix on `main` (`c00b30c`) is Daniel's commit and is recorded on his row. No author commits under Dominick's name appear on `main` at `10fe58b`. He opened [PR #292](https://github.com/CMSC495-GROUP3/Sourcebook/pull/292) (`docs: add lighthouse metrics to quality.md`, for [#214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214)) on 2026-09-26; it has five non-merge commits. Taylor requested changes that evening; Dominick pushed two fixes afterward (trimming unrelated changes, and recording the live-site commit and time for each Lighthouse run). At the snapshot it is open, with Taylor's changes-requested review still standing. See [In progress](#in-progress).
 
 ## Scope of this record
 
@@ -145,4 +162,4 @@ Unconfirmed: Dominick had not confirmed this row by the 27 September deadline.
 - Review counts are other people's pull requests GitHub marks `reviewed-by`, not every comment.
 - Issue assignment is cited as ownership, not as authored work.
 
-[^claude]: This total includes 48 Claude-authored commits Taylor directed and accepted responsibility for.
+[^claude]: This total includes 58 Claude-authored commits Taylor directed and accepted responsibility for.
