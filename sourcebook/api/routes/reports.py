@@ -50,7 +50,11 @@ from sourcebook.api.db import query_logs_col
 from sourcebook.api.limiter import limiter
 from sourcebook.api.routes.deps import require_auth
 from sourcebook.rag.cache import embedding_cache_key, get_cached_embeddings
-from sourcebook.rag.config import QUERY_LOG_TTL_SECONDS, QUESTION_GROUP_THRESHOLD
+from sourcebook.rag.config import (
+    CACHE_ENABLED,
+    QUERY_LOG_TTL_SECONDS,
+    QUESTION_GROUP_THRESHOLD,
+)
 from sourcebook.rag.llm import get_provider
 from sourcebook.rag.query_log_reports import (
     DEFAULT_MIN_REPEAT,
@@ -87,6 +91,8 @@ MAX_OTHER_WORDINGS = 5
 # every load re-embeds every text the Mongo cache no longer holds (its TTL is
 # 30 days, the report's window up to 90). Vectors are stored as 32-bit arrays,
 # 6 KB each at 1,536 dimensions, so the bound is about 31 MB per process.
+# CACHE_ENABLED=0 turns it off with the Mongo caches, so a load test run
+# without caching sees every load embed.
 VECTOR_MEMO_SIZE = 5000
 _vector_memo: OrderedDict[str, array] = OrderedDict()
 _vector_memo_lock = threading.Lock()
@@ -112,6 +118,8 @@ def _wording(row: dict[str, Any]) -> Wording:
 
 
 def _remember(vectors: dict[str, list[float]]) -> None:
+    if not CACHE_ENABLED:
+        return
     with _vector_memo_lock:
         for text, vector in vectors.items():
             key = embedding_cache_key(text)
@@ -122,6 +130,8 @@ def _remember(vectors: dict[str, list[float]]) -> None:
 
 
 def _recall(texts: list[str]) -> dict[str, array]:
+    if not CACHE_ENABLED:
+        return {}
     with _vector_memo_lock:
         found = {}
         for text in texts:

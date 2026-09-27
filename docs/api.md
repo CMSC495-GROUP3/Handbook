@@ -361,7 +361,7 @@ Only the top 200 hash groups per list are grouped: refused wordings by asks,
 all wordings by conversations. Their vectors come from `embedding_cache`,
 where retrieval stored them. That cache keeps 30 days, so on a 90-day window
 the older wordings are embedded in one provider call. Those vectors are kept
-in a bounded in-process memo (5,000 entries) and never written to Mongo, so a
+in a bounded in-process memo (5,000 entries, off when `CACHE_ENABLED=0`) and never written to Mongo, so a
 repeat load makes no provider call and the route writes nothing.
 If that call fails, `grouping` is `"exact"` and every wording has its own row.
 

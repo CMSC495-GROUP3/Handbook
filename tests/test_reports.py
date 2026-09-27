@@ -379,3 +379,15 @@ def test_the_vector_memo_evicts_the_least_recently_used(monkeypatch):
     reports._remember({"c": PTO_REPHRASED})
 
     assert set(reports._recall(["a", "b", "c"])) == {"a", "c"}
+
+
+def test_cache_disabled_turns_the_vector_memo_off(client, auth, monkeypatch):
+    monkeypatch.setattr(reports, "CACHE_ENABLED", False)
+    calls = vectors(monkeypatch, {"Where do I park?": PARKING})
+    log("Where do I park?", refused=True)
+
+    client.get(URL, headers=auth)
+    client.get(URL, headers=auth)
+
+    assert calls == [["Where do I park?"], ["Where do I park?"]]
+    assert len(reports._vector_memo) == 0
