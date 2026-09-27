@@ -40,12 +40,12 @@ unmeasured.
 
 | Field | Value |
 | --- | --- |
-| Commit | Pending: the merge commit of the release pull request that fills this folder |
+| Commit | Pending: the merge commit of the last documentation pull request before the tag, which comes after #274, #259, and #231. Every commit since the candidate changed documentation only |
 | Tag and release | Pending: `v1.0.0`, annotated, a full release (not a prerelease), on that commit |
 | Running at | <https://sourcebook.duckdns.org> |
-| Deployed commit | `7d3c779` in both `HEAD` and `refs/deployed/main` on the pilot host, checked 2026-09-27 14:10 UTC. Re-check when the tag is cut |
-| CI | Pending: the push-to-`main` run on the merge commit |
-| Security | Pending: the push-to-`main` run on the merge commit |
+| Deployed commit | `7d3c779` in both `HEAD` and `refs/deployed/main` on the pilot host, checked 2026-09-27 14:10 UTC; `67e4953` at 15:37 UTC, with nothing to rebuild. Re-check when the tag is cut |
+| CI | [36330158339](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36330158339) on #274's merge commit `67e4953`, green. The tagged commit's own run is linked by the write-back pull request |
+| Security | [36330158342](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36330158342) on `67e4953`, green. The tagged commit's own run is linked by the write-back pull request |
 | Code under test | [`7d3c779`](https://github.com/CMSC495-GROUP3/Sourcebook/commit/7d3c7795c197c5be56b15aebc650576760fd75d1), the candidate. CI run [36324854066](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36324854066) and Security run [36324854241](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36324854241) are green on it. The release pull request adds documentation only, so its merge commit runs the same code |
 
 ## Passwords on the pilot
@@ -85,7 +85,7 @@ Every code change on the candidate:
 | HR password | `HR_PASSWORD_HASH` is a third password. HR Requests and its routes return 403 to any other session, and the sidebar hides the link. Filing an escalation from the chat still needs only the shared password. On the pilot the HR password has been its own since 2026-09-27; before that it was the reviewer password ([#290](https://github.com/CMSC495-GROUP3/Sourcebook/issues/290)) | #295 |
 | What People Ask at volume | The grouped report returns at most 1,000 session ids per wording with an exact count beside them, so one question asked in 400,000 conversations no longer exceeds MongoDB's 16 MB document limit. A window over Mongo's memory limit gets 503 and "Try a shorter window." instead of 500. Timings from a local `mongo:7`, not Atlas, are in [docs/load-testing.md](../../load-testing.md) ([#291](https://github.com/CMSC495-GROUP3/Sourcebook/issues/291)) | #296 |
 | Sample policies | The injury policy's incident-reporting window now matches the Workplace Health and Safety Policy: report no later than 24 hours after the incident, instead of by the end of the shift. The pilot was re-ingested on 2026-09-26, so the corpus version differs from the beta's | #284 |
-| Documentation | User guide ([#206](https://github.com/CMSC495-GROUP3/Sourcebook/issues/206)) and team page ([#209](https://github.com/CMSC495-GROUP3/Sourcebook/issues/209)) pending; [portfolio page](portfolio.md) in this folder; pilot load-run page; README and quality page corrected where the beta made their status claims stale | Pending: #259, #231; #274, #278, #285 |
+| Documentation | [User guide](../../user-guide.md) ([#206](https://github.com/CMSC495-GROUP3/Sourcebook/issues/206)) and [team page](../../team.md) ([#209](https://github.com/CMSC495-GROUP3/Sourcebook/issues/209)); [portfolio page](portfolio.md) in this folder; pilot load-run page; CI/CD evidence; README and quality page corrected where the beta made their status claims stale | #259, #231; #274, #278, #285 |
 
 ## Verification status
 
@@ -243,5 +243,5 @@ README, `docs/README.md`, and `portfolio.md`. That pull request closes
 | End-to-end pass by hand, recorded above with screenshots | Done |
 | Coverage for the candidate in [evidence/coverage.md](evidence/coverage.md) | Done |
 | Load run and Lighthouse, or recorded as not measured | Done |
-| `docs/user-guide.md` and `docs/team.md` on `main` | Pending: #259, #231 |
-| Release pull request merged, with its CI and Security runs green and linked in the table at the top of this page | Pending |
+| `docs/user-guide.md` and `docs/team.md` on `main` | Done: #259 (`c92124a`) and #231 (`cb4119b`), both updated for the candidate |
+| Release pull request merged, with its CI and Security runs green and linked in the table at the top of this page | Done: #274 merged as `67e4953`; [CI](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36330158339) and [Security](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36330158342) green |

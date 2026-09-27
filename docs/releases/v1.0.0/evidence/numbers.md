@@ -57,10 +57,10 @@ refreshed when `v1.0.0` is tagged.
 | [@t-shahan](https://github.com/t-shahan) | Lead Architect | [67](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+is%3Apr+is%3Amerged+author%3At-shahan&type=pullrequests) | [56](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+reviewed-by%3At-shahan+-author%3At-shahan&type=pullrequests) | [65](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+is%3Aissue+is%3Aclosed+author%3At-shahan&type=issues) |
 | [@DanielTsang26](https://github.com/DanielTsang26) | Interface Designer | [1](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+is%3Apr+is%3Amerged+author%3ADanielTsang26&type=pullrequests) | [1](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+reviewed-by%3ADanielTsang26+-author%3ADanielTsang26&type=pullrequests) | [0](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+is%3Aissue+is%3Aclosed+author%3ADanielTsang26&type=issues) |
 | [@threshi-art](https://github.com/threshi-art) | Integration Lead | [50](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+is%3Apr+is%3Amerged+author%3Athreshi-art&type=pullrequests) | [1](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+reviewed-by%3Athreshi-art+-author%3Athreshi-art&type=pullrequests) | [25](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+is%3Aissue+is%3Aclosed+author%3Athreshi-art&type=issues) |
-| [@gavinwathen](https://github.com/gavinwathen) | Pending — [#231](https://github.com/CMSC495-GROUP3/Sourcebook/pull/231) | [1](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+is%3Apr+is%3Amerged+author%3Agavinwathen&type=pullrequests) | [0](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+reviewed-by%3Agavinwathen+-author%3Agavinwathen&type=pullrequests) | [0](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+is%3Aissue+is%3Aclosed+author%3Agavinwathen&type=issues) |
-| [@fudgepop01](https://github.com/fudgepop01) | Pending — [#231](https://github.com/CMSC495-GROUP3/Sourcebook/pull/231) | [0](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+is%3Apr+is%3Amerged+author%3Afudgepop01&type=pullrequests) | [0](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+reviewed-by%3Afudgepop01+-author%3Afudgepop01&type=pullrequests) | [0](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+is%3Aissue+is%3Aclosed+author%3Afudgepop01&type=issues) |
-| [@Lazzy-dev](https://github.com/Lazzy-dev) | Pending — [#231](https://github.com/CMSC495-GROUP3/Sourcebook/pull/231) | [3](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+is%3Apr+is%3Amerged+author%3ALazzy-dev&type=pullrequests) | [4](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+reviewed-by%3ALazzy-dev+-author%3ALazzy-dev&type=pullrequests) | [1](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+is%3Aissue+is%3Aclosed+author%3ALazzy-dev&type=issues) |
-| [@RoNUO](https://github.com/RoNUO) | Pending — [#231](https://github.com/CMSC495-GROUP3/Sourcebook/pull/231) | [2](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+is%3Apr+is%3Amerged+author%3ARoNUO&type=pullrequests) | [2](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+reviewed-by%3ARoNUO+-author%3ARoNUO&type=pullrequests) | [0](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+is%3Aissue+is%3Aclosed+author%3ARoNUO&type=issues) |
+| [@gavinwathen](https://github.com/gavinwathen) | React components, design and styling (row unconfirmed) | [1](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+is%3Apr+is%3Amerged+author%3Agavinwathen&type=pullrequests) | [0](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+reviewed-by%3Agavinwathen+-author%3Agavinwathen&type=pullrequests) | [0](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+is%3Aissue+is%3Aclosed+author%3Agavinwathen&type=issues) |
+| [@fudgepop01](https://github.com/fudgepop01) | React components, design and styling (row unconfirmed) | [0](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+is%3Apr+is%3Amerged+author%3Afudgepop01&type=pullrequests) | [0](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+reviewed-by%3Afudgepop01+-author%3Afudgepop01&type=pullrequests) | [0](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+is%3Aissue+is%3Aclosed+author%3Afudgepop01&type=issues) |
+| [@Lazzy-dev](https://github.com/Lazzy-dev) | Administration (EC2, S3, Atlas), locks, MongoDB | [3](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+is%3Apr+is%3Amerged+author%3ALazzy-dev&type=pullrequests) | [4](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+reviewed-by%3ALazzy-dev+-author%3ALazzy-dev&type=pullrequests) | [1](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+is%3Aissue+is%3Aclosed+author%3ALazzy-dev&type=issues) |
+| [@RoNUO](https://github.com/RoNUO) | Corpus availability and passage index | [2](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+is%3Apr+is%3Amerged+author%3ARoNUO&type=pullrequests) | [2](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+reviewed-by%3ARoNUO+-author%3ARoNUO&type=pullrequests) | [0](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+is%3Aissue+is%3Aclosed+author%3ARoNUO&type=issues) |
 | Dependabot (not a member) | — | [20](https://github.com/search?q=repo%3ACMSC495-GROUP3%2FSourcebook+is%3Apr+is%3Amerged+author%3Aapp%2Fdependabot&type=pullrequests) | — | — |
 
 How to read the columns:
@@ -77,16 +77,14 @@ How to read the columns:
   review events. Cite this column, not a plain `reviewed-by:` count.
 - **Closed issues authored** is `is:issue is:closed author:<login>`. It counts
   who opened the issue, not who fixed it.
-- **Role** comes from [README § Team](../../../../README.md#team), which names
-  only the three Unit 5 roles. The other four members' roles are in
-  `docs/team.md`, which is still in draft
-  [pull request #231](https://github.com/CMSC495-GROUP3/Sourcebook/pull/231).
+- **Role** comes from [README § Team](../../../../README.md#team) for the
+  three Unit 5 roles and from [docs/team.md](../../../team.md) for the other
+  four. Gavin's and Dominick's rows there are marked unconfirmed.
 
 **Contribution statements:** each paper copies the author's row in
-`docs/team.md` word for word. That file is not on `main` yet
-([#231](https://github.com/CMSC495-GROUP3/Sourcebook/pull/231), deadline for
-confirming rows Sunday 27 September, week 8 count refresh after the freeze).
-Until it merges, there is no row to copy.
+[docs/team.md](../../../team.md) word for word. It merged in
+[#231](https://github.com/CMSC495-GROUP3/Sourcebook/pull/231) with its counts
+refreshed against the candidate `7d3c779`.
 
 ## Answer quality (live evaluation)
 
@@ -156,7 +154,7 @@ no run times a refusal by the coverage judge. Seven requests are too few for per
 | Section 1: the product and the releases | [README](../../../../README.md); the alpha [handoff](https://github.com/CMSC495-GROUP3/Sourcebook/blob/v0.1.0-alpha.1/docs/alpha/handoff.md) and [release notes](https://github.com/CMSC495-GROUP3/Sourcebook/blob/v0.1.0-alpha.1/docs/alpha/release-notes.md); the beta [handoff](https://github.com/CMSC495-GROUP3/Sourcebook/blob/v0.2.0/docs/releases/v0.2.0/handoff.md) and [release notes](https://github.com/CMSC495-GROUP3/Sourcebook/blob/v0.2.0/docs/releases/v0.2.0/release-notes.md); the `v1.0.0` handoff and release notes once [#274](https://github.com/CMSC495-GROUP3/Sourcebook/pull/274) is filled and tagged | Keep claims to what a tagged or committed file shows |
 | Section 2: quality and process | [docs/quality.md](../../../quality.md), with [docs/evaluation.md](../../../evaluation.md), [docs/ci-cd.md](../../../ci-cd.md), and this sheet for the figures | Compare quality.md against the **SEI CMMI** practice areas (for example Verification, Peer Review, Measurement and Analysis), or against **IEEE 730** (software quality assurance) and **IEEE 12207** (software life-cycle processes). Name the edition you cite |
 | Section 3: industry context | The counts above, [README § Team](../../../../README.md#team), and [CONTRIBUTING.md](../../../../CONTRIBUTING.md) for the review and branch process | The **Stack Overflow Developer Survey**, **GitHub Octoverse**, or an **IEEE Computer Society** report. Name the year you cite |
-| Contribution statement | The author's row in `docs/team.md`, copied as written ([#231](https://github.com/CMSC495-GROUP3/Sourcebook/pull/231)) | — |
+| Contribution statement | The author's row in [docs/team.md](../../../team.md), copied as written | — |
 
 Do not fill a Pending row from anything but the artifact it names. When that
 artifact lands, replace the Pending text with the figure and point the Source
