@@ -692,4 +692,15 @@ describe('EscalationsPage', () => {
 
     expect(await screen.findByRole('button', { name: /pet insurance/ })).toBeInTheDocument()
   })
+
+  it('says who the page is for when the session is not HR', async () => {
+    vi.spyOn(client, 'get').mockRejectedValue(axiosError(403, { detail: 'Human Resources sign-in required.' }))
+    renderPage()
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'This page is for Human Resources. Sign out and sign in with the HR password to see it.',
+    )
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Filter by status' })).not.toBeInTheDocument()
+  })
 })
