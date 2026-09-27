@@ -1,11 +1,11 @@
-# Load test against the deployed pilot
+# Load test against the deployed demo site
 
-**Status: Done on 2026-09-27** against the pilot running the `v1.0.0`
+**Status: Done on 2026-09-27** against the demo site running the `v1.0.0`
 candidate's code (issue [#212](https://github.com/CMSC495-GROUP3/Sourcebook/issues/212),
 [plan on #215](https://github.com/CMSC495-GROUP3/Sourcebook/issues/215#issuecomment-5824613941)).
 The results are at the end of this page. Up to 20 concurrent users, every
 request answered with a first token in under 2 seconds at 10 and 20. At 40,
-33 of 40 requests failed: 20 on OpenAI's own rate limit and 13 on the pilot's
+33 of 40 requests failed: 20 on OpenAI's own rate limit and 13 on the demo site's
 provider bound.
 
 ## What this measures, and what it does not
@@ -15,19 +15,19 @@ Three measurements answer different questions:
 | Page | System | Load | Answers |
 | --- | --- | --- | --- |
 | [load-testing.md](load-testing.md) | laptop, model faked, database in memory, limiter off | up to 320 concurrent | where the thread pool saturates |
-| `live-benchmark.md` in each release folder | the deployed pilot, real model | 7 or 8 requests, a burst of 3 | whether each path works for one user |
-| this page | the deployed pilot, real model | a few concurrency levels, 80 requests at most | what the deployed system sustains under concurrent load |
+| `live-benchmark.md` in each release folder | the deployed demo site, real model | 7 or 8 requests, a burst of 3 | whether each path works for one user |
+| this page | the deployed demo site, real model | a few concurrency levels, 80 requests at most | what the deployed system sustains under concurrent load |
 
 The capacity claim for 10,000 users rests on the synthetic page's
 multiplication. This run replaces that with a measured figure for the
-deployed system. It does not measure 10,000 users: the pilot is one small
+deployed system. It does not measure 10,000 users: the demo site is one small
 instance with one API worker, and a paid model makes a large run a budget
 decision rather than a test.
 
 ## Mode: the real model, capped
 
 #212 offers two modes. This run uses the real OpenAI model with a hard cap on
-requests, because it measures what a pilot user waits for. The other mode, a
+requests, because it measures what a demo-site user waits for. The other mode, a
 second Compose profile with `LLM_PROVIDER=fake`, would measure the server
 without the provider, but the fake provider refuses to start with
 `APP_ENV=production`, and its embeddings make every retrieval score noise.
@@ -58,7 +58,7 @@ requests p95 is the slowest request.
 
 ## Settings that decide the result
 
-These pilot settings shape the numbers. Record each one as it was during the
+These demo settings shape the numbers. Record each one as it was during the
 run, in the table under Results.
 
 - **`CHAT_RATE_LIMIT`**, default `30/minute`, is per client address. From
@@ -81,17 +81,17 @@ run, in the table under Results.
   API container runs a single uvicorn worker unless `WEB_CONCURRENCY` is set,
   and each worker has 20 Atlas connections, which the history lookup, vector
   search, persist, and query log share. Leave these unchanged: they are what
-  the pilot runs. Step 1 prints them.
+  the demo site runs. Step 1 prints them.
 - **The OpenAI account's own limits.** A request or token rate limit at
   OpenAI comes back as a 429 from OpenAI, which the SDK retries once
   (`OPENAI_MAX_RETRIES=1`). If it persists, the stream ends with "An error
   occurred while generating the response.", which the script lists apart from
-  `HTTP 503`. That is OpenAI's limit, not the pilot's.
+  `HTTP 503`. That is OpenAI's limit, not the demo site's.
 
 ## Running it
 
-Two people or two shells: one on the pilot host, one on a client outside it.
-Pick a time when nobody else is using the pilot, and tell the team not to
+Two people or two shells: one on the demo host, one on a client outside it.
+Pick a time when nobody else is using the demo site, and tell the team not to
 merge or deploy during it.
 
 **1. On the host, open the window.** The checkout is the one the
@@ -156,7 +156,7 @@ The `query_logs` rows would otherwise skew the measured cache hit rate and the
 knowledge-gap report; record the count it prints. If the script could not
 delete every conversation (`failed` above 0 in `cleanup`, or it was killed
 before cleaning up), the same `delete_many` on `conversations_col` removes
-the rest. Ask one question in the browser to confirm the pilot answers with
+the rest. Ask one question in the browser to confirm the demo site answers with
 the cache back on.
 
 **4. Commit the evidence.** Commit the JSON report, then copy the host
@@ -214,7 +214,7 @@ The first level's slower first token (3.94s at 5 concurrent, against about
 1.5s at 10 and 20) is the one cold start of the run, after the API had just
 been recreated.
 
-**What this means for capacity.** On this pilot, about 20 users asking at the
+**What this means for capacity.** On this demo, about 20 users asking at the
 same moment get answers with a first token in under 2 seconds and about 9
 answers a second. Past that, the OpenAI account's token rate is the ceiling.
 Raising it is an OpenAI usage tier, not a code change.
@@ -224,7 +224,7 @@ Raising it is an OpenAI usage tier, not a code change.
 Pending. After the run, say in plain terms:
 
 - the highest level with no errors, and its requests per second and TTFT p95
-- where failures started and of what kind: `HTTP 503` is the pilot's provider
+- where failures started and of what kind: `HTTP 503` is the demo site's provider
   bound (expected first, at 40), a generic generation error is OpenAI's own
   limit, and anything else is a finding
 - how the measured requests per second compare with the synthetic page's

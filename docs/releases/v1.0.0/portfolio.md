@@ -15,11 +15,11 @@ Stakeholder video: Pending, linked after upload
 
 ## Two ways in
 
-1. **The pilot** at <https://sourcebook.duckdns.org>. Two passwords come
+1. **The demo site** at <https://sourcebook.duckdns.org>. Two passwords come
    through the course channel, never this repository: the reviewer password
    opens What People Ask as a manager sees it, and the HR password also opens
    HR Requests and the unfiltered report
-   ([Passwords on the pilot](handoff.md#passwords-on-the-pilot)). The pilot
+   ([Passwords on the demo site](handoff.md#passwords-on-the-demo-site)). The demo site
    follows `main`; the tag is the submitted version.
 2. **Locally, with no accounts:** [docs/install.md](../../install.md), or
    `git clone` then `make setup && make stub`. It uses a fake model and an
@@ -29,7 +29,7 @@ Stakeholder video: Pending, linked after upload
 
 | Assignment item | Evidence | Measured on the final commit |
 | --- | --- | --- |
-| Integrated system | [README](../../../README.md); the pilot; [handoff.md](handoff.md) | end-to-end pass in [handoff.md](handoff.md#end-to-end-pass-by-hand) |
+| Integrated system | [README](../../../README.md); the demo site; [handoff.md](handoff.md) | end-to-end pass in [handoff.md](handoff.md#end-to-end-pass-by-hand) |
 | Working AI feature | README: [How a question is answered](../../../README.md#how-a-question-is-answered), [Keeping the model honest](../../../README.md#keeping-the-model-honest) | smoke and full tier in [live-evaluation.md](live-evaluation.md); the beta fixed the refusal gap, 0% to 100% ([beta evaluation](../v0.2.0/live-evaluation.md)) |
 | CI/CD evidence | [docs/ci-cd.md](../../ci-cd.md): each workflow and the auto-deploy path | screenshots of green runs on the final commit in [evidence/](evidence/README.md) ([#207](https://github.com/CMSC495-GROUP3/Sourcebook/issues/207)) |
 | README | [README.md](../../../README.md) | release row and video link, written after the tag |
@@ -38,7 +38,7 @@ Stakeholder video: Pending, linked after upload
 | User manual | [docs/user-guide.md](../../user-guide.md) ([#206](https://github.com/CMSC495-GROUP3/Sourcebook/issues/206)) | screenshots from the final browser pass in [evidence/](evidence/README.md) |
 | Code reviews | [docs/quality.md](../../quality.md): CODEOWNERS rule, PR checks, review counts, and threads where review changed the code | counts refreshed at the freeze |
 | Coverage | [evidence/coverage.md](evidence/coverage.md): Python and web, with the CI run | copied from the final commit's coverage artifacts ([#210](https://github.com/CMSC495-GROUP3/Sourcebook/issues/210)) |
-| Performance benchmarks | [live-benchmark.md](live-benchmark.md); synthetic [docs/load-testing.md](../../load-testing.md) | bounded real-service run; load run against the pilot, [docs/load-testing-pilot.md](../../load-testing-pilot.md) ([#212](https://github.com/CMSC495-GROUP3/Sourcebook/issues/212)); Lighthouse in [docs/quality.md](../../quality.md) ([#214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214)) |
+| Performance benchmarks | [live-benchmark.md](live-benchmark.md); synthetic [docs/load-testing.md](../../load-testing.md) | bounded real-service run; load run against the demo site, [docs/load-testing-demo.md](../../load-testing-demo.md) ([#212](https://github.com/CMSC495-GROUP3/Sourcebook/issues/212)); Lighthouse in [docs/quality.md](../../quality.md) ([#214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214)) |
 | Collaboration evidence | [docs/quality.md](../../quality.md); the pull requests and reviews on GitHub | totals in [evidence/numbers.md](evidence/numbers.md) |
 | Individual contributions | [docs/team.md](../../team.md) ([#209](https://github.com/CMSC495-GROUP3/Sourcebook/issues/209)); README [Team](../../../README.md#team) | five of seven members confirmed their own row; Gavin's and Dominick's are marked unconfirmed |
 

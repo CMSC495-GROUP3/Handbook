@@ -1,7 +1,7 @@
 # Lighthouse on the v1.0.0 candidate
 
 `scripts/lighthouse/run.mjs` ([#280](https://github.com/CMSC495-GROUP3/Sourcebook/pull/280))
-against the pilot at <https://sourcebook.duckdns.org> running
+against the demo site at <https://sourcebook.duckdns.org> running
 [`7d3c779`](https://github.com/CMSC495-GROUP3/Sourcebook/commit/7d3c7795c197c5be56b15aebc650576760fd75d1),
 on 2026-09-27 at 14:33 UTC, with Lighthouse 13.5.0 and Google Chrome
 153.0.8010.53 on a Mac laptop. It covers the three pages
@@ -29,10 +29,10 @@ stayed in the runner's git-ignored `results/` folder.
 - **Performance** is 100 on desktop and 87 to 96 on the mobile preset, which
   throttles the network and CPU. A practice run before
   [#282](https://github.com/CMSC495-GROUP3/Sourcebook/pull/282) scored 66 to
-  74 on mobile, when the pilot served its JavaScript bundle uncompressed.
-- **SEO** is 91 everywhere for one reason: the pilot has no valid
+  74 on mobile, when the demo site served its JavaScript bundle uncompressed.
+- **SEO** is 91 everywhere for one reason: the demo site has no valid
   `robots.txt`, so the `robots-txt` audit fails. Every other SEO audit passes.
-  A pilot behind a password is not meant to be indexed, and no code changes
+  A class demo behind a password is not meant to be indexed, and no code changes
   after the freeze, so this stays.
 
 One run is one sample. Mobile performance moves by several points between

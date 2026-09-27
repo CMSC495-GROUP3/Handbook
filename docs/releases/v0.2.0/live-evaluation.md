@@ -1,7 +1,7 @@
 # Beta live evaluation
 
 The smoke tier from `evaluation/questions.json`, run against the real
-provider and the pilot's Atlas index through the Live evaluation workflow. The
+provider and the demo site's Atlas index through the Live evaluation workflow. The
 method, metric definitions, and scoring rules are in
 [docs/evaluation.md](../../evaluation.md). The alpha's run in
 [../v0.1.0-alpha.1/live-evaluation.md](../v0.1.0-alpha.1/live-evaluation.md)

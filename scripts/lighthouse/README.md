@@ -8,7 +8,7 @@ desktop presets. That is 12 runs, each scored on performance, accessibility,
 best practices, and SEO.
 
 The script signs in through the API, asks one question so the chat page has
-an answer, and picks a document. Against the pilot, that is one real model
+an answer, and picks a document. Against the demo site, that is one real model
 call, and it leaves a conversation titled "Lighthouse run". Before each audit it
 stores the theme, and for signed-in pages the token, in the browser, and runs
 Lighthouse with storage reset off so they survive. Storage reset off also keeps
@@ -26,7 +26,7 @@ npm ci
 BASE_URL=https://sourcebook.duckdns.org \
 LH_PASSWORD='<reviewer password>' \
 CHROME_PATH=/path/to/chrome \
-DEPLOYED_COMMIT=<the commit the pilot runs> \
+DEPLOYED_COMMIT=<the commit the demo site runs> \
 node run.mjs
 ```
 
@@ -40,8 +40,8 @@ ignores:
 - one Lighthouse JSON report per run, which opens in the
   [Lighthouse viewer](https://googlechrome.github.io/lighthouse-viewer/)
 
-To try it without the pilot, run `make stub`, build the web app
+To try it without the demo site, run `make stub`, build the web app
 (`cd web && npm run build`), serve it with `npx vite preview` (it proxies
 `/api` to the stub), and point `BASE_URL` at `http://localhost:4173` with
-`LH_PASSWORD=dev`. Local scores leave out the pilot's network, TLS, and
-server, so quote only the pilot run.
+`LH_PASSWORD=dev`. Local scores leave out the demo site's network, TLS, and
+server, so quote only the run against the demo site.

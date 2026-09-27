@@ -1,6 +1,6 @@
 # Beta performance benchmark against the real services
 
-The same bounded workload as the alpha, against the deployed pilot with
+The same bounded workload as the alpha, against the deployed demo site with
 OpenAI, Atlas, Caddy, Nginx, rate limits, and provider bounds all on. The
 protocol, the caps, and the targets are unchanged and are in
 [../v0.1.0-alpha.1/live-benchmark.md](../v0.1.0-alpha.1/live-benchmark.md).

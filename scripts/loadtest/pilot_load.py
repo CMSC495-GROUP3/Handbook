@@ -38,7 +38,7 @@ script deletes the conversations it created (--keep-conversations skips this).
 Its query_logs rows need a step on the host; the page has it.
 
 The report is written after every level, so an interrupted run still leaves
-evidence. docs/load-testing-pilot.md has the protocol and the results. Answer
+evidence. docs/load-testing-demo.md has the protocol and the results. Answer
 text, the password, and the token are never stored, so the report is safe to
 commit.
 """
@@ -236,7 +236,7 @@ def write_report(path: str, report: dict) -> None:
 
 
 def render_markdown(levels: list[dict], cost_per_generation: float) -> str:
-    """The results table for docs/load-testing-pilot.md."""
+    """The results table for docs/load-testing-demo.md."""
     columns = [
         "Concurrent",
         "Completed",

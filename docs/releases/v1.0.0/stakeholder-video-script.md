@@ -11,7 +11,7 @@ Unit 8 video was recorded or published.
 engineering partners who need a grounded walkthrough).
 
 **Runtime target:** 10–15 minutes. Timestamps below are a rehearsal plan; trim
-or stretch per segment after the day-before pilot rehearsal.
+or stretch per segment after the day-before demo rehearsal.
 
 **Record after:** Annotated tag `v1.0.0` exists and the demo host shows that
 submitted commit. Until then, keep every live answer and metric claim marked
@@ -29,7 +29,7 @@ elsewhere. This pull request adds only the stakeholder video package files.
 | --- | --- |
 | Final recording (1080p MP4) | **Pending** |
 | Unlisted YouTube (or hosted) URL | **Pending** |
-| Deployed SHA shown in the demo | **Pending** — capture from the pilot after `v1.0.0` |
+| Deployed SHA shown in the demo | **Pending** — capture from the demo site after `v1.0.0` |
 | Final screenshots for the video package | **Pending** — publish via the evidence workflow after the live pass |
 | Live demo answers / citation text | **Pending** — do not paste final answers here before the live run |
 | Refusal card on `unanswerable_01` | **Pending host verification** — [#253](https://github.com/CMSC495-GROUP3/Sourcebook/pull/253) (coverage gate) is on `main`; the refusal card and Ask Human Resources button appear for that question only after that behavior is **deployed** to the demo host and confirmed in the day-before rehearsal. Alpha evidence in `docs/releases/v0.1.0-alpha.1/live-evaluation.md` showed a prose decline with source chips instead. |
@@ -125,12 +125,12 @@ three containers — see the shot list.
 ### 3:50–7:50 — AI demonstration (~4 min) (Demo operator)
 
 **Source:** browser pass pattern from the release handoff; questions from the
-table above. Pilot: `https://sourcebook.duckdns.org` (or the tagged host once
+table above. Demo: `https://sourcebook.duckdns.org` (or the tagged host once
 frozen).
 
 | Clock | Action | Spoken cue |
 | --- | --- | --- |
-| 3:50 | Sign in | "Shared pilot credential — no secrets on the recording." |
+| 3:50 | Sign in | "Shared demo credential — no secrets on the recording." |
 | 4:10 | Ask `answerable_01` | "Smoke-tier eval id `answerable_01`. We expect a grounded answer with a PTO citation — exact wording pending this live run." |
 | 4:40 | Point at sources + match | "Citation and retrieval match are part of the response, not a separate doc hunt." |
 | 5:00 | Open cited source | "Same turn: open the cited policy so a stakeholder can verify the paragraph." |
@@ -156,7 +156,7 @@ Talking points:
   frame. HR Requests needs it
   ([#295](https://github.com/CMSC495-GROUP3/Sourcebook/pull/295)). A session
   opened with the shared or reviewer password shows no HR Requests link; on
-  the pilot the reviewer password is the manager one
+  the demo site the reviewer password is the manager one
   ([#302](https://github.com/CMSC495-GROUP3/Sourcebook/pull/302)).
 - Handler path: open **HR Requests** (`/escalations`) as shipped on current
   `main` (two-pane queue from [#264](https://github.com/CMSC495-GROUP3/Sourcebook/pull/264)).
@@ -169,7 +169,7 @@ Talking points:
   90 days, with rewordings of one question on one row. Say that managers can
   sign in to this page alone with their own password, and that their view
   leaves out any wording asked in fewer than three conversations. Read
-  whatever rows the pilot's query log shows; do not seed or describe rows
+  whatever rows the demo site's query log shows; do not seed or describe rows
   that are not on screen.
 - Say what the alpha / final notes still limit: do not claim a full Slack/Teams
   operator console unless that UI is actually on the tagged build.
@@ -188,7 +188,7 @@ Talking points:
   Below either bar means no policy answer with citations; decline instead.
 - **Server-side history:** history loaded by `session_id` from MongoDB; the
   client cannot supply forged conversation turns or forged sources.
-- **`LLMProvider`:** one interface; OpenAI for the pilot, fake provider for
+- **`LLMProvider`:** one interface; OpenAI for the demo site, fake provider for
   stub/tests; swap is a configuration choice, not a rewrite.
 - **CI/CD:** name the workflow family honestly (code CI, security, pull request
   checks, evaluation instrumentation, deploy path / `auto_deploy`). Point at
@@ -232,7 +232,7 @@ submission form. End of stakeholder pass."
 
 ## Rehearsal checklist
 
-- [ ] Day-before rehearsal on the pilot (or tagged host)
+- [ ] Day-before rehearsal on the demo site (or tagged host)
 - [ ] Confirm deployed SHA matches the intended tag
 - [ ] Confirm `unanswerable_01` shows the refusal card (not alpha prose+chips)
 - [ ] Confirm PTO follow-up chip or typed fallback against the PTO policy

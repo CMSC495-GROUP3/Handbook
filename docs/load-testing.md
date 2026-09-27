@@ -5,11 +5,11 @@ users."* All numbers reproducible with the harness in `scripts/loadtest/`.
 
 These are synthetic. The model, MongoDB, and vector search are stubbed and the
 chat limiter is off, so they measure what the thread pool can sustain, not what
-a user of the deployed pilot waits. For that, see
+a user of the deployed demo site waits. For that, see
 [live-benchmark.md](releases/v0.1.0-alpha.1/live-benchmark.md), which runs
 against the deployed stack with real OpenAI and Atlas on a sample far too small
-for throughput, and [load-testing-pilot.md](load-testing-pilot.md), which loads
-the deployed pilot at a few concurrency levels with the real model. They answer
+for throughput, and [load-testing-demo.md](load-testing-demo.md), which loads
+the deployed demo site at a few concurrency levels with the real model. They answer
 different questions and none substitutes for the others.
 
 ## Defining the target
@@ -350,7 +350,7 @@ Measured on the same local `mongo:7` container as above (7.0.43, Apple M3,
 `scripts/loadtest/rollup_timing.py` seeds `query_log_daily` directly at 7M
 asks a day for 90 days: one hot question with 1% of the asks, the rest spread
 over N other questions a day, 80% of which come back every day. Distinct
-questions a day is a flag because the pilot has not measured it. Times are
+questions a day is a flag because the demo site has not measured it. Times are
 medians of five runs unless noted.
 
 **The rollup alone was not enough.** At 50k questions a day, the rollup's

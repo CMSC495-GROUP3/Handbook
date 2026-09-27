@@ -237,7 +237,7 @@ scripts/            auto_deploy.sh and its systemd units, deploy.sh, audit.sh, t
 evaluation/         smoke (20) and full-corpus labeled questions plus scoring notes
 data/               42 fictional sample policies
 docs/               install, user-guide, architecture, api, design, evaluation, load-testing,
-                    load-testing-pilot, ci-cd, quality, and team pages,
+                    load-testing-demo, ci-cd, quality, and team pages,
                     and one folder per release under releases/ with its handoff, notes,
                     measurements, and evidence
 assets/brand/       the Sourcebook mark, source PNGs; web/public/ holds the served copies
