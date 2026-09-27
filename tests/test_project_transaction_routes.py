@@ -1,9 +1,13 @@
 from types import SimpleNamespace
 
 import pytest
+from conftest import OWNER
 from fastapi import HTTPException
 
 from sourcebook.api.routes import conversations, projects
+from sourcebook.api.routes.deps import Principal
+
+PRINCIPAL = Principal(cred="APP_PASSWORD_HASH", owner=OWNER)
 
 
 def test_create_assignment_uses_same_transaction_session(monkeypatch):
@@ -18,7 +22,7 @@ def test_create_assignment_uses_same_transaction_session(monkeypatch):
 
     def project_update_one(query, update, *, session=None):
         calls.append(("guard", session))
-        assert query == {"project_id": "project-1"}
+        assert query == {"project_id": "project-1", "owner": OWNER}
         assert update == {"$inc": {"_assignment_guard": 1}}
         return SimpleNamespace(matched_count=1)
 
@@ -38,7 +42,7 @@ def test_create_assignment_uses_same_transaction_session(monkeypatch):
         project_id="project-1",
     )
 
-    created = conversations.create_conversation(body)
+    created = conversations.create_conversation(body, PRINCIPAL)
 
     assert created["project_id"] == "project-1"
     assert calls == [
@@ -59,13 +63,13 @@ def test_reassignment_uses_same_transaction_session(monkeypatch):
 
     def project_update_one(query, update, *, session=None):
         calls.append(("guard", session))
-        assert query == {"project_id": "project-2"}
+        assert query == {"project_id": "project-2", "owner": OWNER}
         assert update == {"$inc": {"_assignment_guard": 1}}
         return SimpleNamespace(matched_count=1)
 
     def conversation_update_one(query, update, *, session=None):
         calls.append(("update", session))
-        assert query == {"session_id": "conversation-1"}
+        assert query == {"session_id": "conversation-1", "owner": OWNER}
         assert update["$set"]["project_id"] == "project-2"
         return SimpleNamespace(matched_count=1)
 
@@ -78,7 +82,7 @@ def test_reassignment_uses_same_transaction_session(monkeypatch):
 
     body = conversations.UpdateConversationRequest(project_id="project-2")
 
-    result = conversations.update_conversation("conversation-1", body)
+    result = conversations.update_conversation("conversation-1", body, PRINCIPAL)
 
     assert result == {"ok": True}
     assert calls == [
@@ -99,12 +103,12 @@ def test_transactional_delete_and_unassign_share_session(monkeypatch):
 
     def project_delete_one(query, *, session=None):
         calls.append(("delete", session))
-        assert query == {"project_id": "project-1"}
+        assert query == {"project_id": "project-1", "owner": OWNER}
         return SimpleNamespace(deleted_count=1)
 
     def conversation_update_many(query, update, *, session=None):
         calls.append(("unassign", session))
-        assert query == {"project_id": "project-1"}
+        assert query == {"project_id": "project-1", "owner": OWNER}
         assert update == {"$set": {"project_id": None}}
         return SimpleNamespace(modified_count=1)
 
@@ -115,7 +119,7 @@ def test_transactional_delete_and_unassign_share_session(monkeypatch):
         conversation_update_many,
     )
 
-    result = projects.delete_project("project-1")
+    result = projects.delete_project("project-1", PRINCIPAL)
 
     assert result == {"ok": True}
     assert calls == [
@@ -154,7 +158,7 @@ def test_transactional_assignment_fails_closed_when_project_is_gone(monkeypatch)
     )
 
     with pytest.raises(HTTPException) as exc:
-        conversations.create_conversation(body)
+        conversations.create_conversation(body, PRINCIPAL)
 
     assert exc.value.status_code == 404
     assert exc.value.detail == "Project not found."

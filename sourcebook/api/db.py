@@ -71,9 +71,12 @@ def ensure_indexes() -> None:
     # conversations — point lookup by session_id, sorted by updated_at for the sidebar
     conversations_col.create_index("session_id", unique=True)
     conversations_col.create_index([("updated_at", DESCENDING)])
+    # The sidebar lists one owner's conversations, newest first (issue #290).
+    conversations_col.create_index([("owner", 1), ("updated_at", DESCENDING)])
 
-    # projects — point lookup by project_id
+    # projects — point lookup by project_id, and one owner's list
     projects_col.create_index("project_id", unique=True)
+    projects_col.create_index([("owner", 1), ("created_at", 1)])
 
     # passages — one record per (source, chunk_index), fetched in order.
     # The name is pinned so the migration and this call agree on it.
