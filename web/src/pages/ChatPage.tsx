@@ -59,9 +59,11 @@ interface HomeProps {
   busy: boolean
   /** Wide enough for the facing page; null until the page has been measured. */
   docked: boolean | null
+  /** The conversation in the URL was not this browser's; say why the chat is empty. */
+  missing: boolean
 }
 
-function Home({ onAsk, busy, docked }: HomeProps) {
+function Home({ onAsk, busy, docked, missing }: HomeProps) {
   const library = useLibrarySummary()
 
   return (
@@ -80,6 +82,13 @@ function Home({ onAsk, busy, docked }: HomeProps) {
               </h1>
               <p className="max-w-130 text-[15px] leading-normal text-ink-2 sm:text-[16px]">{APP_TAGLINE}</p>
             </header>
+
+            {missing && (
+              <p role="status" className="max-w-130 text-[14px] leading-normal text-ink-2">
+                That conversation isn't available in this browser. Conversations stay with
+                the browser that started them, so this is a new chat.
+              </p>
+            )}
 
             <ChatInput variant="hero" onSend={onAsk} disabled={busy} />
 
@@ -138,11 +147,19 @@ export default function ChatPage() {
   const docked = pageWidth >= DOCK_MIN_WIDTH
   const facingPage = pageWidth >= FACING_PAGE_MIN_WIDTH
 
+  // Says why a link opened an empty chat, until a conversation is open again.
+  const [missing, setMissing] = useState(false)
+
   const { messages, loading, streaming, sendMessage, retryLastQuestion, markEscalated } = useChat({
     sessionId,
     onSessionCreated: (id) => {
       // Update the URL with the new session_id without re-mounting the component
       setSearchParams({ session_id: id }, { replace: true })
+    },
+    onSessionMissing: () => {
+      // Drop the dead id so the next question starts a new conversation.
+      setSearchParams({}, { replace: true })
+      setMissing(true)
     },
   })
 
@@ -153,6 +170,7 @@ export default function ChatPage() {
   if (sessionId !== sourceSessionId) {
     setSourceSessionId(sessionId)
     setActiveSource(null)
+    if (sessionId) setMissing(false)
   }
 
   // The chip that opened the pane. The slide-over is a Dialog and restores
@@ -175,7 +193,7 @@ export default function ChatPage() {
   if (!hasMessages) {
     return (
       <div ref={pageRef} className="relative flex min-h-0 flex-1">
-        <Home onAsk={sendMessage} busy={busy} docked={measured ? facingPage : null} />
+        <Home onAsk={sendMessage} busy={busy} docked={measured ? facingPage : null} missing={missing} />
       </div>
     )
   }

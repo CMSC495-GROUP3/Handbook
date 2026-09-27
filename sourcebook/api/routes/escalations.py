@@ -357,7 +357,7 @@ def create_escalation(
     # Mark the message so the UI can show "already sent" when the conversation
     # is reopened, and so a repeat request finds the record above.
     conversations_col.update_one(
-        {"session_id": body.session_id},
+        {"session_id": body.session_id, "owner": principal.owner},
         {"$set": {f"messages.{position}.escalation_id": record["escalation_id"]}},
     )
 
