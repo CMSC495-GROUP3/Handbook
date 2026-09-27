@@ -4,7 +4,8 @@ Five GitHub Actions workflows plus a timer on the pilot host. CI success is
 not live evaluation. Live evaluation is not a quality verdict. A healthy
 deploy is not a tagged release. The `v1.0.0` screenshots and a sanitized
 host journal, taken on the release candidate `7d3c779`, are in
-`docs/releases/v1.0.0/evidence/`; the release links are added after the tag.
+`docs/releases/v1.0.0/evidence/`, and the release links are under
+[Tag and release path](#tag-and-release-path).
 
 ## Integration path at a glance
 
@@ -255,8 +256,7 @@ the public site at a release tag.
 
 ## Checking a deployment
 
-Follow the README's [Checking a deploy](../README.md#checking-a-deploy)
-procedure. It verifies three boundaries:
+Follow [install.md § Checking a deploy](install.md#checking-a-deploy). It verifies three boundaries:
 
 1. the public site serves HTTPS and `/api/health` returns 200;
 2. the Compose networks fall within the proxy's trusted pools and the API has
@@ -270,8 +270,8 @@ past a release tag.
 
 ## Tag and release path
 
-The repository has an alpha release. The final `v1.0.0` tag does not exist
-because this page describes its procedure. The path is:
+`v1.0.0` was tagged on 2026-09-27 by this procedure, and a later release
+follows the same path:
 
 1. Prepare `docs/releases/v1.0.0/` with the handoff, release notes,
    measurements, and evidence index. Leave commit- and run-specific fields

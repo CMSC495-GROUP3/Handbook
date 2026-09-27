@@ -84,7 +84,7 @@ Latest green CI on this snapshot: [run 35039401655](https://github.com/CMSC495-G
 
 ### What the suite covers, and what it does not
 
-From the README [Tests and CI](../README.md#tests-and-ci) section, which matches `tests/` on `main`:
+As of `tests/` on `main`:
 
 **Covered (stubbed suite):** the grounding gate and its best-not-mean rule, server-side history filtering, the SSE protocol, first-turn caching and invalidation, query logging, query-log analysis reports ([PR #171](https://github.com/CMSC495-GROUP3/Sourcebook/pull/171), `tests/test_query_log_reports.py`), escalations end to end, ingestion without real services, the labeled evaluation set and its metrics, and bookkeeping after a client hangs up mid-stream.
 

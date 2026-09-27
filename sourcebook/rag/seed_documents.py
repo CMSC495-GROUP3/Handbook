@@ -7,7 +7,7 @@ configured prefix. Replace that directory with real HR documents and this same
 script uploads those instead — nothing here is specific to the samples.
 
 Keeping the pilot corpus small is deliberate: Atlas free tier allows 512 MB, and
-embeddings are the bulk of the storage. See the README for the sizing note.
+embeddings are the bulk of the storage. See docs/architecture.md, Free-tier ceilings, for the sizing note.
 """
 
 import os

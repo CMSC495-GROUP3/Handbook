@@ -102,7 +102,7 @@ def ensure_indexes() -> None:
 
     Note this cannot create the Atlas Vector Search index — that is a search
     index, not a regular one, and must be created in the Atlas UI or CLI. See
-    the README.
+    docs/install.md, Load the corpus.
     """
     # conversations — point lookup by session_id, and the sidebar lists one
     # owner's conversations, newest first (issue #290).
