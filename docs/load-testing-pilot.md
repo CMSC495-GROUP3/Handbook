@@ -1,11 +1,12 @@
 # Load test against the deployed pilot
 
-**Status: Pending.** The run happens on the `v1.0.0` candidate after the
-Monday 28 September freeze
-([plan on #215](https://github.com/CMSC495-GROUP3/Sourcebook/issues/215#issuecomment-5824613941),
-issue [#212](https://github.com/CMSC495-GROUP3/Sourcebook/issues/212)). This
-page holds the protocol now so the run is mechanical; every figure below stays
-Pending until it is measured.
+**Status: Done on 2026-09-27** against the pilot running the `v1.0.0`
+candidate's code (issue [#212](https://github.com/CMSC495-GROUP3/Sourcebook/issues/212),
+[plan on #215](https://github.com/CMSC495-GROUP3/Sourcebook/issues/215#issuecomment-5824613941)).
+The results are at the end of this page. Up to 20 concurrent users, every
+request answered with a first token in under 2 seconds at 10 and 20. At 40,
+33 of 40 requests failed: 20 on OpenAI's own rate limit and 13 on the pilot's
+provider bound.
 
 ## What this measures, and what it does not
 
@@ -165,38 +166,58 @@ before committing it.
 
 ## Results
 
-Pending.
-
 | Field | Value |
 | --- | --- |
-| Date (UTC) | Pending |
-| Deployed commit | Pending |
-| Client location | Pending |
-| `CHAT_RATE_LIMIT` during the run | Pending |
-| `CACHE_ENABLED` during the run | Pending |
-| `OPENAI_MAX_CONCURRENT_REQUESTS`, `OPENAI_CAPACITY_WAIT_SECONDS`, `OPENAI_MAX_RETRIES` | Pending |
-| API workers, `THREADPOOL_TOKENS`, `MONGO_MAX_POOL_SIZE` | Pending |
-| Actual OpenAI cost for the window | Pending: from the usage page |
-| Cleanup | Pending: conversations deleted, `query_logs` rows deleted |
-| Report | Pending: `releases/v1.0.0/evidence/pilot-load.json` |
+| Date (UTC) | 2026-09-27, 15:03 to 15:06; run id `3eac2646` |
+| Deployed commit | `3473071` in `refs/deployed/main`. It differs from the candidate `7d3c779` only by #304, a documentation change, so the code under test is the candidate's |
+| Client location | a residential connection in the United States, Mac laptop; Claude ran the levels from Taylor's session, and the host steps over SSH |
+| `CHAT_RATE_LIMIT` during the run | `600/minute` |
+| `CACHE_ENABLED` during the run | `0` |
+| `OPENAI_MAX_CONCURRENT_REQUESTS`, `OPENAI_CAPACITY_WAIT_SECONDS`, `OPENAI_MAX_RETRIES` | defaults: 20, 1 s, 1 (`printenv` showed no override) |
+| API workers, `THREADPOOL_TOKENS`, `MONGO_MAX_POOL_SIZE` | defaults: 1 worker, 100, 20 |
+| Actual OpenAI cost for the window | not read; the script's estimate was $0.42 for 75 requests |
+| Cleanup | 42 conversations deleted by the script (33 of the failed requests never saved one), 0 left; 42 `query_logs` rows deleted on the host; `.env` restored and the auto-deploy timer restarted |
+| Report | [releases/v1.0.0/evidence/pilot-load.json](releases/v1.0.0/evidence/pilot-load.json) |
 
 Paste the table the script prints:
 
 | Concurrent | Completed | Generated / cached / refused | 429 | Errors | req/s | TTFT p50 | TTFT p95 | Total p50 | Total p95 |
 | ---: | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 5 | Pending | Pending | Pending | Pending | Pending | Pending | Pending | Pending | Pending |
-| 10 | Pending | Pending | Pending | Pending | Pending | Pending | Pending | Pending | Pending |
-| 20 | Pending | Pending | Pending | Pending | Pending | Pending | Pending | Pending | Pending |
-| 40 | Pending | Pending | Pending | Pending | Pending | Pending | Pending | Pending | Pending |
+| 5 | 5 | 5 / 0 / 0 | 0 | 0 | 1.11 | 3.94s | 4.09s | 4.22s | 4.49s |
+| 10 | 10 | 10 / 0 / 0 | 0 | 0 | 4.44 | 1.43s | 1.73s | 1.83s | 2.25s |
+| 20 | 20 | 20 / 0 / 0 | 0 | 0 | 8.86 | 1.46s | 1.68s | 1.85s | 2.15s |
+| 40 | 7 | 7 / 0 / 0 | 0 | 33 | 1.25 | 1.55s | 1.68s | 1.90s | 1.96s |
 
 Host during the run, from the sampler:
 
 | Measure | Value |
 | --- | --- |
-| API container CPU, peak | Pending |
-| API container memory, peak | Pending |
-| 1-minute load average, peak | Pending |
-| Samples | Pending: `releases/v1.0.0/evidence/pilot-load-host.csv` |
+| API container CPU, peak | 80% of one core, at 15:04:26 |
+| API container memory, peak | 138 MiB of 1.9 GiB (7%) |
+| 1-minute load average, peak | 0.60 |
+| Samples | [releases/v1.0.0/evidence/pilot-load-host.csv](releases/v1.0.0/evidence/pilot-load-host.csv), 26 samples per container every 2 s |
+
+**What the 40 level shows.** The 33 errors are two limits, neither of them
+the server running out of room:
+
+- **20 were OpenAI's rate limit.** The API log shows `429` from OpenAI:
+  "Rate limit reached for gpt-4o ... tokens per min (TPM): Limit 30000". The
+  OpenAI organization allows 30,000 gpt-4o tokens a minute, and 40 answers at
+  once asked for more. The SDK retried once, then the stream ended with "An
+  error occurred while generating the response."
+- **13 were the provider bound.** More than `OPENAI_MAX_CONCURRENT_REQUESTS`
+  (20) provider calls were in flight, so those requests got HTTP 503 with
+  `Retry-After` before their first token, as designed.
+
+The host was not the limit: CPU peaked at 80% of one core and memory at 7%.
+The first level's slower first token (3.94s at 5 concurrent, against about
+1.5s at 10 and 20) is the one cold start of the run, after the API had just
+been recreated.
+
+**What this means for capacity.** On this pilot, about 20 users asking at the
+same moment get answers with a first token in under 2 seconds and about 9
+answers a second. Past that, the OpenAI account's token rate is the ceiling.
+Raising it is an OpenAI usage tier, not a code change.
 
 ## What the result means
 
