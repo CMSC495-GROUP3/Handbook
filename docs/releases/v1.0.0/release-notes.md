@@ -27,8 +27,6 @@ works the escalations on the HR Requests page.
 
 ## What changed since the beta
 
-Pending until the freeze. So far:
-
 - **The refusal card says which check refused**, so a question the coverage
   judge refuses no longer shows "Strong match" under "No matching policy"
   (#269, PR #271).
@@ -54,14 +52,28 @@ Pending until the freeze. So far:
 - **The sample policies agree on when to report a workplace incident:** no
   later than 24 hours after it happens. The injury policy used to say by the
   end of the shift, while the safety policy said 24 hours (PR #284).
-- **Human Resources has a What People Ask page.** It lists the questions no
-  policy answered and the questions asked in more than one conversation, over
-  the last 7, 30, or 90 days, so HR can see which policies to write or
-  clarify. Close rewordings of one question share a row (#287; PRs #286,
-  #288, #297).
-- **HR Requests and What People Ask need the HR password.** Both pages show
-  what employees typed, so a session opened with the shared employee password
-  no longer sees them (#290, PR #295).
+- **Human Resources and managers have a What People Ask page.** It lists the
+  questions no policy answered and the questions asked in more than one
+  conversation, over the last 7, 30, or 90 days, so HR can see which policies
+  to write or clarify and managers can see what to cover in training (#287;
+  PRs #286, #288, #297).
+- **Rewordings of one question share a row.** Wordings that are nearly
+  identical merge on their own; for closer calls, the utility model decides
+  whether two wordings are one question. On 120 labelled pairs that merged 16
+  to 18 of 60 paraphrases and at most 1 of 60 different questions (#293; PRs
+  #298, #303).
+- **HR Requests needs the HR password, and What People Ask needs the HR or
+  manager password.** Both pages show what employees typed. A manager's view
+  lists only questions asked in at least three separate conversations, so a
+  question typed once can't point back at the person who asked it (#290; PRs
+  #295, #302).
+- **Conversations belong to the browser that started them.** Another browser,
+  whichever password it uses, can't list, open, or continue them. Everyone
+  signed in again once after this deployed, and conversations from before it
+  were removed from the pilot (#290; PRs #299, #301).
+- **Rebuilding the document index needs the HR password**, and What People
+  Ask gives up on a stalled model provider after about 16 seconds instead of
+  a minute (#300, PR #301).
 - **What People Ask holds up at the pilot's planned volume.** A question asked
   in hundreds of thousands of conversations used to break the page with a
   server error. It now loads, and a window too large for the database gets
@@ -70,10 +82,11 @@ Pending until the freeze. So far:
 ## Getting access
 
 **The pilot** runs at <https://sourcebook.duckdns.org> on a single instance.
-It needs a password, which the team supplies through the course channel,
-never through this repository. The reviewer password is also the HR password,
-so it opens HR Requests and What People Ask. Anyone signed in before PR #295
-deployed signs out and back in once to see those pages.
+The team supplies two passwords through the course channel, never through
+this repository. The reviewer password opens the chat and What People Ask as
+a manager sees it. The HR password also opens HR Requests and the unfiltered
+report. Conversations stay with the browser that started them, whichever
+password signed in.
 
 **Without any credential**, the whole app runs locally in about two minutes
 with a fake model and an in-memory database:
@@ -90,14 +103,11 @@ make web
 
 ## Known defects
 
-Pending: confirm at the freeze.
-
 | Issue | What a user would see | Impact | Mitigation |
 | --- | --- | --- | --- |
 | Vague questions on covered topics | "Can I expense this trip?" is refused where the alpha answered in general terms | the user gets the refusal card instead of a pointer to the travel policy | the card says to ask the full question again with the details it depends on (PR #281), or use Ask Human Resources |
-| Conversations are not private to the person who had them | anyone with a password can list and open every conversation through the API | the HR password protects two pages, not the question text in conversations | a pilot with a handful of reviewers; draft PR #299 scopes conversations to the browser that made them |
-| Any signed-in session can rebuild the document index | an employee session can call the reindex route | a rebuild empties the answer cache, so the next answers are slower and cost more | the route is rate-limited; #300 tracks limiting it to HR or an admin |
-| What People Ask misses most paraphrases | "How much PTO do I get?" and "How many vacation days do I have?" can still be two rows | the "Asked most" counts undercount a question asked in different words | the page says so under the list; on 80 labelled pairs it merged 4 of 40 paraphrases and none of 40 different questions; draft PR #298 adds a model check |
+| Conversations belong to a browser, not a person | clearing site data or switching devices starts an empty history | there is no per-user sign-in, so history can't follow a person | a pilot with a handful of reviewers; the README's known limitations say so |
+| What People Ask still misses paraphrases | "How much PTO do I get?" and "How many vacation days do I have?" can still be two rows | the "Asked most" counts undercount a question asked in different words | the captions say so; with the model check it merged 16 to 18 of 60 labelled paraphrases, short of #293's target of half |
 
 ## What this release does not establish
 
