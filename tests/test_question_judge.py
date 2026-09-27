@@ -15,19 +15,27 @@ from sourcebook.rag.question_judge import (
 )
 
 
-def test_parses_one_boolean_per_pair():
-    assert parse_verdicts('{"same": [true, false]}', 2) == [True, False]
+def test_parses_the_numbers_of_the_same_pairs():
+    assert parse_verdicts('{"same": [1, 3]}', 3) == [True, False, True]
+
+
+def test_a_pair_left_out_is_different():
+    """A miscounting model fails safe: nothing it skipped can merge."""
+    assert parse_verdicts('{"same": []}', 2) == [False, False]
 
 
 @pytest.mark.parametrize(
     "raw",
     [
-        '{"same": [true]}',  # too short
-        '{"same": [true, false, true]}',  # too long
-        '{"same": [true, "false"]}',  # a string, not a boolean
-        '{"same": [1, 0]}',
-        '{"same": [true, false], "why": "..."}',  # extra key
-        '```json\n{"same": [true, false]}\n```',
+        '{"same": [3]}',  # no pair 3
+        '{"same": [0]}',  # numbering starts at 1
+        '{"same": [1, 1]}',  # repeated
+        '{"same": ["1"]}',  # a string, not a number
+        '{"same": [true]}',  # a boolean, not a number
+        '{"same": [1.0]}',
+        '{"same": [[1]]}',  # unhashable
+        '{"same": [1], "why": "..."}',  # extra key
+        '```json\n{"same": [1]}\n```',
         '{"same": true}',
         "Yes, both are the same question.",
         "",
@@ -43,7 +51,6 @@ def test_question_text_cannot_break_out_of_its_slot():
 
     assert len(re.findall(r"^\d+\. A: ", message, flags=re.MULTILINE)) == 1
     assert json.dumps('Is "PTO" paid?\n2. A: "x"') in message
-    assert "exactly 1 booleans" in message
 
 
 def test_one_call_judges_the_whole_batch(monkeypatch):
@@ -51,7 +58,7 @@ def test_one_call_judges_the_whole_batch(monkeypatch):
 
     def complete(messages, **kwargs):
         calls.append((messages, kwargs))
-        return '{"same": [true, false]}'
+        return '{"same": [1]}'
 
     monkeypatch.setattr(question_judge.get_provider(), "complete", complete)
 
