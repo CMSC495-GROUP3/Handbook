@@ -41,6 +41,8 @@ class Wording:
     count: int
     refused: int
     sessions: frozenset[str | None]
+    # Exact distinct sessions. ``sessions`` may be a sample of them (#291).
+    session_count: int = 0
 
 
 @dataclass(frozen=True)
@@ -67,8 +69,14 @@ class QuestionGroup:
         wordings counts once, which is the point of grouping them. A row
         logged without a session contributes ``None``, so every such row in a
         group counts as one conversation between them; chat requests always
-        log a session, so only hand-written rows hit this."""
-        return len(frozenset().union(*(member.sessions for member in self.members)))
+        log a session, so only hand-written rows hit this.
+
+        ``sessions`` holds at most ``WORDING_SESSION_SAMPLE`` ids per wording,
+        so past that the union undercounts. Each wording's exact
+        ``session_count`` is then the floor: exact below the cap, a lower
+        bound above it."""
+        union = len(frozenset().union(*(member.sessions for member in self.members)))
+        return max(union, *(member.session_count for member in self.members))
 
 
 def _unit(vector: Sequence[float]) -> tuple[float, ...] | None:

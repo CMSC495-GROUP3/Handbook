@@ -46,7 +46,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from pymongo.errors import ExecutionTimeout
+from pymongo.errors import ExecutionTimeout, OperationFailure
 
 from sourcebook.api.db import query_logs_col
 from sourcebook.api.limiter import limiter
@@ -83,6 +83,12 @@ TTL_DAYS = max(1, QUERY_LOG_TTL_SECONDS // 86400)
 # Per query. At the volume the TTL comment in config.py plans for, a 90-day
 # $group is not free, and an HR session can ask for one 30 times a minute.
 QUERY_TIMEOUT_MS = 5000
+# MongoDB's ExceededMemoryLimit. An $addToSet accumulator cannot spill to disk,
+# so one question asked in about 1.6M conversations stops the pipeline with it
+# (docs/load-testing.md, #291). A shorter window fixes it like a timeout does.
+# Code 292 is the same failure when allowDiskUse is false; nothing here sets
+# that and the server default is true, so add it if that ever changes.
+EXCEEDED_MEMORY_LIMIT = 146
 # Hash groups per list that go into grouping. Two lists of 200 is at most 400
 # texts in one embed_many call and about 0.7 s of similarity math.
 CANDIDATE_LIMIT = 200
@@ -116,6 +122,7 @@ def _wording(row: dict[str, Any]) -> Wording:
         count=int(row.get("count") or 0),
         refused=int(row.get("refused_count") or 0),
         sessions=frozenset(row.get("sessions") or ()),
+        session_count=int(row.get("session_count") or 0),
     )
 
 
@@ -227,6 +234,13 @@ def coverage_gaps(
         raise HTTPException(
             status_code=503,
             detail="This report took too long. Try a shorter window.",
+        ) from None
+    except OperationFailure as exc:
+        if exc.code != EXCEEDED_MEMORY_LIMIT:
+            raise
+        raise HTTPException(
+            status_code=503,
+            detail="This report needs too much memory. Try a shorter window.",
         ) from None
 
     refused_wordings = [_wording(row) for row in refused_rows]

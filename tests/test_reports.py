@@ -5,11 +5,12 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from conftest import FAKE_DB, make_passages
-from pymongo.errors import ExecutionTimeout
+from pymongo.errors import ExecutionTimeout, OperationFailure
 
 from scripts.loadtest.fakemongo import FakeCollection
 from sourcebook.api.routes import reports
 from sourcebook.api.routes.reports import MAX_WINDOW_DAYS
+from sourcebook.rag import query_log_reports
 
 URL = "/api/reports/gaps"
 # Each logged row is its own conversation unless a test passes session_id.
@@ -243,6 +244,30 @@ def test_a_slow_report_answers_503(client, hr_auth, monkeypatch):
     assert calls == [{"maxTimeMS": reports.QUERY_TIMEOUT_MS}]
 
 
+def test_a_report_over_the_memory_limit_answers_503(client, hr_auth, monkeypatch):
+    """$addToSet cannot spill, so one very common question can hit code 146 (#291)."""
+
+    def too_big(_pipeline, **_kwargs):
+        raise OperationFailure("$group exceeded memory limit", code=146)
+
+    monkeypatch.setattr(reports.query_logs_col, "aggregate", too_big)
+
+    response = client.get(URL, headers=hr_auth)
+
+    assert response.status_code == 503
+    assert "shorter window" in response.json()["detail"]
+
+
+def test_other_mongo_failures_are_not_reported_as_slow(client, hr_auth, monkeypatch):
+    def unauthorized(_pipeline, **_kwargs):
+        raise OperationFailure("not authorized", code=13)
+
+    monkeypatch.setattr(reports.query_logs_col, "aggregate", unauthorized)
+
+    with pytest.raises(OperationFailure):
+        client.get(URL, headers=hr_auth)
+
+
 def test_fake_sort_puts_null_first_ascending_like_mongo():
     collection = FakeCollection()
     collection.insert_many([{"k": 2}, {"k": None}, {"k": 1}])
@@ -252,6 +277,56 @@ def test_fake_sort_puts_null_first_ascending_like_mongo():
 
     assert [row["k"] for row in ascending] == [None, 1, 2]
     assert [row["k"] for row in descending] == [2, 1, None]
+
+
+def test_fake_group_on_a_compound_id_then_sums_a_field_path():
+    """The two-pass conversation count (#291) in the fake, including Mongo's
+    rule that a missing path drops out of an object but a stored null stays."""
+    collection = FakeCollection()
+    collection.insert_many(
+        [
+            {"h": "a", "s": "x"},
+            {"h": "a", "s": "x"},
+            {"h": "a", "s": "y"},
+            {"h": "a", "s": None},
+            {"h": "a"},
+            {"h": "b", "s": "x"},
+        ]
+    )
+
+    first = collection.aggregate([{"$group": {"_id": {"h": "$h", "s": "$s"}, "n": {"$sum": 1}}}])
+    both = collection.aggregate(
+        [
+            {"$group": {"_id": {"h": "$h", "s": "$s"}, "n": {"$sum": 1}}},
+            {"$group": {"_id": "$_id.h", "n": {"$sum": "$n"}, "groups": {"$sum": 1}}},
+        ]
+    )
+
+    assert [(row["_id"], row["n"]) for row in first] == [
+        ({"h": "a", "s": "x"}, 2),
+        ({"h": "a", "s": "y"}, 1),
+        ({"h": "a", "s": None}, 1),
+        ({"h": "a"}, 1),
+        ({"h": "b", "s": "x"}, 1),
+    ]
+    assert list(both) == [
+        {"_id": "a", "n": 5, "groups": 4},
+        {"_id": "b", "n": 1, "groups": 1},
+    ]
+
+
+def test_fake_group_on_a_missing_dotted_path_is_null():
+    collection = FakeCollection()
+    collection.insert_many([{"s": "x"}, {"s": "y"}])
+
+    rows = collection.aggregate(
+        [
+            {"$group": {"_id": {"h": "$h", "s": "$s"}}},
+            {"$group": {"_id": "$_id.h", "n": {"$sum": 1}}},
+        ]
+    )
+
+    assert list(rows) == [{"_id": None, "n": 2}]
 
 
 # ── Grouping by meaning (#287) ────────────────────────────────────────────────
@@ -404,3 +479,39 @@ def test_cache_disabled_turns_the_vector_memo_off(client, hr_auth, monkeypatch):
 
     assert calls == [["Where do I park?"], ["Where do I park?"]]
     assert len(reports._vector_memo) == 0
+
+
+def test_wording_pipeline_returns_a_capped_sample_of_session_ids(monkeypatch):
+    """A popular wording's full id list would pass the 16 MB result document
+    limit at about 370k conversations (#291). The count stays exact."""
+    monkeypatch.setattr(query_log_reports, "WORDING_SESSION_SAMPLE", 2)
+    now = datetime.now(UTC)
+    collection = FakeCollection()
+    collection.insert_many(
+        [
+            {"created_at": now, "question_hash": "pto", "refused": False, "session_id": s}
+            for s in ("a", "b", "c", "d")
+        ]
+    )
+
+    [row] = collection.aggregate(
+        query_log_reports.wording_pipeline(
+            now - timedelta(days=1), now + timedelta(days=1), 10, refused_only=False
+        )
+    )
+
+    assert row["session_count"] == 4
+    assert len(row["sessions"]) == 2
+
+
+def test_a_wording_past_the_sample_cap_reports_its_exact_conversations(
+    client, hr_auth, monkeypatch
+):
+    monkeypatch.setattr(query_log_reports, "WORDING_SESSION_SAMPLE", 2)
+    vectors(monkeypatch, {"Where do I park?": PARKING})
+    for session in ("a", "b", "c"):
+        log("Where do I park?", refused=False, session_id=session)
+
+    [row] = client.get(URL, headers=hr_auth).json()["faq"]
+
+    assert row["conversations"] == 3
