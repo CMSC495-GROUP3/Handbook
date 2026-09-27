@@ -49,19 +49,29 @@ def is_bcrypt_hash(value: str) -> bool:
 
 # The environment variables that may hold an accepted password hash: the
 # team's, which is required; an optional second so a reviewer's password can
-# be handed out and rotated without touching the team's; and an optional one
-# for Human Resources, the only password that opens the HR Requests queue and
-# the What People Ask report (require_hr in deps.py). This is a fixed set, not
-# a list: another password means editing this tuple, .env.example, and the
+# be handed out and rotated without touching the team's; an optional one for
+# Human Resources, the only password that opens the HR Requests queue
+# (require_hr in deps.py); and an optional one for managers and supervisors,
+# which opens the What People Ask report and nothing else HR-only
+# (require_report_reader). HR can read that report too. This is a fixed set,
+# not a list: another password means editing this tuple, .env.example, and the
 # README together. Separate variables rather than one delimited list because a
 # bcrypt hash is full of `$`, which makes a list painful to quote in .env.
 #
 # Order matters. Login takes the first match. The shared password comes first,
-# so an HR hash made from it grants nobody HR access. HR comes before the
-# second password, so a deployment can make the reviewer's password the HR one
-# by setting both variables to the same hash (the course deployment does).
+# so an HR or manager hash made from it grants nobody extra access. HR comes
+# before manager, so the same hash in both opens everything rather than less.
+# Both come before the second password, so a deployment can give the
+# reviewer's password manager access by setting MANAGER_PASSWORD_HASH to the
+# same hash as APP_PASSWORD_HASH_2 (the course deployment does).
 HR_PASSWORD_HASH_VAR = "HR_PASSWORD_HASH"
-PASSWORD_HASH_VARS = ("APP_PASSWORD_HASH", HR_PASSWORD_HASH_VAR, "APP_PASSWORD_HASH_2")
+MANAGER_PASSWORD_HASH_VAR = "MANAGER_PASSWORD_HASH"
+PASSWORD_HASH_VARS = (
+    "APP_PASSWORD_HASH",
+    HR_PASSWORD_HASH_VAR,
+    MANAGER_PASSWORD_HASH_VAR,
+    "APP_PASSWORD_HASH_2",
+)
 PRIMARY_PASSWORD_HASH_VAR = PASSWORD_HASH_VARS[0]
 
 
@@ -194,7 +204,8 @@ def _authenticate(password: str, client_id: str | None, client_host: str) -> Tok
 
     # Every password opens the employee routes. Recording which one was used
     # is the only way to tell a reviewer's session from the team's afterwards,
-    # and it is what require_hr checks for the HR pages. cred is the variable
+    # and it is what require_hr and require_report_reader check for the
+    # restricted pages. cred is the variable
     # name; fingerprint binds the session to that hash so rotating it revokes
     # those sessions without touching JWT_SECRET_KEY.
     cred, password_hash = matched

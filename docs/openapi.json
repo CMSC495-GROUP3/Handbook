@@ -1391,7 +1391,7 @@
             "description": "Successful Response"
           },
           "403": {
-            "description": "Signed in, but not with the HR password."
+            "description": "Signed in, but not with the manager or HR password."
           },
           "422": {
             "content": {

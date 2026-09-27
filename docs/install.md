@@ -57,10 +57,10 @@ make web      # terminal 2: the React app on :5173, proxying /api to :8000
 ```
 
 Open <http://localhost:5173> and sign in with the password `dev`. Sign in
-with `hr` instead to see the HR Requests and What People Ask pages, which only
-the Human Resources password opens. `make stub` hashes both passwords when it
-starts, so `make stub DEV_PASSWORD=something DEV_HR_PASSWORD=other` changes
-them, and it launches `scripts/loadtest/server.py`, which patches the fakes in
+with `manager` instead to see the What People Ask page as a manager does, or
+with `hr` to see it unfiltered along with HR Requests. `make stub` hashes all
+three passwords when it starts, so `make stub DEV_PASSWORD=something
+DEV_MANAGER_PASSWORD=boss DEV_HR_PASSWORD=other` changes them, and it launches `scripts/loadtest/server.py`, which patches the fakes in
 around the real app.
 
 Every answer in this mode is the same canned paragraph about PTO, and the
@@ -117,18 +117,26 @@ hash has to be pasted rather than echoed. It also explains what a second
 password in `APP_PASSWORD_HASH_2` does and does not give you. Read that before
 handing one to a reviewer.
 
-Set `HR_PASSWORD_HASH` too if anyone will work escalations or read the
-coverage report in the web app. It is the Human Resources password, generated
-the same way and different from `APP_PASSWORD_HASH`. It may be the same hash
-as `APP_PASSWORD_HASH_2`, which makes the second password the HR one; the
-course deployment does this for the grader. Only a session opened with it
-can use the HR Requests queue (`GET /api/escalations`, and `GET`, `PATCH`,
-and retry-delivery on `/api/escalations/{escalation_id}`) and What People Ask
-(`GET /api/reports/gaps`); every other valid token gets 403 there, and the sidebar hides both links from it. With it
-unset, nobody can open either page, and employees can still escalate from the
-chat. It does not change which conversations a session sees: each browser sees
-only its own, whichever password it signed in with (see the README's
-[Known limitations](../README.md#known-limitations)).
+Set `HR_PASSWORD_HASH` if anyone will work escalations in the web app. It is
+the Human Resources password, generated the same way and different from
+`APP_PASSWORD_HASH`. Only a session opened with it can use the HR Requests
+queue (`GET /api/escalations`, and `GET`, `PATCH`, and retry-delivery on
+`/api/escalations/{escalation_id}`) or call `POST /api/documents/reindex`. It
+opens What People Ask too.
+
+Set `MANAGER_PASSWORD_HASH` if managers or supervisors will read What People
+Ask (`GET /api/reports/gaps`) to plan training and orientation. It opens that
+page and nothing else HR-only, and a manager's report lists only questions
+asked in at least `MANAGER_MIN_CONVERSATIONS` separate conversations (default
+3). It may be the same hash as `APP_PASSWORD_HASH_2`, which gives the second
+password manager access; the course deployment does this for the grader and
+gives HR a password of its own.
+
+Every other valid token gets 403 on those pages, and the sidebar hides their
+links from it. With a variable unset, nobody can open its pages, and employees
+can still escalate from the chat. Neither changes which conversations a
+session sees: each browser sees only its own, whichever password it signed in
+with (see the README's [Known limitations](../README.md#known-limitations)).
 
 Every variable `.env.example` sets or mentions is listed below, once, with
 what it is for and where its value comes from. The comments in
@@ -163,7 +171,8 @@ are optional.
 | Name | What it is for | Where it comes from |
 | --- | --- | --- |
 | `APP_PASSWORD_HASH_2` | a second accepted password | generated like the first |
-| `HR_PASSWORD_HASH` | the Human Resources password; the only one that opens HR Requests and What People Ask | generated like the first, with a different password |
+| `HR_PASSWORD_HASH` | the Human Resources password; the only one that opens HR Requests, and it opens What People Ask too | generated like the first, with a different password |
+| `MANAGER_PASSWORD_HASH` | the manager and supervisor password; opens What People Ask, filtered to questions asked in several conversations | generated like the first, with a different password; the course deployment reuses `APP_PASSWORD_HASH_2` |
 | `SITE_ADDRESS` | the public hostname Caddy serves and gets a certificate for | your DNS; leave unset for local Compose |
 | `APP_ENV` | environment label; `production` makes the fake provider refuse to start | you |
 | `APP_NAME` | the product name; change it in `web/src/config.ts` and `web/index.html` too | you |
@@ -198,6 +207,7 @@ default first.
 | `LOGIN_THREADPOOL_TOKENS` | a separate pool so sign-in still works when chat is saturated |
 | `CHAT_RATE_LIMIT` | per-address limit on chat requests |
 | `REINDEX_RATE_LIMIT` | per-address limit on reindex requests |
+| `MANAGER_MIN_CONVERSATIONS` | fewest conversations a question needs before a manager sees it on What People Ask (default 3) |
 
 Two names in the file belong to the fake provider and mean nothing on a
 real-services host: `FAKE_STREAM_DELAY_MS` and `FAKE_UTILITY_DELAY_MS` slow

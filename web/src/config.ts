@@ -31,6 +31,13 @@ export const CLIENT_ID_KEY = 'sourcebook_client_id'
 export const HR_CRED = 'HR_PASSWORD_HASH'
 
 /**
+ * The `cred` claim of a session opened with the manager password, which opens
+ * What People Ask and nothing else HR-only. Mirrors MANAGER_PASSWORD_HASH_VAR
+ * in sourcebook/api/routes/auth.py; change both together.
+ */
+export const MANAGER_CRED = 'MANAGER_PASSWORD_HASH'
+
+/**
  * Who a refused or unhelpful answer is handed to. Mirrors ESCALATION_CONTACT
  * in sourcebook/rag/config.py; change both together.
  */

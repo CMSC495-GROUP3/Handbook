@@ -30,7 +30,7 @@ const LAYOUTS = [
   { name: 'drawer', isDesktop: false, open: true },
 ]
 
-describe('Sidebar HR entries', () => {
+describe('Sidebar HR and manager entries', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
     vi.spyOn(client, 'get').mockResolvedValue({ data: [] } as unknown as AxiosResponse)
@@ -55,6 +55,15 @@ describe('Sidebar HR entries', () => {
       expect(screen.queryByRole('button', { name })).not.toBeInTheDocument()
     }
     expect(screen.getByRole('button', { name: 'Policy Library' })).toBeInTheDocument()
+    await waitFor(() => expect(client.get).toHaveBeenCalled())
+  })
+
+  it.each(LAYOUTS)('shows a manager session only What People Ask in the $name', async ({ isDesktop, open }) => {
+    localStorage.setItem(TOKEN_KEY, tokenWith({ cred: 'MANAGER_PASSWORD_HASH' }))
+    renderSidebar(isDesktop, open)
+
+    expect(screen.getByRole('button', { name: 'What People Ask' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'HR Requests' })).not.toBeInTheDocument()
     await waitFor(() => expect(client.get).toHaveBeenCalled())
   })
 

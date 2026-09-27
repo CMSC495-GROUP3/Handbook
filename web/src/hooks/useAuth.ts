@@ -1,4 +1,4 @@
-import { isHrSession, signOut } from '../api/client'
+import { isHrSession, isManagerSession, signOut } from '../api/client'
 
 export function useAuth() {
   function logout() {
@@ -7,5 +7,7 @@ export function useAuth() {
 
   // Read on every render rather than kept in state: signing in or out swaps
   // the stored token and re-renders or reloads the app anyway.
-  return { logout, isHr: isHrSession() }
+  const isHr = isHrSession()
+  // HR reads What People Ask too; a manager reads only that.
+  return { logout, isHr, canReadReport: isHr || isManagerSession() }
 }

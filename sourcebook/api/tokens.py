@@ -21,7 +21,8 @@ from fastapi.security.utils import get_authorization_scheme_param
 _ALGORITHM = "HS256"
 
 # ``cred`` names the environment variable holding the password hash a session
-# was opened with (APP_PASSWORD_HASH, APP_PASSWORD_HASH_2, or HR_PASSWORD_HASH).
+# was opened with (APP_PASSWORD_HASH, APP_PASSWORD_HASH_2, HR_PASSWORD_HASH, or
+# MANAGER_PASSWORD_HASH).
 # Anything not shaped like a variable name is not a cred, whatever signed it:
 # the auth dependency would reject it against its allowlist, and the 429 log
 # line must never receive a value that can carry a newline (issue #153).

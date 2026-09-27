@@ -609,8 +609,11 @@ class TestHrOnly:
         assert _stored(escalation_id)["status"] == "open"
 
     # The reviewer's password is an employee one too, unless a deployment gives
-    # HR_PASSWORD_HASH the same hash (see test_auth.py).
-    @pytest.mark.parametrize("cred", ["APP_PASSWORD_HASH", "APP_PASSWORD_HASH_2"])
+    # HR_PASSWORD_HASH the same hash (see test_auth.py). The manager password
+    # opens What People Ask, not this queue.
+    @pytest.mark.parametrize(
+        "cred", ["APP_PASSWORD_HASH", "APP_PASSWORD_HASH_2", "MANAGER_PASSWORD_HASH"]
+    )
     @pytest.mark.parametrize(("method", "path", "body"), HR_ROUTES)
     def test_an_employee_token_is_forbidden(
         self, client, auth, refused, delivered, monkeypatch, method, path, body, cred

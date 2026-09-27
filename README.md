@@ -42,8 +42,8 @@ make stub     # terminal 1: API on :8000, fake model, in-memory Mongo
 make web      # terminal 2: React on :5173 with hot reload
 ```
 
-Open <http://localhost:5173> and sign in with the password `dev`, or `hr` to
-see the HR Requests and What People Ask pages too. Every answer
+Open <http://localhost:5173> and sign in with the password `dev`. Sign in with
+`manager` to add the What People Ask page, or `hr` to add HR Requests as well. Every answer
 is canned in this mode, so use it to see the UI and the refusal path
 (`make stub REFUSE=1`), not to judge retrieval quality.
 
@@ -63,7 +63,8 @@ hosted around the clock, so a connection timeout means it is off, not broken.
   sources attached.
 - **Learns from its own log.** Every request records what was asked, what was
   retrieved, and whether it was refused. Refusals grouped by question are the
-  list of documents to write next.
+  list of documents to write next, and the most-asked questions show managers
+  what to cover in training and orientation.
 
 ## Documentation
 
@@ -362,8 +363,8 @@ failed webhook delivery. The same operations are available as
 `GET /api/escalations?status=open`, `PATCH /api/escalations/{id}`, and
 `POST /api/escalations/{id}/retry-delivery` for a script or a webhook-fed channel.
 All of them need a session opened with the HR password (`HR_PASSWORD_HASH`, see
-[Configure](#1-configure)); any other valid token gets 403. Filing an escalation from
-the chat works with any password.
+[Configure](#1-configure)); any other valid token gets 403, the manager password's
+included. Filing an escalation from the chat works with any password.
 
 ### Vendor lock-in: one interface, one env var
 
@@ -465,14 +466,16 @@ That log is how the system improves from evidence rather than intuition.
   should write next. This is the closest thing here to learning: the corpus
   gets better because the logs showed where it was thin.
 - Questions asked in more than one conversation rank into an FAQ, which says
-  which answers are worth curating by hand.
+  which answers are worth curating by hand, and which topics managers should
+  cover in training and orientation before new hires have to ask.
 - The score distribution of answered versus refused questions is the only
   sound basis for tuning `SIMILARITY_THRESHOLD`, and there is no other way to
   collect it.
 
 The first two lists are on the What People Ask page in the web app, over the last
-7, 30, or 90 days. Like HR Requests, the page and its route need the HR
-password. The page also merges wordings whose embeddings are within
+7, 30, or 90 days. The page and its route need the manager or HR password, and
+a manager sees only questions asked in several separate conversations (see
+[Configure](#1-configure)). The page also merges wordings whose embeddings are within
 `QUESTION_GROUP_THRESHOLD` cosine (default 0.85, #287). On 120 labelled pairs
 that merged 6 of 60 paraphrases and 2 of 60 different questions
 ([measurement](docs/evaluation.md#question-grouping-threshold)). For pairs
@@ -564,7 +567,7 @@ To hand out a second password without sharing the first, for a reviewer or a
 grader, generate its hash the same way and put it in `APP_PASSWORD_HASH_2`.
 Either password logs in; every configured hash is checked at startup and a
 malformed one stops the server from booting. Leave the second unset to accept
-only the shared password (plus the HR one below, if set).
+only the shared password (plus the HR and manager ones below, if set).
 
 Three things to know before handing one out. Every configured password opens
 the employee routes, so the deployment is only as strong as the weakest one;
@@ -576,21 +579,36 @@ session is bound to a fingerprint of that hash, so the next request with the
 old token fails. Rotating `JWT_SECRET_KEY` is no longer needed just to revoke
 one password's sessions; sessions from the other passwords keep working.
 
-Give Human Resources its own password in `HR_PASSWORD_HASH`, generated the same
-way. A session opened with it can do everything the shared password can, and
-it is the only one that can open the HR Requests queue and the What People Ask
-report, both of which show questions employees typed, and the only one that
-can call `POST /api/documents/reindex`, which drops every cached answer. Every other valid token
-gets 403 on those routes, and the web app hides their links unless the stored
-token's `cred` claim is `HR_PASSWORD_HASH`. Leave it unset and nobody can open
-either page. Use a password different from the shared one: login checks
-`APP_PASSWORD_HASH` first, so an HR hash of the shared password never matches
-and grants nobody HR access. Login checks `HR_PASSWORD_HASH` before
-`APP_PASSWORD_HASH_2`, so setting both to the same hash makes the second
-password the HR one. The course deployment does this, so the grader can open
-both HR pages. Tokens issued before an upgrade carry `APP_PASSWORD_HASH` or
-`APP_PASSWORD_HASH_2` as their `cred`, never `HR_PASSWORD_HASH`, so HR staff
-(and the grader) sign out and back in once to see the HR pages.
+Two more passwords open pages the shared one cannot. Both are generated the
+same way, and a session opened with either can do everything the shared
+password can as well.
+
+- **`HR_PASSWORD_HASH`**, for Human Resources. It is the only password that
+  opens the HR Requests queue and the only one that can call
+  `POST /api/documents/reindex`, which drops every cached answer. It opens the
+  What People Ask report too, with every question listed.
+- **`MANAGER_PASSWORD_HASH`**, for managers and supervisors. It opens the What
+  People Ask report and nothing else beyond the employee routes, so a manager
+  can see what their people keep asking and cover it in training and
+  orientation. A manager's report lists only questions asked in at least
+  `MANAGER_MIN_CONVERSATIONS` separate conversations (default 3). A question
+  typed once can point at the person who typed it, and a manager, unlike HR,
+  is not the confidential channel. The totals at the top still count every
+  question.
+
+Every other valid token gets 403 on those routes, and the web app hides their
+links unless the stored token's `cred` claim names the right variable. Leave a
+variable unset and nobody can use its pages. Use passwords different from the
+shared one: login checks `APP_PASSWORD_HASH` first, so an HR or manager hash of
+the shared password never matches. Login then checks `HR_PASSWORD_HASH`,
+`MANAGER_PASSWORD_HASH`, and `APP_PASSWORD_HASH_2`, in that order, so the same
+hash in two of them gives the wider access. The course deployment sets
+`MANAGER_PASSWORD_HASH` to the same hash as `APP_PASSWORD_HASH_2`, so the
+grader's password opens What People Ask, and gives HR a password of its own.
+A token keeps the `cred` it was issued with, so after that change anyone
+signed in with the grader's password signs out and back in once to see the
+page, and a session opened with the old HR password stops working once
+`HR_PASSWORD_HASH` changes.
 
 Conversations are separate from the passwords. Each browser keeps a random id
 and sends it at login, and a session sees only the conversations and projects
@@ -1062,7 +1080,9 @@ The product name lives in three places: `APP_NAME` in
   local storage ([#290](https://github.com/CMSC495-GROUP3/Sourcebook/issues/290)).
   Clearing site data or moving to another device loses the history, and anyone
   who copies that id and knows a password can read it, as with the token
-  stored next to it.
+  stored next to it. The HR and manager passwords guard pages, not
+  conversations: a session sees only its own browser's conversations whichever
+  password opened it.
 - **Do not deploy under gunicorn `--preload`.** `MongoClient` is not fork-safe
   and the collection handles bind at import. `uvicorn --workers` is safe
   because each worker imports the app after forking. See

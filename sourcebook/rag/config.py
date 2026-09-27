@@ -216,6 +216,12 @@ QUESTION_JUDGE_MAX_PAIRS = int(os.getenv("QUESTION_JUDGE_MAX_PAIRS", "50"))
 # (30 s plus a retry). The embed call and the judge call each get this, so a
 # load waits at most about twice it on the provider (#300).
 REPORT_PROVIDER_TIMEOUT_SECONDS = float(os.getenv("REPORT_PROVIDER_TIMEOUT_SECONDS", "8"))
+# A manager's view of the What People Ask report lists only wordings asked in at
+# least this many conversations. A question typed once can point at the one
+# person who typed it ("how do I report my manager for harassment?"), and a
+# manager, unlike HR, is not the confidential channel. Repeated questions are
+# the ones worth covering in training anyway. HR sees every wording.
+MANAGER_MIN_CONVERSATIONS = max(1, int(os.getenv("MANAGER_MIN_CONVERSATIONS", "3")))
 
 # ── Conversation limits ───────────────────────────────────────────────────────
 # Turns of history replayed to the model, and turns used to rewrite a follow-up

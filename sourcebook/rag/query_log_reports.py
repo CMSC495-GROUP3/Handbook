@@ -192,6 +192,7 @@ def wording_pipeline(
     limit: int,
     *,
     refused_only: bool,
+    min_sessions: int = 1,
 ) -> list[dict[str, Any]]:
     """Aggregation: every hash group in the window, for grouping by meaning.
 
@@ -205,6 +206,10 @@ def wording_pipeline(
     The cap picks candidates the way each list ranks: refused wordings by asks,
     all wordings by conversations, so one person repeating a question cannot
     take a slot from a wording asked once each in several conversations.
+
+    ``min_sessions`` drops wordings asked in fewer conversations before the
+    sort and cap, so wordings below it cannot crowd out wordings above it.
+    The web route uses it for a manager's view.
     """
     match = {**_time_match(since, until), **({"refused": True} if refused_only else {})}
     order = (
@@ -222,6 +227,7 @@ def wording_pipeline(
             }
         },
         {"$addFields": {"session_count": {"$size": "$sessions"}}},
+        *([{"$match": {"session_count": {"$gte": min_sessions}}}] if min_sessions > 1 else []),
         {"$sort": order},
         {"$limit": limit},
         {"$addFields": {"sessions": {"$slice": ["$sessions", WORDING_SESSION_SAMPLE]}}},

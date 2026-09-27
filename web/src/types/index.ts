@@ -133,6 +133,11 @@ export interface CoverageReport {
    * per-load cap, or in a check that failed. A later load judges the next batch.
    */
   unjudged: number
+  /**
+   * Set on a manager's report: only wordings asked in at least this many
+   * conversations are listed. Null on HR's, which lists every wording.
+   */
+  min_conversations: number | null
   /** Every chat request in the window. */
   total: number
   refused: number

@@ -8,7 +8,7 @@ from datetime import timedelta
 
 import bcrypt
 import pytest
-from conftest import HR_TEST_PASSWORD, TEST_PASSWORD
+from conftest import HR_TEST_PASSWORD, MANAGER_TEST_PASSWORD, TEST_PASSWORD
 
 from sourcebook.api.routes import auth as auth_routes
 from sourcebook.api.tokens import decode_claims
@@ -89,6 +89,7 @@ def test_malformed_second_hash_is_a_server_error(client, monkeypatch, caplog):
         (TEST_PASSWORD, "APP_PASSWORD_HASH"),
         (SECOND_PASSWORD, "APP_PASSWORD_HASH_2"),
         (HR_TEST_PASSWORD, "HR_PASSWORD_HASH"),
+        (MANAGER_TEST_PASSWORD, "MANAGER_PASSWORD_HASH"),
     ],
 )
 def test_login_records_which_password_was_used(client, monkeypatch, caplog, password, variable):
@@ -223,6 +224,7 @@ def test_startup_requires_the_first_hash_even_with_a_second(monkeypatch):
 def test_startup_accepts_one_or_two_well_formed_hashes(monkeypatch):
     monkeypatch.delenv("APP_PASSWORD_HASH_2", raising=False)
     monkeypatch.delenv("HR_PASSWORD_HASH", raising=False)
+    monkeypatch.delenv("MANAGER_PASSWORD_HASH", raising=False)
     assert [name for name, _ in auth_routes.validate_password_hashes()] == ["APP_PASSWORD_HASH"]
     monkeypatch.setenv("APP_PASSWORD_HASH_2", _second_hash())
     assert [name for name, _ in auth_routes.validate_password_hashes()] == [
@@ -258,7 +260,7 @@ def test_the_shared_password_wins_when_hr_reuses_it(client, monkeypatch):
 
 
 def test_hr_wins_when_it_shares_the_second_hash(client, monkeypatch):
-    """The course deployment gives the reviewer's password HR access this way."""
+    """A deployment can still make the reviewer's password the HR one."""
     second = _second_hash()
     monkeypatch.setenv("APP_PASSWORD_HASH_2", second)
     monkeypatch.setenv("HR_PASSWORD_HASH", second)
@@ -284,11 +286,12 @@ def test_hr_hash_alone_does_not_replace_the_first(monkeypatch):
         auth_routes.validate_password_hashes()
 
 
-def test_startup_accepts_all_three_hashes(monkeypatch):
+def test_startup_accepts_all_four_hashes(monkeypatch):
     monkeypatch.setenv("APP_PASSWORD_HASH_2", _second_hash())
     assert [name for name, _ in auth_routes.validate_password_hashes()] == [
         "APP_PASSWORD_HASH",
         "HR_PASSWORD_HASH",
+        "MANAGER_PASSWORD_HASH",
         "APP_PASSWORD_HASH_2",
     ]
 
@@ -323,6 +326,70 @@ def test_employee_logins_cannot_reach_the_hr_routes(client, monkeypatch, cred):
     headers = {"Authorization": f"Bearer {token}"}
     assert client.get("/api/escalations", headers=headers).status_code == 403
     assert client.get("/api/reports/gaps", headers=headers).status_code == 403
+
+
+# ── The manager password ──────────────────────────────────────────────────────
+
+
+def _login_headers(client, password: str) -> dict:
+    token = client.post("/api/auth/login", json={"password": password}).json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+def test_manager_password_opens_the_report_but_not_the_hr_queue(client):
+    headers = _login_headers(client, MANAGER_TEST_PASSWORD)
+    assert client.get("/api/conversations", headers=headers).status_code == 200
+    assert client.get("/api/reports/gaps", headers=headers).status_code == 200
+    response = client.get("/api/escalations", headers=headers)
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Human Resources sign-in required."
+
+
+def test_manager_wins_when_it_shares_the_second_hash(client, monkeypatch):
+    """The course deployment gives the reviewer's password manager access this way."""
+    second = _second_hash()
+    monkeypatch.setenv("APP_PASSWORD_HASH_2", second)
+    monkeypatch.setenv("MANAGER_PASSWORD_HASH", second)
+    headers = _login_headers(client, SECOND_PASSWORD)
+    assert decode_claims(headers["Authorization"].split()[1])["cred"] == "MANAGER_PASSWORD_HASH"
+    assert client.get("/api/reports/gaps", headers=headers).status_code == 200
+    assert client.get("/api/escalations", headers=headers).status_code == 403
+
+
+def test_hr_wins_when_manager_shares_its_hash(client, monkeypatch):
+    """The same hash in both slots opens more, never less."""
+    monkeypatch.setenv("MANAGER_PASSWORD_HASH", os.environ["HR_PASSWORD_HASH"])
+    headers = _login_headers(client, HR_TEST_PASSWORD)
+    assert decode_claims(headers["Authorization"].split()[1])["cred"] == "HR_PASSWORD_HASH"
+    assert client.get("/api/escalations", headers=headers).status_code == 200
+
+
+def test_the_shared_password_wins_when_manager_reuses_it(client, monkeypatch):
+    monkeypatch.setenv("MANAGER_PASSWORD_HASH", _cost4_hash())
+    headers = _login_headers(client, TEST_PASSWORD)
+    assert decode_claims(headers["Authorization"].split()[1])["cred"] == "APP_PASSWORD_HASH"
+    assert client.get("/api/reports/gaps", headers=headers).status_code == 403
+
+
+def test_manager_password_is_rejected_when_not_configured(client, monkeypatch):
+    monkeypatch.delenv("MANAGER_PASSWORD_HASH", raising=False)
+    assert (
+        client.post("/api/auth/login", json={"password": MANAGER_TEST_PASSWORD}).status_code == 401
+    )
+
+
+def test_rotated_manager_hash_rejects_its_tokens(client, monkeypatch):
+    headers = _login_headers(client, MANAGER_TEST_PASSWORD)
+    monkeypatch.setenv("MANAGER_PASSWORD_HASH", _cost4_hash())
+    assert client.get("/api/reports/gaps", headers=headers).status_code == 401
+
+
+def test_malformed_manager_hash_is_a_server_error(client, monkeypatch, caplog):
+    monkeypatch.setenv("MANAGER_PASSWORD_HASH", "not-a-bcrypt-hash")
+    with caplog.at_level(logging.ERROR, logger="sourcebook.api.routes.auth"):
+        response = client.post("/api/auth/login", json={"password": TEST_PASSWORD})
+    assert response.status_code == 500
+    assert "MANAGER_PASSWORD_HASH is not a valid bcrypt hash" in caplog.text
 
 
 def test_unconfigured_password_is_a_server_error(client, monkeypatch, caplog):

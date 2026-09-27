@@ -11,6 +11,7 @@ from scripts.loadtest.fakemongo import FakeCollection
 from sourcebook.api.routes import reports
 from sourcebook.api.routes.reports import MAX_WINDOW_DAYS
 from sourcebook.rag import query_log_reports
+from sourcebook.rag.config import MANAGER_MIN_CONVERSATIONS
 
 URL = "/api/reports/gaps"
 # Each logged row is its own conversation unless a test passes session_id.
@@ -56,18 +57,20 @@ def test_an_employee_token_is_forbidden(client, auth):
     """The shared password opens the chat, not the report on everyone's questions."""
     response = client.get(URL, headers=auth)
     assert response.status_code == 403
-    assert response.json()["detail"] == "Human Resources sign-in required."
+    assert response.json()["detail"] == "Manager or Human Resources sign-in required."
 
 
-def test_forbidden_without_an_hr_password_configured(client, auth, monkeypatch):
+def test_forbidden_without_an_hr_or_manager_password_configured(client, auth, monkeypatch):
     """With only APP_PASSWORD_HASH set, nobody can open the report."""
     monkeypatch.delenv("HR_PASSWORD_HASH", raising=False)
+    monkeypatch.delenv("MANAGER_PASSWORD_HASH", raising=False)
     assert client.get(URL, headers=auth).status_code == 403
 
 
 def test_empty_log(client, hr_auth):
     body = client.get(URL, headers=hr_auth).json()
     assert body["days"] == 30
+    assert body["min_conversations"] is None
     assert (body["total"], body["refused"]) == (0, 0)
     assert body["gaps"] == []
     assert body["faq"] == []
@@ -794,3 +797,99 @@ def test_with_the_memo_off_no_pairs_are_promised_to_a_later_load(client, hr_auth
 
     assert calls[0] == calls[1]
     assert (first["unjudged"], second["unjudged"]) == (0, 0)
+
+
+# ── What a manager sees ───────────────────────────────────────────────────────
+
+
+def _ask(question: str, conversations: int, *, refused: bool) -> None:
+    for _ in range(conversations):
+        log(question, refused=refused)
+
+
+def test_the_default_manager_threshold_is_three():
+    assert MANAGER_MIN_CONVERSATIONS == 3
+
+
+def test_a_manager_sees_only_questions_asked_in_enough_conversations(client, manager_auth):
+    _ask("How do I enroll in benefits?", 3, refused=False)
+    _ask("Can I bring my dog?", 3, refused=True)
+    _ask("Where do I find my W-2?", 2, refused=False)
+    _ask("How do I report my manager for harassment?", 1, refused=True)
+
+    body = client.get(URL, headers=manager_auth).json()
+
+    assert body["min_conversations"] == 3
+    # Totals count every row: a number names nobody.
+    assert (body["total"], body["refused"]) == (9, 4)
+    assert [g["question"] for g in body["gaps"]] == ["Can I bring my dog?"]
+    assert [g["question"] for g in body["faq"]] == [
+        "Can I bring my dog?",
+        "How do I enroll in benefits?",
+    ]
+
+
+def test_hr_sees_every_wording(client, hr_auth):
+    _ask("Where do I find my W-2?", 2, refused=False)
+    _ask("How do I report my manager for harassment?", 1, refused=True)
+
+    body = client.get(URL, headers=hr_auth).json()
+
+    assert body["min_conversations"] is None
+    assert [g["question"] for g in body["gaps"]] == ["How do I report my manager for harassment?"]
+    assert [g["question"] for g in body["faq"]] == ["Where do I find my W-2?"]
+
+
+def test_one_conversation_repeating_itself_does_not_reach_a_manager(client, manager_auth):
+    """The threshold counts conversations, not asks."""
+    for _ in range(5):
+        log("Asked five times by one person", refused=True, session_id="alone")
+
+    body = client.get(URL, headers=manager_auth).json()
+
+    assert body["gaps"] == []
+    assert body["faq"] == []
+
+
+def test_a_rare_wording_never_rides_along_under_a_common_one(
+    client, hr_auth, manager_auth, monkeypatch
+):
+    """Filtering happens before grouping, so a one-off rewording that merges
+    into a common question for HR is not listed under it for a manager."""
+    rare = "How much PTO do I get as a new hire in the Denver office?"
+    vectors(monkeypatch, {"How much PTO do I get?": PTO, rare: PTO_REPHRASED})
+    _ask("How much PTO do I get?", 3, refused=False)
+    _ask(rare, 1, refused=False)
+
+    [hr_row] = client.get(URL, headers=hr_auth).json()["faq"]
+    [manager_row] = client.get(URL, headers=manager_auth).json()["faq"]
+
+    assert hr_row["other_wordings"] == [{"question": rare, "count": 1}]
+    assert (manager_row["question"], manager_row["count"]) == ("How much PTO do I get?", 3)
+    assert manager_row["other_wordings"] == []
+
+
+def test_single_conversation_wordings_do_not_crowd_a_manager_out_of_the_cap(
+    client, manager_auth, monkeypatch
+):
+    """Refused candidates are capped by asks. One person's heavy repeats must
+    not fill the cap ahead of a question asked in several conversations."""
+    monkeypatch.setattr(reports, "CANDIDATE_LIMIT", 2)
+    for question in ("Repeat one", "Repeat two"):
+        for _ in range(5):
+            log(question, refused=True, session_id=f"alone-{question}")
+    _ask("Can I bring my dog?", 3, refused=True)
+
+    gaps = client.get(URL, headers=manager_auth).json()["gaps"]
+
+    assert [(g["question"], g["conversations"]) for g in gaps] == [("Can I bring my dog?", 3)]
+
+
+def test_the_manager_threshold_is_configurable(client, manager_auth, monkeypatch):
+    monkeypatch.setattr(reports, "MANAGER_MIN_CONVERSATIONS", 2)
+    _ask("Where do I find my W-2?", 2, refused=False)
+
+    body = client.get(URL, headers=manager_auth).json()
+
+    assert body["min_conversations"] == 2
+    assert [g["question"] for g in body["faq"]] == ["Where do I find my W-2?"]

@@ -32,12 +32,16 @@ os.environ.pop("APP_ENV", None)  # FakeProvider refuses to run as production
 
 TEST_PASSWORD = "correct-horse-battery-staple"
 HR_TEST_PASSWORD = "human-resources-only"
+MANAGER_TEST_PASSWORD = "managers-and-supervisors"
 
 # Cost 4 is bcrypt's minimum and exists only to keep the suite fast. Never use
 # it for a real hash.
 os.environ["APP_PASSWORD_HASH"] = bcrypt.hashpw(TEST_PASSWORD.encode(), bcrypt.gensalt(4)).decode()
 os.environ["HR_PASSWORD_HASH"] = bcrypt.hashpw(
     HR_TEST_PASSWORD.encode(), bcrypt.gensalt(4)
+).decode()
+os.environ["MANAGER_PASSWORD_HASH"] = bcrypt.hashpw(
+    MANAGER_TEST_PASSWORD.encode(), bcrypt.gensalt(4)
 ).decode()
 
 from scripts.loadtest.fakemongo import FakeDB  # noqa: E402
@@ -60,6 +64,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 from sourcebook.api.limiter import limiter  # noqa: E402
 from sourcebook.api.routes.auth import (  # noqa: E402
     HR_PASSWORD_HASH_VAR,
+    MANAGER_PASSWORD_HASH_VAR,
     PRIMARY_PASSWORD_HASH_VAR,
     create_access_token,
     credential_fingerprint,
@@ -151,6 +156,12 @@ def auth() -> dict:
 def hr_auth() -> dict:
     """Human Resources: signed in with the HR password."""
     return _bearer(HR_PASSWORD_HASH_VAR)
+
+
+@pytest.fixture
+def manager_auth() -> dict:
+    """A manager or supervisor: signed in with the manager password."""
+    return _bearer(MANAGER_PASSWORD_HASH_VAR)
 
 
 @pytest.fixture
