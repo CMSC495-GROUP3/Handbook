@@ -204,3 +204,75 @@ SIMILARITY_THRESHOLD=1.0 ./.venv/bin/uvicorn scripts.loadtest.server:app --port 
 LOADTEST_THREAD_TOKENS=320 ./.venv/bin/uvicorn scripts.loadtest.server:app --port 8001 &
 ./.venv/bin/python scripts/loadtest/run.py --concurrency 320
 ```
+
+## Report aggregation at planned volume (issue #291)
+
+The What People Ask report (`GET /api/reports/gaps`, #286) counts the distinct
+conversations each question was asked in. The #286 pipelines collect every
+`session_id` into a per-question `$addToSet` array and take its `$size`. #291
+proposed a two-pass `$group` instead: first on `{question_hash, session_id}`,
+then on the hash with `session_count: {$sum: 1}`, so no stage holds an array.
+This section times both.
+
+### Method
+
+`scripts/loadtest/report_timing.py` seeds `query_logs` in a throwaway MongoDB
+and runs the gaps and FAQ pipelines as the route does, with its 5,000 ms
+`maxTimeMS`, five timed runs each after one warm-up run. The rows are shaped
+like `analytics.log_query` writes them and carry the same three indexes as
+`db.ensure_indexes`, minus the TTL. One popular question gets N asks spread
+over 0.8 N conversations (UUID session ids), half of them refused, at random
+times across 90 days. 100,000 more asks spread over 5,000 other questions,
+each in its own conversation. The window is the full 90 days.
+
+This ran on a **local single-node `mongo:7` container (7.0.43)** under Docker
+Desktop on an Apple M3 laptop with 8 GB given to Docker. It is not Atlas: no
+replica set, no network hop, a different CPU and disk, and a different memory
+budget. Treat the ratios as the finding and the absolute times as local.
+
+### Results
+
+Median of five runs, three at 2M asks. "Timeout" means every run hit
+`maxTimeMS`, which the route turns into its 503.
+
+| Popular question | Pipeline | Before (`$addToSet`) | After (two `$group`) |
+|---|---|---|---|
+| 500k asks, 400k conversations | gaps | 499 ms | 2,819 ms, spilled to disk |
+| 500k asks, 400k conversations | FAQ | 1,190 ms | timeout (6.3 s untimed), spilled |
+| 1M asks, 800k conversations | gaps | 1,104 ms | timeout (5.5 s untimed), spilled |
+| 1M asks, 800k conversations | FAQ | 2,521 ms | timeout (11.5 s untimed), spilled |
+| 2M asks, 1.6M conversations | gaps | 2,290 ms | timeout (9.8 s untimed), spilled |
+| 2M asks, 1.6M conversations | FAQ | timeout or `ExceededMemoryLimit` | timeout (21.8 s untimed), spilled |
+
+"Untimed" is the `$group` time from an `executionStats` explain, which runs
+without `maxTimeMS`. Where both sides finished, the ranked `_id`, `count`,
+`session_count`, and `refused_count` matched.
+
+### What this says
+
+- **The two-pass version is 4 to 6 times slower here, and it misses the 5 s
+  budget at 500k asks, where the `$addToSet` version takes 1.2 s.** Memory in
+  both versions grows with distinct (question, conversation) pairs. The first
+  pass keeps one group document per pair, which costs far more per pair than
+  one string in an array, so it passes the 100 MB `$group` limit and spills to
+  disk at a volume the array version holds in memory. Dropping the sample
+  fields and `refused_count` from the first pass still took 4.1 s for the FAQ
+  pipeline at 500k asks.
+- **The `$addToSet` version fails differently.** One accumulator cannot spill,
+  so at 1.6M conversations for one question the FAQ pipeline stopped with
+  `ExceededMemoryLimit` (code 146) in one run of three and timed out in the
+  other two. The route catches only `ExecutionTimeout`, so that error would be
+  a 500, not the 503.
+- Neither version answers a 90-day window inside 5 s at the 7M rows a day the
+  TTL comment in `sourcebook/rag/config.py` plans for. That volume needs a
+  pre-aggregated count or a shorter window, not a different `$group`.
+
+### Reproducing
+
+```bash
+docker run -d --rm --name sourcebook-report-timing -p 27099:27017 mongo:7
+.venv/bin/python -m scripts.loadtest.report_timing --uri mongodb://localhost:27099
+.venv/bin/python -m scripts.loadtest.report_timing --uri mongodb://localhost:27099 \
+  --rows 1000000 --sessions 800000
+docker stop sourcebook-report-timing
+```
