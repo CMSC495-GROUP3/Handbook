@@ -9,8 +9,10 @@ request and review counts are GitHub search totals taken at 2026-09-27 16:31
 UTC. Everything merged between the `v1.0.0` candidate
 [`7d3c779`](https://github.com/CMSC495-GROUP3/Sourcebook/commit/7d3c7795c197c5be56b15aebc650576760fd75d1)
 and `10fe58b` is documentation (#231, #259, #274, #304, #305, #306). Work still in
-an open pull request is listed under [In progress](#in-progress), not in the
-merged columns.
+an open pull request is listed under [In progress](#in-progress). Dominick's
+row is a forecast that assumes his open
+[PR #292](https://github.com/CMSC495-GROUP3/Sourcebook/pull/292) merges as it
+stands; see [Forecast for #292](#forecast-for-292).
 
 Each member confirmed their own row on
 [PR #231](https://github.com/CMSC495-GROUP3/Sourcebook/pull/231), except Gavin
@@ -25,7 +27,7 @@ marked unconfirmed.
 | Open pull requests | `gh` search `repo:CMSC495-GROUP3/Sourcebook type:pr author:<login> is:open` |
 | Issues assigned | `gh issue list --assignee <login> --state all` on this repository |
 
-Several people commit under more than one Git name. Author commits are grouped by person: `t-shahan`, `Taylor`, `Taylor Shahan`, and `Claude` under **Taylor Shahan**; `Lokias` under **Chris**; `RoNUO` under **Rob**; `DanielTsang26` and `Daniel Tsang` under **Daniel Tsang**. `dependabot[bot]` is not grouped with anyone.
+Several people commit under more than one Git name. Author commits are grouped by person: `t-shahan`, `Taylor`, `Taylor Shahan`, and `Claude` under **Taylor Shahan**; `Lokias` under **Chris**; `RoNUO` under **Rob**; `DanielTsang26` and `Daniel Tsang` under **Daniel Tsang**; `fudgepop01` under **Dominick**. `dependabot[bot]` is not grouped with anyone.
 
 ## Roster
 
@@ -37,21 +39,40 @@ Several people commit under more than one Git name. Author commits are grouped b
 | George Struder | [@Lazzy-dev](https://github.com/Lazzy-dev) | Administration (EC2, S3, Atlas), locks, MongoDB | 11 | 3 | 4 | 0 |
 | Rob | [@RoNUO](https://github.com/RoNUO) | Corpus availability and passage index | 4 | 3 | 2 | 0 |
 | Gavin (unconfirmed) | [@gavinwathen](https://github.com/gavinwathen) | React components, design and styling | 2 | 1 | 0 | 0 |
-| Dominick (unconfirmed) | [@fudgepop01](https://github.com/fudgepop01) | React components, design and styling | 0 | 0 | 0 | 1 ([#292](https://github.com/CMSC495-GROUP3/Sourcebook/pull/292)) |
+| Dominick (unconfirmed) | [@fudgepop01](https://github.com/fudgepop01) | React components, design and styling | 5 [^forecast] | 1 [^forecast] | 0 | 0 [^forecast] |
 
 `dependabot[bot]` has 20 author commits and 20 merged PRs on the same snapshot. It is not a team member.
 
-Grouped this way, `10fe58b` shows six people plus Dependabot. Dominick has no author commits on `main`; his five commits are on the open [PR #292](https://github.com/CMSC495-GROUP3/Sourcebook/pull/292).
+Grouped this way, `10fe58b` shows six people plus Dependabot; Dominick has no author commits on `main` yet. With #292 merged, all seven members would have author commits on `main`.
 
 ## In progress
 
-Open pull requests at 2026-09-27 16:31 UTC. These move to the merged columns when they merge; update this table as that changes.
+Open pull requests at 2026-09-27 16:31 UTC. When one merges, move it out of this table, replace any forecast in the roster with the counted value, and bump the snapshot at the top of the page.
 
 | Pull request | Author | Commits | Issue | State |
 | --- | --- | ---: | --- | --- |
-| [#292](https://github.com/CMSC495-GROUP3/Sourcebook/pull/292) `docs: add lighthouse metrics to quality.md` | Dominick ([@fudgepop01](https://github.com/fudgepop01)) | 5 non-merge | [#214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214) | Changes requested by Taylor on 2026-09-26; Dominick pushed two fixes after that review (`8dd650c`, `c63df06`); reviews requested from George and Daniel |
+| [#292](https://github.com/CMSC495-GROUP3/Sourcebook/pull/292) `docs: add lighthouse metrics to quality.md` | Dominick ([@fudgepop01](https://github.com/fudgepop01)) | 5 non-merge | Part of [#214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214) | Changes requested by Taylor on 2026-09-26; Dominick pushed two fixes after that review (`8dd650c`, `c63df06`); reviews requested from George and Daniel. Conflicts with `main` at the snapshot |
 
 No other branch on the repository carries commits that are not on `main`.
+
+### Forecast for #292
+
+Dominick's roster row assumes #292 merges with its current five commits. The forecast works like this:
+
+| Metric | Counted at `10fe58b` | Forecast after #292 merges | Why |
+| --- | ---: | ---: | --- |
+| Author commits | 0 | 5 | This repository merges pull requests with a merge commit, so the five non-merge commits on the branch (`8ff6bec`, `9ef947d`, `e77d288`, `8dd650c`, `c63df06`) land on `main` under the Git name `fudgepop01`. The two merges of `main` into the branch are merge commits and are not counted |
+| Merged PRs authored | 0 | 1 | #292 itself |
+| Others' PRs reviewed | 0 | 0 | Merging his own pull request adds no review of someone else's |
+| Open PRs | 1 | 0 | #292 leaves the open list |
+
+The forecast changes if:
+
+- #292 is squash-merged. Author commits would then be 1, not 5.
+- Dominick adds commits to fix the merge conflict or answer review. Each non-merge commit adds one; a merge of `main` into the branch adds none.
+- #292 is closed without merging. The row goes back to 0, 0, 0, 0.
+
+No other row changes. Taylor's review of #292 is already in Taylor's count of 59, and #292 is "Part of #214", so [issue #214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214) stays open after it merges.
 
 ## Taylor Shahan
 
@@ -154,12 +175,14 @@ Unconfirmed: Dominick had not confirmed this row by the 27 September deadline.
 
 **Owns, per the README.** React components, design, and styling, with Gavin.
 
-**What GitHub shows.** Zero author commits, zero merged pull requests, and zero reviews of others' pull requests under `fudgepop01`. Assigned on the same design and frontend cluster ([#41](https://github.com/CMSC495-GROUP3/Sourcebook/issues/41)–[#53](https://github.com/CMSC495-GROUP3/Sourcebook/issues/53), [#82](https://github.com/CMSC495-GROUP3/Sourcebook/issues/82), [#84](https://github.com/CMSC495-GROUP3/Sourcebook/issues/84), [#159](https://github.com/CMSC495-GROUP3/Sourcebook/issues/159), [#174](https://github.com/CMSC495-GROUP3/Sourcebook/issues/174), [#175](https://github.com/CMSC495-GROUP3/Sourcebook/issues/175)), plus [#214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214) (Lighthouse accessibility and performance per theme, still open). Assigned [#175](https://github.com/CMSC495-GROUP3/Sourcebook/issues/175) is ownership, not merged authorship; the merged facing-page fix on `main` (`c00b30c`) is Daniel's commit and is recorded on his row. No author commits under Dominick's name appear on `main` at `10fe58b`. He opened [PR #292](https://github.com/CMSC495-GROUP3/Sourcebook/pull/292) (`docs: add lighthouse metrics to quality.md`, for [#214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214)) on 2026-09-26; it has five non-merge commits. Taylor requested changes that evening; Dominick pushed two fixes afterward (trimming unrelated changes, and recording the live-site commit and time for each Lighthouse run). At the snapshot it is open, with Taylor's changes-requested review still standing. See [In progress](#in-progress).
+**What GitHub shows.** At the snapshot: zero author commits, zero merged pull requests, and zero reviews of others' pull requests under `fudgepop01`. The roster row is a forecast of five author commits and one merged pull request, assuming #292 merges (see [Forecast for #292](#forecast-for-292)). Assigned on the same design and frontend cluster ([#41](https://github.com/CMSC495-GROUP3/Sourcebook/issues/41)–[#53](https://github.com/CMSC495-GROUP3/Sourcebook/issues/53), [#82](https://github.com/CMSC495-GROUP3/Sourcebook/issues/82), [#84](https://github.com/CMSC495-GROUP3/Sourcebook/issues/84), [#159](https://github.com/CMSC495-GROUP3/Sourcebook/issues/159), [#174](https://github.com/CMSC495-GROUP3/Sourcebook/issues/174), [#175](https://github.com/CMSC495-GROUP3/Sourcebook/issues/175)), plus [#214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214) (Lighthouse accessibility and performance per theme, still open). Assigned [#175](https://github.com/CMSC495-GROUP3/Sourcebook/issues/175) is ownership, not merged authorship; the merged facing-page fix on `main` (`c00b30c`) is Daniel's commit and is recorded on his row. No author commits under Dominick's name appear on `main` at `10fe58b`. He opened [PR #292](https://github.com/CMSC495-GROUP3/Sourcebook/pull/292) (`docs: add lighthouse metrics to quality.md`, for [#214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214)) on 2026-09-26; it has five non-merge commits. Taylor requested changes that evening; Dominick pushed two fixes afterward (trimming unrelated changes, and recording the live-site commit and time for each Lighthouse run). At the snapshot it is open, with Taylor's changes-requested review still standing. See [In progress](#in-progress).
 
 ## Scope of this record
 
 - Work that exists only in a fork, a classroom write-up, or a chat is not listed.
 - Review counts are other people's pull requests GitHub marks `reviewed-by`, not every comment.
 - Issue assignment is cited as ownership, not as authored work.
+
+[^forecast]: Forecast, not yet counted. Assumes [PR #292](https://github.com/CMSC495-GROUP3/Sourcebook/pull/292) merges with a merge commit and its current five commits. At `10fe58b` the counted values are 0 author commits, 0 merged PRs, and 1 open PR. See [Forecast for #292](#forecast-for-292).
 
 [^claude]: This total includes 58 Claude-authored commits Taylor directed and accepted responsibility for.
