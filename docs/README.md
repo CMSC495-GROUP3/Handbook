@@ -1,8 +1,8 @@
 # Documentation
 
-Narrative docs live here, grouped by what you want to do, in the same order
-as the [README](../README.md#start-here)'s Start here table. The README is the
-short version of what the system is and why.
+Narrative docs live here, grouped by what you want to do. The
+[README](../README.md) is the short version of what the system is and why, and
+its [Start here](../README.md#start-here) table says what to read first.
 
 ## Use it
 

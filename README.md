@@ -35,12 +35,11 @@
 
 | You are | Read first | Then |
 | --- | --- | --- |
-| Grading or evaluating the project | This page, from [The problem](#the-problem) through [Evidence](#evidence) | the `v1.0.0` [handoff](docs/releases/v1.0.0/handoff.md) and [portfolio](docs/releases/v1.0.0/portfolio.md), [quality.md](docs/quality.md), [evaluation.md](docs/evaluation.md) |
-| An employee, a manager, or in Human Resources | the [pilot site](https://sourcebook.duckdns.org) and the [user guide](docs/user-guide.md) | the user guide's HR Requests and What People Ask sections |
+| Grading or evaluating the project | This page, from [The problem](#the-problem) through [Evidence](#evidence) | the [pilot site](https://sourcebook.duckdns.org) with the [user guide](docs/user-guide.md), the `v1.0.0` [handoff](docs/releases/v1.0.0/handoff.md) and [portfolio](docs/releases/v1.0.0/portfolio.md), [quality.md](docs/quality.md), [evaluation.md](docs/evaluation.md) |
 | Running or deploying it | [docs/install.md](docs/install.md) | [docs/ci-cd.md](docs/ci-cd.md) for the deploy pipeline, [docs/evaluation.md](docs/evaluation.md) to measure it |
 | Changing the code | [Quick start](#quick-start), then [CONTRIBUTING.md](CONTRIBUTING.md) | [docs/architecture.md](docs/architecture.md), [docs/api.md](docs/api.md), [docs/design.md](docs/design.md) |
 
-Every page under `docs/` is listed, grouped the same way, in
+Every page under `docs/` is listed, grouped by task, in
 [docs/README.md](docs/README.md).
 
 ## What it does
