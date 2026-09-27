@@ -1,4 +1,11 @@
-"""Conversation CRUD endpoints."""
+"""Conversation CRUD endpoints.
+
+Every route sees only the caller's conversations: each record carries the
+``owner`` id from the token that created it, and every read and write filters
+on it (issue #290, item 4). Someone else's conversation answers 404, the same as
+one that does not exist, so a session id reveals nothing. Records stored before
+owners existed have none and match no session.
+"""
 
 import uuid
 from datetime import UTC, datetime
@@ -9,7 +16,7 @@ from pymongo import DESCENDING
 from pymongo.client_session import ClientSession
 
 from sourcebook.api.db import conversations_col, projects_col
-from sourcebook.api.routes.deps import require_auth
+from sourcebook.api.routes.deps import Principal, require_auth
 from sourcebook.rag.mongo import run_transaction
 
 router = APIRouter()
@@ -68,6 +75,7 @@ def _serialize(doc: dict) -> dict:
 
 def _require_project(
     project_id: str | None,
+    owner: str,
     *,
     session: ClientSession | None = None,
 ) -> None:
@@ -85,12 +93,12 @@ def _require_project(
         return
 
     if session is None:
-        if projects_col.find_one({"project_id": project_id}) is None:
+        if projects_col.find_one({"project_id": project_id, "owner": owner}) is None:
             raise HTTPException(status_code=404, detail="Project not found.")
         return
 
     result = projects_col.update_one(
-        {"project_id": project_id},
+        {"project_id": project_id, "owner": owner},
         {"$inc": {"_assignment_guard": 1}},
         session=session,
     )
@@ -98,8 +106,8 @@ def _require_project(
         raise HTTPException(status_code=404, detail="Project not found.")
 
 
-@router.get("/conversations", dependencies=[Depends(require_auth)])
-def list_conversations():
+@router.get("/conversations")
+def list_conversations(principal: Principal = Depends(require_auth)):
     """List conversations; treat unresolved project ids as ungrouped.
 
     Read-side only: a stored project_id that no longer matches any project is
@@ -109,11 +117,12 @@ def list_conversations():
     introduced orphaned rows even when transactional writes are enabled.
     """
     docs = conversations_col.find(
-        {},
+        {"owner": principal.owner},
         {"session_id": 1, "title": 1, "project_id": 1, "updated_at": 1, "_id": 0},
     ).sort("updated_at", DESCENDING)
     known_project_ids = {
-        project["project_id"] for project in projects_col.find({}, {"project_id": 1, "_id": 0})
+        project["project_id"]
+        for project in projects_col.find({"owner": principal.owner}, {"project_id": 1, "_id": 0})
     }
     listed: list[dict] = []
     for doc in docs:
@@ -125,8 +134,10 @@ def list_conversations():
     return listed
 
 
-@router.post("/conversations", dependencies=[Depends(require_auth)])
-def create_conversation(body: CreateConversationRequest):
+@router.post("/conversations")
+def create_conversation(
+    body: CreateConversationRequest, principal: Principal = Depends(require_auth)
+):
     now = datetime.now(UTC)
     doc = {
         "session_id": str(uuid.uuid4()),
@@ -138,14 +149,16 @@ def create_conversation(body: CreateConversationRequest):
     }
 
     def create(session: ClientSession | None) -> dict:
-        _require_project(body.project_id, session=session)
+        _require_project(body.project_id, principal.owner, session=session)
 
+        # Insert a copy: the response leaves out the owner id and Mongo's _id.
+        stored = {**doc, "owner": principal.owner}
         if session is None:
-            conversations_col.insert_one(doc)
+            conversations_col.insert_one(stored)
         else:
-            conversations_col.insert_one(doc, session=session)
+            conversations_col.insert_one(stored, session=session)
 
-        return _serialize(doc)
+        return doc
 
     if body.project_id is None:
         return create(None)
@@ -153,16 +166,20 @@ def create_conversation(body: CreateConversationRequest):
     return run_transaction(create)
 
 
-@router.get("/conversations/{session_id}", dependencies=[Depends(require_auth)])
-def get_conversation(session_id: str):
-    doc = conversations_col.find_one({"session_id": session_id}, {"_id": 0})
+@router.get("/conversations/{session_id}")
+def get_conversation(session_id: str, principal: Principal = Depends(require_auth)):
+    doc = conversations_col.find_one(
+        {"session_id": session_id, "owner": principal.owner}, {"_id": 0, "owner": 0}
+    )
     if not doc:
         raise HTTPException(status_code=404, detail="Conversation not found.")
     return _serialize(doc)
 
 
-@router.patch("/conversations/{session_id}", dependencies=[Depends(require_auth)])
-def update_conversation(session_id: str, body: UpdateConversationRequest):
+@router.patch("/conversations/{session_id}")
+def update_conversation(
+    session_id: str, body: UpdateConversationRequest, principal: Principal = Depends(require_auth)
+):
     updates: dict = {"updated_at": datetime.now(UTC)}
 
     if "title" in body.model_fields_set and body.title is not None:
@@ -174,16 +191,17 @@ def update_conversation(session_id: str, body: UpdateConversationRequest):
 
     def apply_update(session: ClientSession | None) -> dict:
         if project_change:
-            _require_project(body.project_id, session=session)
+            _require_project(body.project_id, principal.owner, session=session)
 
+        mine = {"session_id": session_id, "owner": principal.owner}
         if session is None:
             result = conversations_col.update_one(
-                {"session_id": session_id},
+                mine,
                 {"$set": updates},
             )
         else:
             result = conversations_col.update_one(
-                {"session_id": session_id},
+                mine,
                 {"$set": updates},
                 session=session,
             )
@@ -201,9 +219,9 @@ def update_conversation(session_id: str, body: UpdateConversationRequest):
     return apply_update(None)
 
 
-@router.delete("/conversations/{session_id}", dependencies=[Depends(require_auth)])
-def delete_conversation(session_id: str):
-    result = conversations_col.delete_one({"session_id": session_id})
+@router.delete("/conversations/{session_id}")
+def delete_conversation(session_id: str, principal: Principal = Depends(require_auth)):
+    result = conversations_col.delete_one({"session_id": session_id, "owner": principal.owner})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Conversation not found.")
     return {"ok": True}

@@ -587,8 +587,15 @@ and grants nobody HR access. Login checks `HR_PASSWORD_HASH` before
 password the HR one. The course deployment does this, so the grader can open
 both HR pages. Tokens issued before an upgrade carry `APP_PASSWORD_HASH` or
 `APP_PASSWORD_HASH_2` as their `cred`, never `HR_PASSWORD_HASH`, so HR staff
-(and the grader) sign out and back in once to see the HR pages. The HR password
-does not protect conversations; see [Known limitations](#known-limitations).
+(and the grader) sign out and back in once to see the HR pages.
+
+Conversations are separate from the passwords. Each browser keeps a random id
+and sends it at login, and a session sees only the conversations and projects
+filed under that id, whichever password opened it. Signing out keeps them;
+clearing the browser's site data or switching browsers starts an empty
+history. Conversations stored before this existed have no owner and stop
+appearing for anyone. Every token issued before it is rejected, so everyone
+signs in once more after the upgrade.
 
 ### 2. Load the corpus
 
@@ -1034,13 +1041,12 @@ The product name lives in three places: `APP_NAME` in
   corpus size. Move to Atlas Search if the library grows large.
 - **JWTs live in browser local storage.** Acceptable for an internal pilot
   behind shared credentials, not for a multi-user security model.
-- **The HR password guards two pages, not conversations.** HR Requests and
-  What People Ask need `HR_PASSWORD_HASH`
-  ([#290](https://github.com/CMSC495-GROUP3/Sourcebook/issues/290)).
-  `GET /api/conversations` and `GET /api/conversations/{session_id}` still
-  have no owner filter, so anyone with a password can list and open every
-  conversation, including the question text those pages show. Scoping them to
-  the caller needs a per-user identity, which the pilot does not have.
+- **Conversations belong to a browser, not a person.** There is no per-user
+  sign-in, so the owner of a conversation is a random id the browser keeps in
+  local storage ([#290](https://github.com/CMSC495-GROUP3/Sourcebook/issues/290)).
+  Clearing site data or moving to another device loses the history, and anyone
+  who copies that id and knows a password can read it, as with the token
+  stored next to it.
 - **Do not deploy under gunicorn `--preload`.** `MongoClient` is not fork-safe
   and the collection handles bind at import. `uvicorn --workers` is safe
   because each worker imports the app after forking. See

@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import re
 from datetime import timedelta
 
 import bcrypt
@@ -99,7 +100,7 @@ def test_login_records_which_password_was_used(client, monkeypatch, caplog, pass
     assert response.status_code == 200
     claims = decode_claims(response.json()["access_token"])
     assert claims is not None
-    assert claims["sub"] == "user"
+    assert re.fullmatch(r"[0-9a-f]{32}", claims["sub"])
     assert claims["cred"] == variable
     assert claims["fingerprint"] == auth_routes.credential_fingerprint(os.environ[variable])
     assert len(claims["fingerprint"]) == auth_routes.FINGERPRINT_HEX_LEN
@@ -417,3 +418,46 @@ def test_protected_routes_reject_missing_and_bad_tokens(client):
 def test_health_and_config_are_public(client):
     assert client.get("/api/health").json() == {"status": "ok"}
     assert "similarity_threshold" in client.get("/api/config").json()
+
+
+# ── Owner ids (issue #290, item 4) ────────────────────────────────────────────
+
+
+def test_login_puts_the_browsers_client_id_in_sub(client):
+    client_id = "ab" * 16
+    response = client.post(
+        "/api/auth/login", json={"password": TEST_PASSWORD, "client_id": client_id}
+    )
+    assert decode_claims(response.json()["access_token"])["sub"] == client_id
+
+
+def test_login_without_a_client_id_mints_a_fresh_owner(client):
+    subs = {
+        decode_claims(
+            client.post("/api/auth/login", json={"password": TEST_PASSWORD}).json()["access_token"]
+        )["sub"]
+        for _ in range(2)
+    }
+    assert len(subs) == 2
+
+
+@pytest.mark.parametrize("client_id", ["AB" * 16, "ab" * 15, "../etc/passwd", ""])
+def test_login_rejects_a_malformed_client_id(client, client_id):
+    response = client.post(
+        "/api/auth/login", json={"password": TEST_PASSWORD, "client_id": client_id}
+    )
+    assert response.status_code == 422
+
+
+def test_a_token_from_before_owners_is_rejected(client):
+    """Tokens issued before this change carry sub "user". Their holders sign in again."""
+    token = auth_routes.create_access_token(
+        {
+            "sub": "user",
+            "cred": "APP_PASSWORD_HASH",
+            "fingerprint": auth_routes.credential_fingerprint(os.environ["APP_PASSWORD_HASH"]),
+        },
+        timedelta(hours=1),
+    )
+    response = client.get("/api/conversations", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 401

@@ -126,9 +126,9 @@ can use the HR Requests queue (`GET /api/escalations`, and `GET`, `PATCH`,
 and retry-delivery on `/api/escalations/{escalation_id}`) and What People Ask
 (`GET /api/reports/gaps`); every other valid token gets 403 there, and the sidebar hides both links from it. With it
 unset, nobody can open either page, and employees can still escalate from the
-chat. It does not scope conversations: any password still lists and opens
-every conversation. The README's
-[Known limitations](../README.md#known-limitations) says why.
+chat. It does not change which conversations a session sees: each browser sees
+only its own, whichever password it signed in with (see the README's
+[Known limitations](../README.md#known-limitations)).
 
 Every variable `.env.example` sets or mentions is listed below, once, with
 what it is for and where its value comes from. The comments in

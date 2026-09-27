@@ -229,6 +229,18 @@
       },
       "LoginRequest": {
         "properties": {
+          "client_id": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{32}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
           "password": {
             "title": "Password",
             "type": "string"

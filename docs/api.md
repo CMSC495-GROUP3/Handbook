@@ -55,8 +55,20 @@ five, which take only an `HR_PASSWORD_HASH` session:
 `POST /api/escalations` is not one of them; employees file escalations from
 the chat. When `HR_PASSWORD_HASH` is unset, the five answer 403 to everyone.
 The web app decodes the token's payload to decide whether to show the HR
-links, but the server check above is the only gate. The conversation routes
-are not HR-only and have no owner filter.
+links, but the server check above is the only gate.
+
+## Owners
+
+Conversations and projects belong to the browser that created them. The
+token's `sub` claim is an owner id, 32 lowercase hex digits; the web app keeps
+one in local storage and sends it as `client_id` at login, so signing out and
+back in on the same browser keeps its history. A client that sends no
+`client_id` gets a fresh owner id at every login. Every conversation, project,
+and chat route, and filing an escalation, sees only the caller's own records;
+someone else's session id or project id answers 404, the same as one that does
+not exist. HR sessions are no exception. Records stored before owners existed
+match no one. A token without an owner id in `sub`, which is every token issued
+before this change, gets 401.
 
 Both chat routes answer HTTP 503 when the model provider is at its
 concurrency limit (`OPENAI_MAX_CONCURRENT_REQUESTS`, waited on for
@@ -74,8 +86,10 @@ is not retryable and keeps the shapes below.
 POST /api/auth/login
 Content-Type: application/json
 
-{"password": "dev"}
+{"password": "dev", "client_id": "5f0c3a9e1b7d4c2a8e6f0b1d3c5a7e9f"}
 ```
+
+`client_id` is optional; see [Owners](#owners).
 
 ```json
 {
@@ -364,9 +378,8 @@ row; see [Grouping by meaning](#grouping-by-meaning) below.
 `question` is the logged condensed question, or the truncated raw one, or
 `null` when neither was logged. No session ids are returned, but the question
 text comes from what the employee typed (the condensed rewrite when there is
-one), and any signed-in user can call this route: sign-in has no roles.
-`GET /api/conversations` already lists every conversation to every user, so
-this route adds ranking and counts, not new access.
+one), so only a session opened with the HR password can call this route. It
+is the one place HR sees questions across browsers.
 
 Each query stops after five seconds. A report that runs longer returns HTTP
 503 with `{"detail": "This report took too long. Try a shorter window."}`.
