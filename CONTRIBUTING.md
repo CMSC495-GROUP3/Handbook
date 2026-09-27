@@ -1,7 +1,7 @@
 # Working on this project
 
-The [README](README.md) explains what the system is and why it is built the way
-it is. This page is the practical side: getting it running, checking a change,
+The [README](README.md) explains what the system is, and
+[docs/architecture.md](docs/architecture.md) why it is built the way it is. This page is the practical side: getting it running, checking a change,
 and getting that change merged. If something here is wrong or missing, fix it in
 the same PR as the change that made it wrong.
 
@@ -18,7 +18,7 @@ worded and how stalled branches get picked up, is in
 No cloud accounts, API keys, or `.env` needed. This runs the real application
 with a fake model and an in-memory database.
 
-Prerequisites: Python 3.11+, Node 20+, and `make`. Docker is only needed for the
+Prerequisites: Python 3.11+, Node 22+, and `make`. Docker is only needed for the
 full stack.
 
 ```bash
@@ -29,7 +29,8 @@ make stub           # terminal 1: API on :8000, fake model, in-memory Mongo
 make web            # terminal 2: React on :5173 with hot reload
 ```
 
-Open http://localhost:5173 and log in with the password `dev`.
+Open http://localhost:5173 and log in with the password `dev`. Log in with
+`manager` to add the What People Ask page, or `hr` to add HR Requests as well.
 
 What is fake in this mode, so you are not surprised:
 
@@ -51,6 +52,8 @@ be one.
 ## Running against the real services
 
 Needed for anything touching retrieval quality, ingestion, or the provider.
+[docs/install.md § Real services](docs/install.md#real-services) is the full
+procedure; this is the short checklist.
 
 1. `cp .env.example .env` and fill it in. The comments in that file say what
    each value is for. You need an OpenAI key, a MongoDB Atlas cluster with
@@ -62,10 +65,13 @@ Needed for anything touching retrieval quality, ingestion, or the provider.
    ```
    A bcrypt hash contains `$`. Paste it into `.env` with an editor, not `echo`.
    An optional second password goes in `APP_PASSWORD_HASH_2`, hashed the same
-   way; the README's Configure section, under the hash one-liner, says what that
-   implies before you hand one out.
-3. Load the corpus, then create the vector index in the Atlas UI (the README's
-   "Load the corpus" section has the exact JSON). The driver cannot create a
+   way; [install.md § More passwords](docs/install.md#more-passwords) says what
+   that implies before you hand one out. The HR Requests page opens only for the
+   password in `HR_PASSWORD_HASH`, and What People Ask for that one or the
+   manager password in `MANAGER_PASSWORD_HASH`, both hashed the same way.
+3. Load the corpus, then create the vector index in the Atlas UI
+   ([install.md § Load the corpus](docs/install.md#load-the-corpus) has the
+   exact JSON). The driver cannot create a
    search index; this step is manual and it is the one people forget.
    ```bash
    .venv/bin/python -m sourcebook.rag.seed_documents     # documents -> S3
@@ -94,7 +100,14 @@ make build    # production web build
 make check    # Python tests, web tests (test-web / npm test), lint, build; this is what the CI workflow runs
 make openapi  # rewrite docs/openapi.json from the live app; CI diffs this file
 make audit    # known vulnerabilities in both dependency trees (the Security workflow)
+make acceptance  # the real Caddy -> Nginx -> Uvicorn client-IP and rate-limit chain
 ```
+
+`make acceptance` needs Docker Compose 2.24 or later because
+`docker-compose.acceptance.yml` uses `!reset`. Older Compose fails to parse
+the override. The run intentionally leaves two image tags for build-cache
+reuse: `sourcebook-api:acceptance` and `sourcebook-web:acceptance`. CI's Docker
+job runs the same check.
 
 Python formatting is enforced. `make fmt` before you commit and CI will not
 complain. The rules are in `pyproject.toml`; the version of ruff is pinned in
@@ -102,7 +115,7 @@ complain. The rules are in `pyproject.toml`; the version of ruff is pinned in
 
 ### What CI runs
 
-Every PR and every push to `main` triggers three workflows. None needs a secret,
+Every PR and every push to `main` triggers four workflows. None needs a secret,
 so they run on fork PRs too.
 
 | Workflow | Job | What fails it |
@@ -128,7 +141,7 @@ counts as a failure here, so a wrong `if:` or `paths:` condition on a required
 job shows up as a red check rather than a silent pass. Requiring that one name
 means a job added or renamed in `ci.yml` cannot quietly stop being required.
 
-A fourth workflow, **Live evaluation**, runs the labeled question set against
+A fifth workflow, **Live evaluation**, runs the labeled question set against
 the real provider and index. It costs money, so it only runs when a maintainer
 starts it from the Actions tab, and it needs a repository environment named
 `evaluation` holding `OPENAI_API_KEY`, `MONGODB_URI`, `MONGODB_DB`, and an
@@ -156,7 +169,9 @@ Test the behaviour, not the implementation: assert on the HTTP response, the
 SSE events, or what ended up in the fake database. Look at
 `tests/test_escalations.py` for the shape of a route test and
 `tests/test_chat.py::TestDroppedStream` for driving the streaming generator by
-hand.
+hand. That class earned its place: while the suite was being written it caught
+a two-word fragment from an abandoned stream being cached as the answer for
+everyone who asked the same question next.
 
 The fake Mongo (`scripts/loadtest/fakemongo.py`) implements only the operations
 the app uses. If you use a new query operator or update form, add it there, and
@@ -170,13 +185,73 @@ keep it obviously partial rather than pretending to be complete.
 | the answer prompt | `sourcebook/rag/rag_chain.py` `ANSWER_SYSTEM_PROMPT`, then bump `PROMPT_VERSION` in `sourcebook/rag/config.py` or cached answers keep serving the old prompt |
 | the coverage-judge prompt or parser | `sourcebook/rag/rag_chain.py` `COVERAGE_SYSTEM_PROMPT` / `_parse_coverage_response`, then bump `COVERAGE_PROMPT_VERSION` in `sourcebook/rag/config.py` or cached answers and refusals keep serving the old judge |
 | retrieval or the grounding gate | `sourcebook/rag/rag_chain.py` |
+| the What People Ask pair check | `sourcebook/rag/question_judge.py`, then bump `QUESTION_JUDGE_PROMPT_VERSION` there and rerun `scripts/measure_question_groups.py --judge` ([evaluation.md](docs/evaluation.md#question-grouping-threshold)) |
 | which model or vendor is used | `sourcebook/rag/llm.py` only. Add a subclass, register it in `_PROVIDERS`, set `LLM_PROVIDER` |
 | how a source format is parsed | `sourcebook/rag/documents.py` |
 | an API endpoint | `sourcebook/api/routes/`; one file per area, mounted in `sourcebook/api/main.py` |
 | a MongoDB collection or index | `sourcebook/api/db.py` |
 | the chat UI | `web/src/components/Chat/`, state in `web/src/hooks/useChat.ts` |
-| the product name or the escalation contact | both `sourcebook/rag/config.py` and `web/src/config.ts`; they are mirrored, change both |
+| the product name or the escalation contact | both `sourcebook/rag/config.py` and `web/src/config.ts`, mirrored; the product name is also the `<title>` in `web/index.html`, so change all three |
 | the sample corpus | `data/sample-policies/`, then re-run ingestion |
+
+### Repository layout
+
+```text
+sourcebook/   the Python application, one package, absolute imports only
+  api/              FastAPI app
+    main.py           app factory and lifespan; mounts routes/
+    db.py             collection handles and index creation
+    limiter.py        the slowapi rate limiter; routes set the limits
+    tokens.py         JWT signing and verification, shared by auth, deps, and limiter
+    analytics.py      one query_logs record per request, plus its per-day rollup
+    logutil.py        sanitizes values before they reach a log line
+    notify.py         best-effort webhook delivery for escalations
+    routes/           one file per area
+      auth.py           login with the shared, second, HR, or manager password; 24-hour JWT; 10 attempts a minute
+      chat.py           streaming and non-streaming Q&A; enforces the grounding gate
+      conversations.py  saved conversations and their citations
+      projects.py       folders that group conversations
+      documents.py      browse and search the indexed corpus
+      escalations.py    hand a question to a person; open queue; resolve; retry delivery
+      reports.py        the What People Ask report and its background refresh
+      deps.py           the require_auth dependency every protected route uses
+  rag/              the pipeline, imported by api/ and run offline for ingestion
+    config.py         every tuning knob, env-overridable; defaults live here
+    llm.py            LLMProvider interface, the only vendor-aware module
+    rag_chain.py      retrieval, grounding gate, prompt, generation
+    cache.py          embedding and answer caches, keyed on corpus and prompt version
+    documents.py      source-format abstraction
+    mongo.py          client construction and the connection-pool arithmetic
+    evaluation.py     runs and scores smoke/full evaluation tiers
+    question_groups.py, question_judge.py   What People Ask's grouping by meaning
+    query_log_rollup.py, report_snapshots.py   per-day counts and the refreshed report windows
+    query_log_reports.py   the read-only terminal report over query_logs
+    seed_documents.py, embed_documents.py   offline ingestion
+web/                React 19, TypeScript, Tailwind 4, Vite; served by Nginx
+tests/              pytest suite; conftest.py stubs every external service
+scripts/            auto_deploy.sh and its systemd units, deploy.sh, audit.sh, the
+                    proxy-chain acceptance test, the live evaluation gate and its
+                    synthetic test, purge_ownerless_conversations.py,
+                    measure_question_groups.py, the Lighthouse runner in lighthouse/,
+                    and the load-test harness in loadtest/
+evaluation/         smoke (20) and full-corpus labeled questions plus scoring notes
+data/               42 fictional sample policies
+docs/               install, user-guide, architecture, api, design, evaluation, load-testing,
+                    load-testing-pilot, ci-cd, quality, and team pages,
+                    and one folder per release under releases/ with its handoff, notes,
+                    measurements, and evidence
+assets/brand/       the Sourcebook mark, source PNGs; web/public/ holds the served copies
+requirements/       *.in are pip-compile inputs (base is shared; api is the Docker image; ingest;
+                    lint; dev is everything); api, dev, and ingest compile to .txt locks
+pyproject.toml      ruff and pytest settings
+Makefile            setup, stub, web, test, lint, build, compose; `make` lists them
+Dockerfile          the API image; web/ has its own
+docker-compose.yml  caddy, web, api
+Caddyfile           TLS termination and reverse proxy in front of Nginx
+.env.example        every setting, with a comment on each
+.github/            CI, Security, PR checks, PR path labels, and Live evaluation workflows; templates; Dependabot; CODEOWNERS
+.agents/            a skill file describing this repo for coding agents
+```
 
 `sourcebook` is one package and every import is absolute
 (`from sourcebook.rag.config import ...`), so run things from the repo
@@ -202,7 +277,8 @@ root as modules: `python -m sourcebook.rag.embed_documents`,
    The template asks for what a reviewer needs. One approval and green CI to
    merge. Prefer squash only when the commits are noise; otherwise keep them.
 5. If the change alters setup, configuration, or behaviour someone would need
-   to know about, the README or this page changes in the same PR.
+   to know about, the README, this page, or the `docs/` page that owns it
+   changes in the same PR.
 
 Never commit `.env`, a key, a hash, or a real policy document. `.gitignore`
 covers `.env`; the rest is on you.
@@ -343,8 +419,9 @@ backup and investigate before retrying.
 - SSE by hand:
   `curl -N -X POST localhost:8000/api/chat/stream -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{"question":"How much PTO do I get?"}'`
 - Escalations queue: `GET /api/escalations?status=open`. Retry a failed webhook
-  with `POST /api/escalations/{id}/retry-delivery`. There is no UI for it
-  yet.
+  with `POST /api/escalations/{id}/retry-delivery`. Both need a token from the
+  HR password (`hr` under `make stub`). In the web app this is the HR Requests
+  page.
 - Query analytics are in the `query_logs` collection: refused questions grouped
   by `question_hash` are the content gaps, and `best_score` on answered versus
   refused rows is what the threshold should be tuned against. Run a read-only
@@ -367,8 +444,8 @@ backup and investigate before retrying.
   the services whose inputs changed. `scripts/deploy.sh` starts that service
   now, over SSH, and prints its log. Both touch real infrastructure, so read
   them before running them. The host setup (Elastic IP, DuckDNS record,
-  security group, `SITE_ADDRESS` in `.env`, the timer) is in the README's
-  Deployment section.
+  security group, `SITE_ADDRESS` in `.env`, the timer) is in
+  [docs/install.md § Deployment](docs/install.md#deployment).
 
 ## Adding a Python dependency
 

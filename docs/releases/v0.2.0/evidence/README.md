@@ -24,3 +24,17 @@ sessions, which the script creates without a title.
 | `12-hr-requests-open.png` | the new request at the top of the HR Requests open list, with its detail |
 | `13-hr-request-resolved.png` | the request in the Resolved list with its resolution note |
 | `14-hr-request-reopened.png` | the request back in the open list after Reopen request |
+
+## Refusal cards after #269
+
+`15` and `16` are not from the beta pass. They were taken on 2026-09-26 for
+the user guide ([#206](https://github.com/CMSC495-GROUP3/Sourcebook/issues/206))
+on a local copy running `make stub` and `make web`, with the web client and API
+from `5b35d3c` on `main`, in headless Chromium 153 at 1440x1000. Each started
+from a fresh in-memory stub database, so the only conversation in the sidebar
+is the one shown. The stub has no real model or policy documents.
+
+| File | What it shows |
+| --- | --- |
+| `15-refusal-escalation-form.png` | `make stub REFUSE=1`: a question refused at the similarity threshold, showing "No matching policy" with its match meter, and the Send to Human Resources box open with a note typed |
+| `16-not-answered-by-any-policy.png` | `make stub REFUSE=judge`: the coverage judge refusing "Does Meridian reimburse employee pet insurance?", showing "Not answered by any policy" with no match meter (#269) |

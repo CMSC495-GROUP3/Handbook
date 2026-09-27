@@ -31,10 +31,18 @@ os.environ["CACHE_ENABLED"] = "1"
 os.environ.pop("APP_ENV", None)  # FakeProvider refuses to run as production
 
 TEST_PASSWORD = "correct-horse-battery-staple"
+HR_TEST_PASSWORD = "human-resources-only"
+MANAGER_TEST_PASSWORD = "managers-and-supervisors"
 
 # Cost 4 is bcrypt's minimum and exists only to keep the suite fast. Never use
 # it for a real hash.
 os.environ["APP_PASSWORD_HASH"] = bcrypt.hashpw(TEST_PASSWORD.encode(), bcrypt.gensalt(4)).decode()
+os.environ["HR_PASSWORD_HASH"] = bcrypt.hashpw(
+    HR_TEST_PASSWORD.encode(), bcrypt.gensalt(4)
+).decode()
+os.environ["MANAGER_PASSWORD_HASH"] = bcrypt.hashpw(
+    MANAGER_TEST_PASSWORD.encode(), bcrypt.gensalt(4)
+).decode()
 
 from scripts.loadtest.fakemongo import FakeDB  # noqa: E402
 from sourcebook.rag import mongo  # noqa: E402
@@ -50,11 +58,15 @@ cache.get_collection = mongo.get_collection
 from sourcebook.api import main  # noqa: E402
 
 main.ensure_indexes = lambda: None
+# Tests drive the refresh directly (test_reports.py); no thread per TestClient.
+main.start_report_refresh = lambda: None
 
 from fastapi.testclient import TestClient  # noqa: E402
 
 from sourcebook.api.limiter import limiter  # noqa: E402
 from sourcebook.api.routes.auth import (  # noqa: E402
+    HR_PASSWORD_HASH_VAR,
+    MANAGER_PASSWORD_HASH_VAR,
     PRIMARY_PASSWORD_HASH_VAR,
     create_access_token,
     credential_fingerprint,
@@ -117,18 +129,47 @@ def client():
         yield test_client
 
 
-@pytest.fixture
-def auth() -> dict:
-    password_hash = os.environ["APP_PASSWORD_HASH"]
+# Owner ids, as a browser would send them at login. Each fixture below is one
+# browser; OTHER_OWNER is a second browser signed in with the same password.
+OWNER = "0" * 31 + "1"
+OTHER_OWNER = "0" * 31 + "2"
+
+
+def _bearer(cred: str, owner: str = OWNER) -> dict:
+    """Headers carrying a token minted as login would for the hash in ``cred``."""
     token = create_access_token(
         {
-            "sub": "user",
-            "cred": PRIMARY_PASSWORD_HASH_VAR,
-            "fingerprint": credential_fingerprint(password_hash),
+            "sub": owner,
+            "cred": cred,
+            "fingerprint": credential_fingerprint(os.environ[cred]),
         },
         timedelta(hours=1),
     )
     return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def auth() -> dict:
+    """An employee: signed in with the shared password."""
+    return _bearer(PRIMARY_PASSWORD_HASH_VAR)
+
+
+@pytest.fixture
+def hr_auth() -> dict:
+    """Human Resources: signed in with the HR password."""
+    return _bearer(HR_PASSWORD_HASH_VAR)
+
+
+@pytest.fixture
+def manager_auth() -> dict:
+    """A manager or supervisor: signed in with the manager password."""
+    return _bearer(MANAGER_PASSWORD_HASH_VAR)
+
+
+@pytest.fixture
+def other_auth() -> dict:
+    """Another employee's browser: the same shared password, a different owner."""
+    return _bearer(PRIMARY_PASSWORD_HASH_VAR, OTHER_OWNER)
 
 
 class Retrieval:

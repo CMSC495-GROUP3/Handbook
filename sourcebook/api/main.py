@@ -40,6 +40,8 @@ from sourcebook.api.routes.conversations import router as conversations_router  
 from sourcebook.api.routes.documents import router as documents_router  # noqa: E402
 from sourcebook.api.routes.escalations import router as escalations_router  # noqa: E402
 from sourcebook.api.routes.projects import router as projects_router  # noqa: E402
+from sourcebook.api.routes.reports import router as reports_router  # noqa: E402
+from sourcebook.api.routes.reports import start_refresh as start_report_refresh  # noqa: E402
 from sourcebook.rag.config import (  # noqa: E402
     APP_NAME,
     SIMILARITY_THRESHOLD,
@@ -47,13 +49,13 @@ from sourcebook.rag.config import (  # noqa: E402
 )
 
 # A malformed hash refuses to start rather than locking everyone out; see
-# validate_password_hashes for why. Both variables get the same treatment.
+# validate_password_hashes for why. Every hash variable gets the same treatment.
 try:
     validate_password_hashes()
 except PasswordHashError as exc:
     raise RuntimeError(
         f"{exc}. A hash must be the full 60-character $2b$ string with no "
-        "surrounding whitespace; see the README for how to generate one."
+        "surrounding whitespace; see docs/install.md, Configure, for how to generate one."
     ) from None
 
 
@@ -79,7 +81,12 @@ async def lifespan(_app: FastAPI):
     anyio.to_thread.current_default_thread_limiter().total_tokens = THREADPOOL_TOKENS
 
     ensure_indexes()
+    # Precomputes the What People Ask windows (#291). A daemon thread, so a
+    # refresh still running at shutdown does not hold the process open.
+    stop_report_refresh = start_report_refresh()
     yield
+    if stop_report_refresh is not None:
+        stop_report_refresh.set()
 
 
 app = FastAPI(
@@ -112,6 +119,7 @@ app.include_router(conversations_router, prefix="/api")
 app.include_router(documents_router, prefix="/api")
 app.include_router(escalations_router, prefix="/api")
 app.include_router(projects_router, prefix="/api")
+app.include_router(reports_router, prefix="/api")
 
 
 @app.get("/api/health")

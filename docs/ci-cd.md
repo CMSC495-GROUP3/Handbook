@@ -2,9 +2,10 @@
 
 Five GitHub Actions workflows plus a timer on the pilot host. CI success is
 not live evaluation. Live evaluation is not a quality verdict. A healthy
-deploy is not a tagged release. Final `v1.0.0` screenshots and a sanitized
-host journal stay pending until the tagged commit exists; placeholders live
-under `docs/releases/v1.0.0/evidence/`.
+deploy is not a tagged release. The `v1.0.0` screenshots and a sanitized
+host journal, taken on the release candidate `7d3c779`, are in
+`docs/releases/v1.0.0/evidence/`, and the release links are under
+[Tag and release path](#tag-and-release-path).
 
 ## Integration path at a glance
 
@@ -64,10 +65,11 @@ No project secrets, so fork pull requests run the same workflow. Locally,
 regenerate the same files CI diffs. Docker and the repo-check jobs exist
 only in CI.
 
-> **FINAL EVIDENCE PENDING — `v1.0.0`:** Add a screenshot of the green CI run
-> for the exact tagged commit as
-> `docs/releases/v1.0.0/evidence/ci-green.png`, then link the workflow run and
-> record its full SHA here.
+> **Evidence, `v1.0.0` candidate:** [CI run 36324854066](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36324854066),
+> push to `main` on `7d3c7795c197c5be56b15aebc650576760fd75d1`, success in 1m 12s with all 11 jobs green:
+> [`ci-green.png`](releases/v1.0.0/evidence/ci-green.png). The tag goes on the release pull
+> request's merge commit, which adds documentation only; the write-back pull
+> request links that commit's own CI run.
 
 ## Security
 
@@ -90,13 +92,15 @@ Security is a separate workflow so a Monday advisory can fail this path without
 turning an unrelated CI change into a false claim about its code. A finding
 still needs triage. Green CI does not override it.
 
-> **FINAL EVIDENCE PENDING — `v1.0.0`:** Add a screenshot of the green Security
-> run for the tagged commit as
-> `docs/releases/v1.0.0/evidence/security-green.png`, link the run, and record
-> any accepted advisory disposition rather than hiding it. Dependency review
-> runs only on pull requests, so also link its successful check from the final
-> release-candidate PR; the tagged commit's push run cannot reproduce that
-> PR-only gate.
+> **Evidence, `v1.0.0` candidate:** [Security run 36324854241](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36324854241),
+> push to `main` on `7d3c7795c197c5be56b15aebc650576760fd75d1`, success:
+> [`security-green.png`](releases/v1.0.0/evidence/security-green.png). No advisory is accepted:
+> `IGNORED_ADVISORIES` in `scripts/audit.sh` is empty, and the run's audit
+> step reported "No known vulnerabilities found" for Python and "found 0
+> vulnerabilities" for npm. Dependency review runs only on pull requests; it
+> passed on the release pull request
+> [#274](https://github.com/CMSC495-GROUP3/Sourcebook/pull/274) in
+> [Security run 36328626429](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36328626429).
 
 ## PR checks
 
@@ -112,9 +116,11 @@ lower-case subject. Except for Dependabot, the body must keep `## What and why`
 and contain real prose before `## How to check it`. Metadata only; this does
 not test the implementation.
 
-> **FINAL EVIDENCE PENDING — `v1.0.0`:** Capture the successful PR checks on
-> the final release PR as
-> `docs/releases/v1.0.0/evidence/pr-checks-green.png` and link that PR here.
+> **Evidence, `v1.0.0` release pull request:** [PR checks run
+> 36328626384](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36328626384) on
+> [#274](https://github.com/CMSC495-GROUP3/Sourcebook/pull/274) at `bc13639`,
+> success: [`pr-checks-green.png`](releases/v1.0.0/evidence/pr-checks-green.png). Later pushes to
+> #274 rerun it.
 
 ## PR path labels
 
@@ -129,9 +135,12 @@ PR metadata, so this workflow uses the base branch's configuration, does not
 check out the proposed branch, and never imports or executes PR content.
 Labels help route review. Not a code or merge gate.
 
-> **FINAL EVIDENCE PENDING — `v1.0.0`:** Capture the successful label workflow
-> and the resulting labels on the final release PR as
-> `docs/releases/v1.0.0/evidence/pr-path-labels-green.png`.
+> **Evidence, `v1.0.0` release pull request:** [PR path labels run
+> 36328625547](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36328625547) on
+> [#274](https://github.com/CMSC495-GROUP3/Sourcebook/pull/274) at `bc13639`,
+> success: [`pr-path-labels-green.png`](releases/v1.0.0/evidence/pr-path-labels-green.png). It
+> applied `documentation`, the only label #274 carries, since the pull request
+> changes only `docs/`.
 
 ## Live evaluation
 
@@ -167,11 +176,14 @@ passed validation. It is not the protected merge gate. It is not a claim that
 answers, refusals, or prompt-injection resistance are acceptable. Those still
 need human review of cited passages and the labeled cases.
 
-> **FINAL EVIDENCE PENDING — `v1.0.0`:** After the final full-tier run, add a
-> screenshot as `docs/releases/v1.0.0/evidence/live-evaluation-green.png`, link
-> the run and retained artifact, record the tagged SHA and dataset tier, and
-> link the human-reviewed metrics. Do not substitute a smoke run or a workflow
-> badge for that evidence.
+> **Evidence, `v1.0.0` candidate:** [Live evaluation run
+> 36325113964](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36325113964), full tier (59 cases), dispatched with
+> `commit_sha` `7d3c7795c197c5be56b15aebc650576760fd75d1`, success:
+> [`live-evaluation-green.png`](releases/v1.0.0/evidence/live-evaluation-green.png). The results
+> JSON is retained in the run's `evaluation-results` artifact and committed as
+> [`live-evaluation-results-full.json`](releases/v1.0.0/live-evaluation-results-full.json);
+> the scores and the six hand-reviewed dispositions are in
+> [`live-evaluation.md`](releases/v1.0.0/live-evaluation.md).
 
 ## From merge to the pilot containers
 
@@ -234,19 +246,17 @@ A successful probe means the selected services came up and `/api/health`
 answered. It does not re-run CI, does not score answers, and does not freeze
 the public site at a release tag.
 
-> **FINAL EVIDENCE PENDING — real `v1.0.0` deployment:** Store a sanitized
-> journal excerpt as `docs/releases/v1.0.0/evidence/auto-deploy-journal.txt`
-> and a screenshot as
-> `docs/releases/v1.0.0/evidence/auto-deploy-green.png`. The excerpt must show
-> the target SHA, selected services, healthy Compose state, and successful
-> completion. Remove host addresses, usernames, environment values, tokens,
-> and credentials. Only an authorized pilot-host operator can supply this
-> evidence.
+> **Evidence, `v1.0.0` candidate deployment:** the pilot's auto-deploy of
+> `95db28f -> 7d3c779` at 14:09:58 UTC on 2026-09-27 rebuilt and recreated
+> only `api`, then printed every container up:
+> [`auto-deploy-journal.txt`](releases/v1.0.0/evidence/auto-deploy-journal.txt), rendered as
+> [`auto-deploy-green.png`](releases/v1.0.0/evidence/auto-deploy-green.png). The host name is
+> replaced and BuildKit step lines are left out; no address, user name,
+> environment value, or credential appears.
 
 ## Checking a deployment
 
-Follow the README's [Checking a deploy](../README.md#checking-a-deploy)
-procedure. It verifies three boundaries:
+Follow [install.md § Checking a deploy](install.md#checking-a-deploy). It verifies three boundaries:
 
 1. the public site serves HTTPS and `/api/health` returns 200;
 2. the Compose networks fall within the proxy's trusted pools and the API has
@@ -260,8 +270,8 @@ past a release tag.
 
 ## Tag and release path
 
-The repository has an alpha release. The final `v1.0.0` tag does not exist
-because this page describes its procedure. The path is:
+`v1.0.0` was tagged on 2026-09-27 by this procedure, and a later release
+follows the same path:
 
 1. Prepare `docs/releases/v1.0.0/` with the handoff, release notes,
    measurements, and evidence index. Leave commit- and run-specific fields
@@ -285,7 +295,13 @@ someone reads the page) has to be the commit covered by every final claim. A
 later deployment can move past it. The tag remains the reproducible portfolio
 artifact.
 
-> **FINAL EVIDENCE PENDING — release:** Replace this note in the follow-up PR
-> with the annotated tag URL, GitHub release URL, full tagged SHA, final release
-> PR, and links to the exact CI, Security, Live evaluation, and deployment
-> evidence described above.
+> **Evidence, release:** annotated tag [`v1.0.0`](https://github.com/CMSC495-GROUP3/Sourcebook/tree/v1.0.0)
+> and the [GitHub release](https://github.com/CMSC495-GROUP3/Sourcebook/releases/tag/v1.0.0), a full release, on
+> `a0f7810c2d5705dcf0245f203e766db4f2e86a7b`, the merge of
+> [#305](https://github.com/CMSC495-GROUP3/Sourcebook/pull/305). The release
+> folder merged in [#274](https://github.com/CMSC495-GROUP3/Sourcebook/pull/274).
+> On the tagged commit: [CI 36331671207](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36331671207) and [Security 36331671210](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36331671210),
+> both green. The Live evaluation and deployment evidence above were taken on
+> the candidate `7d3c779`; every commit from it to the tag changed
+> documentation only, and the pilot deployed the tagged commit at 16:03 UTC
+> with nothing to rebuild.

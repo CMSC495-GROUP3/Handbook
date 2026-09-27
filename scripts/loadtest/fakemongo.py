@@ -14,6 +14,8 @@ import copy
 import itertools
 from typing import Any
 
+from pymongo.errors import DuplicateKeyError
+
 
 def _matches(doc: dict, query: dict) -> bool:
     """Support the handful of query forms used in this codebase."""
@@ -91,10 +93,119 @@ def _apply_update(doc: dict, update: dict, inserted: bool) -> None:
     for field, value in update.get("$inc", {}).items():
         doc[field] = doc.get(field, 0) + value
     for field, spec in update.get("$push", {}).items():
-        doc.setdefault(field, []).extend(spec.get("$each", [spec]))
+        values = spec["$each"] if isinstance(spec, dict) and "$each" in spec else [spec]
+        doc.setdefault(field, []).extend(values)
+        if isinstance(spec, dict) and "$slice" in spec:
+            # A positive $slice keeps the first n, the only form used here.
+            doc[field] = doc[field][: spec["$slice"]]
     if inserted:
         for field, value in update.get("$setOnInsert", {}).items():
             doc.setdefault(field, value)
+
+
+_MISSING = object()
+
+
+def _field(doc: dict, path: str) -> Any:
+    """Follow a dotted path ("_id.hash"); _MISSING if any step is absent."""
+    value: Any = doc
+    for part in path.split("."):
+        if not isinstance(value, dict) or part not in value:
+            return _MISSING
+        value = value[part]
+    return value
+
+
+def _is_missing(doc: dict, expr: Any) -> bool:
+    """True when expr is a field path the document does not have."""
+    return isinstance(expr, str) and expr.startswith("$") and _field(doc, expr[1:]) is _MISSING
+
+
+def _resolve(doc: dict, expr: Any) -> Any:
+    """A field path ("$refused", "$_id.hash"), {"$eq": [a, b]},
+    {"$cond": [if, then, else]}, {"$size": array}, {"$slice": [array, n]} with
+    n >= 0, an object of expressions
+    ({"hash": "$question_hash"}), or a literal."""
+    if isinstance(expr, str) and expr.startswith("$"):
+        value = _field(doc, expr[1:])
+        return None if value is _MISSING else value
+    if isinstance(expr, dict) and "$size" in expr:
+        return len(_resolve(doc, expr["$size"]))
+    if isinstance(expr, dict) and "$slice" in expr:
+        array, n = expr["$slice"]
+        return _resolve(doc, array)[:n]
+    if isinstance(expr, dict) and "$eq" in expr:
+        left, right = expr["$eq"]
+        return _resolve(doc, left) == _resolve(doc, right)
+    if isinstance(expr, dict) and "$cond" in expr:
+        condition, then, otherwise = expr["$cond"]
+        return _resolve(doc, then if _resolve(doc, condition) else otherwise)
+    if isinstance(expr, dict) and not any(key.startswith("$") for key in expr):
+        # Mongo leaves a field out of the object when its path is missing,
+        # so {"s": "$absent"} is {} but {"s": "$stored_null"} is {"s": None}.
+        return {key: _resolve(doc, sub) for key, sub in expr.items() if not _is_missing(doc, sub)}
+    return expr
+
+
+def _hashable(value: Any) -> Any:
+    """A dict key for a group _id. Field order counts, as it does in Mongo."""
+    if isinstance(value, dict):
+        return tuple((key, _hashable(sub)) for key, sub in value.items())
+    if isinstance(value, list):
+        return tuple(_hashable(item) for item in value)
+    return value
+
+
+def _group(rows: list[dict], spec: dict) -> list[dict]:
+    """$group with $sum, $first and $addToSet, the accumulators the coverage report uses.
+
+    _id may be a field path or an object of them, and groups come out in the
+    order their first row went in.
+    """
+    groups: dict[Any, dict] = {}
+    for row in rows:
+        key = _resolve(row, spec["_id"])
+        slot = _hashable(key)
+        is_new = slot not in groups
+        group = groups.setdefault(slot, {"_id": key})
+        for field, accumulator in spec.items():
+            if field == "_id":
+                continue
+            (op, expr), *_ = accumulator.items()
+            if op == "$sum":
+                value = _resolve(row, expr)
+                # Mongo's $sum skips non-numbers, booleans included.
+                numeric = isinstance(value, int | float) and not isinstance(value, bool)
+                group[field] = group.get(field, 0) + (value if numeric else 0)
+            elif op == "$first":
+                if is_new:
+                    group[field] = _resolve(row, expr)
+            elif op == "$addToSet":
+                members = group.setdefault(field, [])
+                # A missing field adds nothing; a stored null is a member, as in Mongo.
+                value = _resolve(row, expr)
+                if not _is_missing(row, expr) and value not in members:
+                    members.append(value)
+            else:
+                raise NotImplementedError(f"FakeCollection $group does not implement {op}.")
+    return list(groups.values())
+
+
+def _project_stage(row: dict, spec: dict) -> dict:
+    """$project as an exclusion (every value 0) or an inclusion (1 or an
+    expression). An inclusion keeps _id unless it says _id: 0."""
+    if all(value == 0 for value in spec.values()):
+        return {k: v for k, v in row.items() if k not in spec}
+    out = {} if spec.get("_id", 1) == 0 or "_id" not in row else {"_id": row["_id"]}
+    for field, expr in spec.items():
+        if field == "_id" and expr in (0, 1):
+            continue
+        if expr == 1:
+            if field in row:
+                out[field] = row[field]
+        elif not _is_missing(row, expr):
+            out[field] = _resolve(row, expr)
+    return out
 
 
 class _Cursor:
@@ -136,10 +247,10 @@ class FakeCollection:
                 return _project(doc, projection)
         return None
 
-    def find(self, query: dict | None = None, projection: dict | None = None):
+    def find(self, query: dict | None = None, projection: dict | None = None, **kwargs):
         return _Cursor([_project(d, projection) for d in self._docs if _matches(d, query or {})])
 
-    def count_documents(self, query: dict) -> int:
+    def count_documents(self, query: dict, **kwargs) -> int:
         return sum(1 for d in self._docs if _matches(d, query))
 
     def distinct(self, field: str):
@@ -149,6 +260,10 @@ class FakeCollection:
     def insert_one(self, doc: dict):
         doc = copy.deepcopy(doc)
         doc.setdefault("_id", next(self._ids))
+        # _id is unique in every Mongo collection. The report's rollup relies
+        # on this to count a conversation once (#291).
+        if any(existing["_id"] == doc["_id"] for existing in self._docs):
+            raise DuplicateKeyError(f"E11000 duplicate key error _id: {doc['_id']!r}")
         self._docs.append(doc)
         return type("R", (), {"inserted_id": doc["_id"]})()
 
@@ -164,6 +279,11 @@ class FakeCollection:
         if upsert:
             doc = {k: v for k, v in query.items() if not isinstance(v, dict)}
             doc.setdefault("_id", next(self._ids))
+            # As in Mongo: an upsert whose filter missed an existing _id
+            # inserts a duplicate, which fails. The report's refresh lease
+            # relies on this.
+            if any(existing["_id"] == doc["_id"] for existing in self._docs):
+                raise DuplicateKeyError(f"E11000 duplicate key error _id: {doc['_id']!r}")
             _apply_update(doc, update, inserted=True)
             self._docs.append(doc)
             return type("R", (), {"matched_count": 0, "modified_count": 0})()
@@ -208,11 +328,45 @@ class FakeCollection:
     def create_index(self, *args, **kwargs):
         return "index"
 
-    def aggregate(self, pipeline):
-        raise NotImplementedError(
-            "FakeCollection does not implement aggregate. $vectorSearch is "
-            "Atlas-only and cannot be emulated meaningfully."
-        )
+    def drop_index(self, name):
+        return None
+
+    def aggregate(self, pipeline, **kwargs):
+        """The $match / $group / $addFields / $project / $sort / $limit /
+        $facet subset the coverage report runs. Options such as hint and
+        maxTimeMS are accepted and ignored.
+
+        Any other stage raises. $vectorSearch in particular is Atlas-only and
+        cannot be emulated meaningfully.
+        """
+        return self._run([copy.deepcopy(d) for d in self._docs], pipeline)
+
+    def _run(self, rows: list[dict], pipeline) -> Any:
+        rows = copy.deepcopy(rows)
+        for stage in pipeline:
+            (op, spec), *_ = stage.items()
+            if op == "$match":
+                rows = [r for r in rows if _matches(r, spec)]
+            elif op == "$group":
+                rows = _group(rows, spec)
+            elif op == "$sort":
+                # Null sorts first ascending and last descending, as in Mongo.
+                for field, direction in reversed(spec.items()):
+                    rows.sort(
+                        key=lambda r: (r.get(field) is not None, r.get(field)),
+                        reverse=direction < 0,
+                    )
+            elif op == "$addFields":
+                rows = [{**r, **{f: _resolve(r, e) for f, e in spec.items()}} for r in rows]
+            elif op == "$project":
+                rows = [_project_stage(r, spec) for r in rows]
+            elif op == "$facet":
+                rows = [{name: list(self._run(rows, branch)) for name, branch in spec.items()}]
+            elif op == "$limit":
+                rows = rows[:spec]
+            else:
+                raise NotImplementedError(f"FakeCollection.aggregate does not implement {op}.")
+        return iter(rows)
 
 
 class FakeDB:

@@ -26,15 +26,16 @@ import uuid
 from datetime import UTC, datetime
 from typing import Literal
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
+from pymongo.errors import DuplicateKeyError
 
 from sourcebook.api.analytics import log_query
 from sourcebook.api.db import conversations_col
 from sourcebook.api.limiter import limiter
 from sourcebook.api.logutil import normalize_log_token
-from sourcebook.api.routes.deps import require_auth
+from sourcebook.api.routes.deps import Principal, require_auth
 from sourcebook.rag.cache import (
     get_cached_answer,
     get_corpus_version,
@@ -113,7 +114,21 @@ class ChatResponse(BaseModel):
     message_id: str | None = None
 
 
-def load_history(session_id: str | None) -> list[dict]:
+def require_own_session(session_id: str | None, owner: str) -> None:
+    """404 when ``session_id`` names a conversation filed under another owner.
+
+    An id nobody has used yet is fine: the first exchange creates the record
+    under this owner. Someone else's answers 404 like a missing one, so the
+    chat routes cannot read another browser's history or append to it.
+    """
+    if not session_id:
+        return
+    doc = conversations_col.find_one({"session_id": session_id}, {"_id": 0, "owner": 1})
+    if doc is not None and doc.get("owner") != owner:
+        raise HTTPException(status_code=404, detail="Conversation not found.")
+
+
+def load_history(session_id: str | None, owner: str) -> list[dict]:
     """Return prior turns of a conversation, newest last.
 
     Only `user` and `assistant` turns are replayed, and only the fields the
@@ -127,7 +142,7 @@ def load_history(session_id: str | None) -> list[dict]:
         return []
 
     doc = conversations_col.find_one(
-        {"session_id": session_id},
+        {"session_id": session_id, "owner": owner},
         {"_id": 0, "messages": 1},
     )
     if not doc:
@@ -150,6 +165,7 @@ def load_history(session_id: str | None) -> list[dict]:
 
 def _persist(
     session_id: str | None,
+    owner: str,
     question: str,
     answer: str,
     sources: list[str],
@@ -174,30 +190,35 @@ def _persist(
     if not session_id:
         return
 
-    conversations_col.update_one(
-        {"session_id": session_id},
-        {
-            "$push": {
-                "messages": {
-                    "$each": [
-                        {"role": "user", "content": question},
-                        {
-                            "role": "assistant",
-                            "message_id": message_id or uuid.uuid4().hex,
-                            "content": answer,
-                            "sources": sources,
-                            "confidence": confidence,
-                            "refused": refused,
-                            "refusal_reason": refusal_reason,
-                            "follow_ups": list(follow_ups or []),
-                        },
-                    ]
-                }
+    try:
+        conversations_col.update_one(
+            {"session_id": session_id, "owner": owner},
+            {
+                "$push": {
+                    "messages": {
+                        "$each": [
+                            {"role": "user", "content": question},
+                            {
+                                "role": "assistant",
+                                "message_id": message_id or uuid.uuid4().hex,
+                                "content": answer,
+                                "sources": sources,
+                                "confidence": confidence,
+                                "refused": refused,
+                                "refusal_reason": refusal_reason,
+                                "follow_ups": list(follow_ups or []),
+                            },
+                        ]
+                    }
+                },
+                "$set": {"updated_at": datetime.now(UTC)},
             },
-            "$set": {"updated_at": datetime.now(UTC)},
-        },
-        upsert=True,
-    )
+            upsert=True,
+        )
+    except DuplicateKeyError:
+        # Another owner created this session id after require_own_session
+        # looked. The upsert could not claim it, so nothing is appended.
+        logger.warning("Session %s belongs to another owner", normalize_log_token(session_id))
 
 
 def _answer(question: str, history: list[dict]) -> dict:
@@ -269,13 +290,13 @@ def _answer(question: str, history: list[dict]) -> dict:
     "/chat",
     response_model=ChatResponse,
     responses=PROVIDER_BUSY_RESPONSES,
-    dependencies=[Depends(require_auth)],
 )
 @limiter.limit(CHAT_RATE_LIMIT)
-def chat(request: Request, body: ChatRequest):
+def chat(request: Request, body: ChatRequest, principal: Principal = Depends(require_auth)):
     """Non-streaming variant. Kept for testing and as a fallback; the UI uses
     the streaming route."""
-    history = load_history(body.session_id)
+    require_own_session(body.session_id, principal.owner)
+    history = load_history(body.session_id, principal.owner)
     started = time.perf_counter()
     try:
         result = _answer(body.question, history)
@@ -298,6 +319,7 @@ def chat(request: Request, body: ChatRequest):
     message_id = uuid.uuid4().hex
     _persist(
         body.session_id,
+        principal.owner,
         body.question,
         result["answer"],
         result["sources"],
@@ -346,7 +368,12 @@ CACHED_REPLAY_CHUNKS = 8
 
 
 def _finalize(
-    body: ChatRequest, state: dict, corpus_version: str, history: list[dict], started: float
+    body: ChatRequest,
+    owner: str,
+    state: dict,
+    corpus_version: str,
+    history: list[dict],
+    started: float,
 ) -> None:
     """Persist, cache, and log one exchange. Runs exactly once.
 
@@ -393,6 +420,7 @@ def _finalize(
 
     _persist(
         body.session_id,
+        owner,
         body.question,
         state["answer"],
         state["sources"],
@@ -430,7 +458,7 @@ def _finalize(
     )
 
 
-def _stream(body: ChatRequest):
+def _stream(body: ChatRequest, owner: str):
     """Sync SSE generator.
 
     Starlette iterates this through the thread pool, acquiring a thread per
@@ -442,7 +470,7 @@ def _stream(body: ChatRequest):
     why it cannot live after the last yield.
     """
     started = time.perf_counter()
-    history = load_history(body.session_id)
+    history = load_history(body.session_id, owner)
     corpus_version = get_corpus_version()
 
     state = {
@@ -594,14 +622,12 @@ def _stream(body: ChatRequest):
         state["follow_ups"] = generate_follow_ups(body.question, state["answer"])
         yield _sse({"follow_ups": state["follow_ups"]})
     finally:
-        _finalize(body, state, corpus_version, history, started)
+        _finalize(body, owner, state, corpus_version, history, started)
 
 
-@router.post(
-    "/chat/stream", responses=PROVIDER_BUSY_RESPONSES, dependencies=[Depends(require_auth)]
-)
+@router.post("/chat/stream", responses=PROVIDER_BUSY_RESPONSES)
 @limiter.limit(CHAT_RATE_LIMIT)
-def chat_stream(request: Request, body: ChatRequest):
+def chat_stream(request: Request, body: ChatRequest, principal: Principal = Depends(require_auth)):
     """SSE variant, the one the UI uses.
 
     The generator's first event is produced here, before the response exists.
@@ -611,7 +637,8 @@ def chat_stream(request: Request, body: ChatRequest):
     contract as /chat, instead of a 200 whose stream opens and immediately
     ends. The generator's finally still runs and stores nothing.
     """
-    events = _stream(body)
+    require_own_session(body.session_id, principal.owner)
+    events = _stream(body, principal.owner)
     try:
         first = next(events)
     except StopIteration:

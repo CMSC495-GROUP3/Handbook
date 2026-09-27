@@ -17,10 +17,16 @@ window that ends earlier than that prints an empty report, not an error.
 Reports:
 
 1. Top refused ``question_hash`` groups (content-gap ranking)
-2. Top repeated ``question_hash`` groups overall (FAQ candidates)
+2. ``question_hash`` groups asked in at least ``--min-repeat`` conversations
+   (FAQ candidates)
 3. Answered vs refused ``best_score`` counts and fixed histogram bins
 
-``question_hash`` is the grouping key. Sample text is taken from already-logged
+``question_hash`` is the grouping key, so rows group by exact wording after
+normalization: a rephrased question is its own row. Each group also counts the
+distinct ``session_id`` values it was asked in. One employee asking the same
+thing five times is five asks but one conversation, and only the second says
+how many people share the question. A conversation is not a person, but it is
+the closest the log gets. Rows logged without a session count as one. Sample text is taken from already-logged
 truncated ``question_raw`` / ``question_condensed`` fields when present; nothing
 new is retained or fabricated.
 """
@@ -96,7 +102,7 @@ def validate_top(top: int) -> None:
 
 
 def validate_min_repeat(min_repeat: int) -> None:
-    """FAQ ranking only includes hashes seen at least this many times."""
+    """FAQ ranking only includes hashes asked in at least this many conversations."""
     if min_repeat < 2:
         raise ReportInputError("--min-repeat must be at least 2")
 
@@ -112,6 +118,23 @@ def _time_match(since: datetime, until: datetime) -> dict[str, Any]:
     return {"created_at": {"$gte": since, "$lt": until}}
 
 
+def _group_fields() -> dict[str, Any]:
+    """Accumulators both rankings share: asks, conversations, sample text."""
+    return {
+        "count": {"$sum": 1},
+        "sessions": {"$addToSet": "$session_id"},
+        **_sample_fields(),
+    }
+
+
+# Replace the session list with its size; the ids themselves never leave the
+# pipeline.
+_SESSION_COUNT_STAGES: list[dict[str, Any]] = [
+    {"$addFields": {"session_count": {"$size": "$sessions"}}},
+    {"$project": {"sessions": 0}},
+]
+
+
 def _sample_fields() -> dict[str, Any]:
     """Project already-truncated sample text fields into group accumulators."""
     return {
@@ -124,13 +147,10 @@ def content_gap_pipeline(since: datetime, until: datetime, top: int) -> list[dic
     """Aggregation: refused hashes ranked by count within the time window."""
     return [
         {"$match": {**_time_match(since, until), "refused": True}},
-        {
-            "$group": {
-                "_id": "$question_hash",
-                "count": {"$sum": 1},
-                **_sample_fields(),
-            }
-        },
+        {"$group": {"_id": "$question_hash", **_group_fields()}},
+        *_SESSION_COUNT_STAGES,
+        # Sorted on asks, not conversations: every refusal is a gap, even
+        # when one person hit it repeatedly.
         {"$sort": {"count": -1, "_id": 1}},
         {"$limit": top},
     ]
@@ -142,21 +162,21 @@ def faq_pipeline(
     top: int,
     min_repeat: int,
 ) -> list[dict[str, Any]]:
-    """Aggregation: repeated hashes ranked by count (FAQ candidates)."""
+    """Aggregation: hashes asked in at least ``min_repeat`` conversations (FAQ candidates)."""
     return [
         {"$match": _time_match(since, until)},
         {
             "$group": {
                 "_id": "$question_hash",
-                "count": {"$sum": 1},
+                **_group_fields(),
                 "refused_count": {
                     "$sum": {"$cond": [{"$eq": ["$refused", True]}, 1, 0]},
                 },
-                **_sample_fields(),
             }
         },
-        {"$match": {"count": {"$gte": min_repeat}}},
-        {"$sort": {"count": -1, "_id": 1}},
+        *_SESSION_COUNT_STAGES,
+        {"$match": {"session_count": {"$gte": min_repeat}}},
+        {"$sort": {"session_count": -1, "count": -1, "_id": 1}},
         {"$limit": top},
     ]
 
@@ -243,8 +263,10 @@ def _format_hash_rows(rows: Sequence[Mapping[str, Any]], *, include_refused: boo
         count = int(row.get("count") or 0)
         sample = _sample_text(row)
         suffix = ""
+        if "session_count" in row:
+            suffix += f"  conversations={int(row['session_count'])}"
         if include_refused and "refused_count" in row:
-            suffix = f"  refused={int(row['refused_count'])}"
+            suffix += f"  refused={int(row['refused_count'])}"
         lines.append(f"  {index:>3}. count={count:<6}{suffix}  hash={question_hash}")
         lines.append(f"       sample: {sample}")
     return lines
@@ -324,7 +346,7 @@ def format_report(
         "1. Content gaps (refused question_hash groups)",
         *_format_hash_rows(content_gaps, include_refused=False),
         "",
-        "2. FAQ candidates (repeated question_hash groups)",
+        "2. FAQ candidates (question_hash groups asked in at least min_repeat conversations)",
         *_format_hash_rows(faq, include_refused=True),
         "",
         "3. Answered vs refused best_score",
@@ -347,7 +369,8 @@ def format_report(
         *_format_bins(score_facet.get("refused_bins") or []),
         "",
         "Notes:",
-        "  - Grouping key is question_hash.",
+        "  - Grouping key is question_hash: exact wording after normalization.",
+        "  - conversations counts distinct session_id values; count counts asks.",
         "  - Sample text is from already-logged truncated question_raw /",
         "    question_condensed when present; hashes alone if samples are absent.",
         "  - Aggregations $match the window first, then $group/$sort/$limit;",
@@ -415,7 +438,7 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=DEFAULT_MIN_REPEAT,
         dest="min_repeat",
-        help=f"Minimum count for FAQ candidates (default {DEFAULT_MIN_REPEAT}).",
+        help=(f"Minimum distinct conversations for FAQ candidates (default {DEFAULT_MIN_REPEAT})."),
     )
     parser.add_argument(
         "--timeout",

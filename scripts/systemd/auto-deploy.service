@@ -13,7 +13,7 @@ Requires=docker.service
 Type=oneshot
 User=ubuntu
 # Both paths must match where the repository is cloned on the instance
-# (README, Deployment step 6). Edit them here if the checkout moves.
+# (docs/install.md, Deployment step 6). Edit them here if the checkout moves.
 WorkingDirectory=/home/ubuntu/CMSC495-CAP
 ExecStart=/home/ubuntu/CMSC495-CAP/scripts/auto_deploy.sh
 # A oneshot has no start timeout by default, so a hung image pull would hold

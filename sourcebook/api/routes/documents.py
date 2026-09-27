@@ -17,7 +17,7 @@ from pymongo import ASCENDING, UpdateOne
 
 from sourcebook.api.db import document_bodies_col, documents_col, meta_col, passages_col
 from sourcebook.api.limiter import limiter
-from sourcebook.api.routes.deps import require_auth
+from sourcebook.api.routes.deps import HR_ONLY_RESPONSES, require_auth, require_hr
 from sourcebook.rag.cache import bump_corpus_version, get_corpus_version
 from sourcebook.rag.config import REINDEX_RATE_LIMIT
 
@@ -190,13 +190,14 @@ def get_document_passages(source: str):
     return [p["text"] for p in passages]
 
 
-@router.post("/documents/reindex", dependencies=[Depends(require_auth)])
+@router.post("/documents/reindex", responses=HR_ONLY_RESPONSES, dependencies=[Depends(require_hr)])
 @limiter.limit(REINDEX_RATE_LIMIT)
 def reindex_documents(request: Request):
     """Force a rebuild of the document library and invalidate cached answers.
 
     Bumping the corpus version is what clears the answer cache — entries are
-    keyed by it, so old ones simply stop matching.
+    keyed by it, so old ones simply stop matching. Because every cached answer
+    goes with it, only a session opened with the HR password may call this.
     """
     count = rebuild_document_index()
     version = bump_corpus_version()
