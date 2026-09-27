@@ -11,7 +11,7 @@
  * must show "Incorrect password." instead of being navigated away.
  */
 import axios from 'axios'
-import { TOKEN_KEY } from '../config'
+import { CLIENT_ID_KEY, HR_CRED, MANAGER_CRED, TOKEN_KEY } from '../config'
 
 export { TOKEN_KEY }
 
@@ -23,28 +23,75 @@ const client = axios.create({
   baseURL: '/',
 })
 
-/** Clear the stored JWT and return to the sign-in page. */
+/** Clear the stored JWT and return to the sign-in page. The browser id stays. */
 export function signOut(): void {
   localStorage.removeItem(TOKEN_KEY)
   window.location.href = '/'
+}
+
+const CLIENT_ID_SHAPE = /^[0-9a-f]{32}$/
+
+/**
+ * This browser's owner id: 32 random hex digits, made on first use and kept in
+ * localStorage. Login sends it, and the server shows a session only the
+ * conversations and projects filed under it. Clearing site data starts over
+ * with an empty history. It is as private as the token next to it.
+ */
+export function browserId(): string {
+  const stored = localStorage.getItem(CLIENT_ID_KEY)
+  if (stored !== null && CLIENT_ID_SHAPE.test(stored)) return stored
+  const bytes = crypto.getRandomValues(new Uint8Array(16))
+  const id = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
+  localStorage.setItem(CLIENT_ID_KEY, id)
+  return id
+}
+
+/**
+ * The payload of a JWT, decoded but not verified, or null if it will not parse.
+ * The browser has no signing key; the server checks every token it is sent.
+ */
+function readClaims(token: string): Record<string, unknown> | null {
+  try {
+    const parts = token.split('.')
+    if (parts.length < 2) return null
+    const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const pad = (4 - (b64.length % 4)) % 4
+    const claims: unknown = JSON.parse(atob(b64 + '='.repeat(pad)))
+    return claims && typeof claims === 'object' ? (claims as Record<string, unknown>) : null
+  } catch {
+    return null
+  }
 }
 
 /**
  * True when `token` is expired, malformed, or missing an `exp` claim.
  */
 export function isTokenExpired(token: string): boolean {
-  try {
-    const parts = token.split('.')
-    if (parts.length < 2) return true
-    const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
-    const pad = (4 - (b64.length % 4)) % 4
-    const json = atob(b64 + '='.repeat(pad))
-    const claims = JSON.parse(json) as { exp?: unknown }
-    if (typeof claims.exp !== 'number') return true
-    return claims.exp * 1000 <= Date.now()
-  } catch {
-    return true
-  }
+  const exp = readClaims(token)?.exp
+  if (typeof exp !== 'number') return true
+  return exp * 1000 <= Date.now()
+}
+
+/**
+ * True when the stored token was issued for the HR password. This only decides
+ * which links to show: the server answers 403 to any other token on the HR
+ * routes, whatever the client shows.
+ */
+export function isHrSession(): boolean {
+  return storedCred() === HR_CRED
+}
+
+/**
+ * True when the stored token was issued for the manager password. Like
+ * isHrSession, this only decides which links to show.
+ */
+export function isManagerSession(): boolean {
+  return storedCred() === MANAGER_CRED
+}
+
+function storedCred(): unknown {
+  const token = localStorage.getItem(TOKEN_KEY)
+  return token === null ? undefined : readClaims(token)?.cred
 }
 
 function isLoginRequest(url: string | undefined): boolean {

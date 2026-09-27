@@ -74,6 +74,9 @@ export default function EscalationsPage() {
   const navigate = useNavigate()
 
   const [list, setList] = useState<ListState | null>(null)
+  // A 403 means the session was not opened with the HR password. Retrying
+  // cannot help, so the page says who it is for instead.
+  const [forbidden, setForbidden] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
   const [linked, setLinked] = useState<Linked | null>(null)
   // Both tied to the request they came from, so opening another one hides them.
@@ -117,8 +120,10 @@ export default function EscalationsPage() {
       .then((data) => {
         if (!cancelled) setList({ status, items: data.items, total: data.total, error: false })
       })
-      .catch(() => {
-        if (!cancelled) setList({ status, items: [], total: 0, error: true })
+      .catch((error: unknown) => {
+        if (cancelled) return
+        if (isAxiosError(error) && error.response?.status === 403) setForbidden(true)
+        else setList({ status, items: [], total: 0, error: true })
       })
     return () => {
       cancelled = true
@@ -137,6 +142,10 @@ export default function EscalationsPage() {
       })
       .catch((error: unknown) => {
         if (cancelled) return
+        if (isAxiosError(error) && error.response?.status === 403) {
+          setForbidden(true)
+          return
+        }
         const failure = isAxiosError(error) && error.response?.status === 404 ? 'not_found' : 'error'
         setLinked({ id: selectedId, escalation: null, failure })
       })
@@ -404,6 +413,21 @@ export default function EscalationsPage() {
       {announcement}
     </p>
   )
+
+  if (forbidden) {
+    return (
+      <div className="min-h-0 flex-1">
+        <header className="flex h-15 shrink-0 items-baseline border-b border-rule px-5 pt-[19px]">
+          <h1 className="font-display text-[22px] leading-none font-medium tracking-tight text-ink">
+            HR Requests
+          </h1>
+        </header>
+        <p role="alert" className="px-5 pt-4 text-[14px] text-ink-2">
+          This page is for Human Resources. Sign out and sign in with the HR password to see it.
+        </p>
+      </div>
+    )
+  }
 
   if (!twoPane) {
     return (

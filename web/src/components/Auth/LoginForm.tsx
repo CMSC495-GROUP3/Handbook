@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { useState } from 'react'
 import { AlertCircle, BookOpen, LifeBuoy, Quote } from 'lucide-react'
-import client, { TOKEN_KEY } from '../../api/client'
+import client, { browserId, TOKEN_KEY } from '../../api/client'
 import { ESCALATION_CONTACT } from '../../config'
 import { BrandMark, Wordmark } from '../Layout/Brand'
 import ThemeToggle from '../Layout/ThemeToggle'
@@ -36,7 +36,7 @@ export default function LoginForm({ onSuccess }: Props) {
     setError('')
     setLoading(true)
     try {
-      const res = await client.post('/api/auth/login', { password })
+      const res = await client.post('/api/auth/login', { password, client_id: browserId() })
       localStorage.setItem(TOKEN_KEY, res.data.access_token)
       onSuccess()
     } catch (err) {
@@ -47,7 +47,7 @@ export default function LoginForm({ onSuccess }: Props) {
   }
 
   return (
-    <div className="relative grid min-h-svh w-full grid-cols-1 bg-paper md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+    <main className="relative grid min-h-svh w-full grid-cols-1 bg-paper md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
       <ThemeToggle className="absolute top-3 right-3" />
       {/* The left page: what this is. It is set on the 24px grid of the ruled
           background: every line-height, gap, and top padding is a multiple of
@@ -124,6 +124,6 @@ export default function LoginForm({ onSuccess }: Props) {
           <p className="text-[12.5px] text-ink-3 md:hidden">Internal tool. Ask {ESCALATION_CONTACT} for the password.</p>
         </form>
       </section>
-    </div>
+    </main>
   )
 }

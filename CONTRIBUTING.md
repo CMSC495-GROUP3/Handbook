@@ -29,7 +29,8 @@ make stub           # terminal 1: API on :8000, fake model, in-memory Mongo
 make web            # terminal 2: React on :5173 with hot reload
 ```
 
-Open http://localhost:5173 and log in with the password `dev`.
+Open http://localhost:5173 and log in with the password `dev`, or `hr` to also
+see the HR Requests and What People Ask pages.
 
 What is fake in this mode, so you are not surprised:
 
@@ -63,7 +64,9 @@ Needed for anything touching retrieval quality, ingestion, or the provider.
    A bcrypt hash contains `$`. Paste it into `.env` with an editor, not `echo`.
    An optional second password goes in `APP_PASSWORD_HASH_2`, hashed the same
    way; the README's Configure section, under the hash one-liner, says what that
-   implies before you hand one out.
+   implies before you hand one out. The HR Requests page opens only for the
+   password in `HR_PASSWORD_HASH`, and What People Ask for that one or the
+   manager password in `MANAGER_PASSWORD_HASH`, both hashed the same way.
 3. Load the corpus, then create the vector index in the Atlas UI (the README's
    "Load the corpus" section has the exact JSON). The driver cannot create a
    search index; this step is manual and it is the one people forget.
@@ -170,6 +173,7 @@ keep it obviously partial rather than pretending to be complete.
 | the answer prompt | `sourcebook/rag/rag_chain.py` `ANSWER_SYSTEM_PROMPT`, then bump `PROMPT_VERSION` in `sourcebook/rag/config.py` or cached answers keep serving the old prompt |
 | the coverage-judge prompt or parser | `sourcebook/rag/rag_chain.py` `COVERAGE_SYSTEM_PROMPT` / `_parse_coverage_response`, then bump `COVERAGE_PROMPT_VERSION` in `sourcebook/rag/config.py` or cached answers and refusals keep serving the old judge |
 | retrieval or the grounding gate | `sourcebook/rag/rag_chain.py` |
+| the What People Ask pair check | `sourcebook/rag/question_judge.py`, then bump `QUESTION_JUDGE_PROMPT_VERSION` there and rerun `scripts/measure_question_groups.py --judge` ([evaluation.md](docs/evaluation.md#question-grouping-threshold)) |
 | which model or vendor is used | `sourcebook/rag/llm.py` only. Add a subclass, register it in `_PROVIDERS`, set `LLM_PROVIDER` |
 | how a source format is parsed | `sourcebook/rag/documents.py` |
 | an API endpoint | `sourcebook/api/routes/`; one file per area, mounted in `sourcebook/api/main.py` |
@@ -343,8 +347,9 @@ backup and investigate before retrying.
 - SSE by hand:
   `curl -N -X POST localhost:8000/api/chat/stream -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{"question":"How much PTO do I get?"}'`
 - Escalations queue: `GET /api/escalations?status=open`. Retry a failed webhook
-  with `POST /api/escalations/{id}/retry-delivery`. There is no UI for it
-  yet.
+  with `POST /api/escalations/{id}/retry-delivery`. Both need a token from the
+  HR password (`hr` under `make stub`). In the web app this is the HR Requests
+  page.
 - Query analytics are in the `query_logs` collection: refused questions grouped
   by `question_hash` are the content gaps, and `best_score` on answered versus
   refused rows is what the threshold should be tuned against. Run a read-only

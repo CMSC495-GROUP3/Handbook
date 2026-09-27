@@ -42,7 +42,8 @@ make stub     # terminal 1: API on :8000, fake model, in-memory Mongo
 make web      # terminal 2: React on :5173 with hot reload
 ```
 
-Open <http://localhost:5173> and sign in with the password `dev`. Every answer
+Open <http://localhost:5173> and sign in with the password `dev`. Sign in with
+`manager` to add the What People Ask page, or `hr` to add HR Requests as well. Every answer
 is canned in this mode, so use it to see the UI and the refusal path
 (`make stub REFUSE=1`), not to judge retrieval quality.
 
@@ -62,7 +63,8 @@ hosted around the clock, so a connection timeout means it is off, not broken.
   sources attached.
 - **Learns from its own log.** Every request records what was asked, what was
   retrieved, and whether it was refused. Refusals grouped by question are the
-  list of documents to write next.
+  list of documents to write next, and the most-asked questions show managers
+  what to cover in training and orientation.
 
 ## Documentation
 
@@ -283,11 +285,12 @@ carry a `history` list and measure this rule from both sides.
 Atlas maps cosine similarity into [0, 1] as (1 + cosine) / 2, so 0.5 means
 unrelated and 1.0 means identical. The default threshold is 0.62.
 
-That number was set by judgement and has been measured once, on the sample
-corpus: the lowest answerable question in the smoke tier scores 70 and the
-uncovered ones score 62 to 73, so no threshold separates them (#192). Against a
-real corpus, log the top score for a set of known-answerable and
-known-unanswerable questions, then set the threshold between the two clusters.
+That number was set by judgement. On the sample corpus the beta's full
+evaluation tier (59 cases) shows that no threshold separates the two groups: the
+lowest answerable question scores 70 and the uncovered ones score 56 to 79
+(#192). Against a real corpus, log the top score for a set of known-answerable
+and known-unanswerable questions, then set the threshold between the two
+clusters.
 Too high refuses legitimate questions. Too low means the refusal never fires.
 The [query log](#learning-from-the-query-log) is where those scores come from.
 
@@ -360,6 +363,9 @@ which lists open escalations, resolves or reopens them with a note, and retries
 failed webhook delivery. The same operations are available as
 `GET /api/escalations?status=open`, `PATCH /api/escalations/{id}`, and
 `POST /api/escalations/{id}/retry-delivery` for a script or a webhook-fed channel.
+All of them need a session opened with the HR password (`HR_PASSWORD_HASH`, see
+[Configure](#1-configure)); any other valid token gets 403, the manager password's
+included. Filing an escalation from the chat works with any password.
 
 ### Vendor lock-in: one interface, one env var
 
@@ -460,14 +466,27 @@ That log is how the system improves from evidence rather than intuition.
 - Refusals grouped by question hash are a ranked list of the documents HR
   should write next. This is the closest thing here to learning: the corpus
   gets better because the logs showed where it was thin.
-- Repeated questions rank into an FAQ, which says which answers are worth
-  curating by hand.
+- Questions asked in more than one conversation rank into an FAQ, which says
+  which answers are worth curating by hand, and which topics managers should
+  cover in training and orientation before new hires have to ask.
 - The score distribution of answered versus refused questions is the only
   sound basis for tuning `SIMILARITY_THRESHOLD`, and there is no other way to
   collect it.
 
-Run a read-only report over a time window. Run it on the EC2 host. The
-cluster's IP access list admits that host, so anywhere else waits out
+The first two lists are on the What People Ask page in the web app, over the last
+7, 30, or 90 days. The page and its route need the manager or HR password, and
+a manager sees only questions asked in several separate conversations (see
+[Configure](#1-configure)). The page also merges wordings whose embeddings are within
+`QUESTION_GROUP_THRESHOLD` cosine (default 0.91, #287). On 120 labelled pairs
+that alone merged 3 of 60 paraphrases and none of 60 different questions
+([measurement](docs/evaluation.md#question-grouping-threshold)). For pairs
+between 0.7 and 0.91 the utility model decides whether the two wordings are
+one question, in one call per page load (#293). If that call fails, the page
+groups on cosine alone and says so. The terminal report below groups by exact
+wording only.
+
+For the score histograms or an exact window, run the read-only report on the
+EC2 host. The cluster's IP access list admits that host, so anywhere else waits out
 `--timeout` (default 10 s) and then fails in a way that looks like a config
 typo.
 
@@ -547,19 +566,71 @@ most shells interpret, so paste it with a text editor rather than `echo`.
 
 To hand out a second password without sharing the first, for a reviewer or a
 grader, generate its hash the same way and put it in `APP_PASSWORD_HASH_2`.
-Either password logs in; both variables are checked at startup and a
-malformed hash in either one stops the server from booting. Leave the second
-unset to accept only one password.
+Either password logs in; every configured hash is checked at startup and a
+malformed one stops the server from booting. Leave the second unset to accept
+only the shared password (plus the HR and manager ones below, if set).
 
-Three things to know before handing one out. Both passwords open the same
-door, so the deployment is exactly as strong as the weaker of the two; do not
-make the second one short because it is temporary. Each successful login logs
-which variable matched and puts that name in the token's `cred` claim, which
-is how to tell a reviewer's session from the team's afterwards. Changing or
-unsetting a hash signs out everyone who logged in with it: each session is
-bound to a fingerprint of that hash, so the next request with the old token
-fails. Rotating `JWT_SECRET_KEY` is no longer needed just to revoke one
-password's sessions; the other password's sessions keep working.
+Three things to know before handing one out. Every configured password opens
+the employee routes, so the deployment is only as strong as the weakest one;
+do not make the second one short because it is temporary. Each successful
+login logs which variable matched and puts that name in the token's `cred`
+claim, which is how to tell a reviewer's session from the team's afterwards.
+Changing or unsetting a hash signs out everyone who logged in with it: each
+session is bound to a fingerprint of that hash, so the next request with the
+old token fails. Rotating `JWT_SECRET_KEY` is no longer needed just to revoke
+one password's sessions; sessions from the other passwords keep working.
+
+Two more passwords open pages the shared one cannot. Both are generated the
+same way, and a session opened with either can do everything the shared
+password can as well.
+
+- **`HR_PASSWORD_HASH`**, for Human Resources. It is the only password that
+  opens the HR Requests queue and the only one that can call
+  `POST /api/documents/reindex`, which drops every cached answer. It opens the
+  What People Ask report too, with every question listed.
+- **`MANAGER_PASSWORD_HASH`**, for managers and supervisors. It opens the What
+  People Ask report and nothing else beyond the employee routes, so a manager
+  can see what their people keep asking and cover it in training and
+  orientation. A manager's report lists only questions asked in at least
+  `MANAGER_MIN_CONVERSATIONS` separate conversations (default 3). A question
+  typed once can point at the person who typed it, and a manager, unlike HR,
+  is not the confidential channel. The totals at the top still count every
+  question.
+
+Every other valid token gets 403 on those routes, and the web app hides their
+links unless the stored token's `cred` claim names the right variable. Leave a
+variable unset and nobody can use its pages. Use passwords different from the
+shared one: login checks `APP_PASSWORD_HASH` first, so an HR or manager hash of
+the shared password never matches. Login then checks `HR_PASSWORD_HASH`,
+`MANAGER_PASSWORD_HASH`, and `APP_PASSWORD_HASH_2`, in that order, so the same
+hash in two of them gives the wider access. The course deployment sets
+`MANAGER_PASSWORD_HASH` to the same hash as `APP_PASSWORD_HASH_2`, so the
+grader's password opens What People Ask, and gives HR a password of its own.
+A token keeps the `cred` it was issued with, so after that change anyone
+signed in with the grader's password signs out and back in once to see the
+page, and a session opened with the old HR password stops working once
+`HR_PASSWORD_HASH` changes.
+
+Conversations are separate from the passwords. Each browser keeps a random id
+and sends it at login, and a session sees only the conversations and projects
+filed under that id, whichever password opened it. Signing out keeps them;
+clearing the browser's site data or switching browsers starts an empty
+history. Conversations stored before this existed have no owner and stop
+appearing for anyone. Every token issued before it is rejected, so everyone
+signs in once more after the upgrade.
+
+Those ownerless conversations and projects stay in Mongo, and nothing in the
+app can reach or delete them. They still hold the questions employees typed,
+so remove them once the upgrade has settled. The script counts them and
+changes nothing until it is given `--delete`:
+
+```bash
+.venv/bin/python -m scripts.purge_ownerless_conversations
+.venv/bin/python -m scripts.purge_ownerless_conversations --delete
+```
+
+Escalation records are kept. HR Requests reads only those, and each one
+copies the question and answer it was filed from.
 
 ### 2. Load the corpus
 
@@ -887,8 +958,11 @@ mid-stream. That last case found a real bug while the suite was being written.
 A two-word fragment from an abandoned stream was being cached as the answer for
 everyone who asked the same question next.
 
-Not covered: live calls to AWS, Atlas, or OpenAI, and the React components,
-which `tsc` and ESLint check but no test exercises.
+Not covered: live calls to AWS, Atlas, or OpenAI. On the web side, Vitest
+covers the chat stream, messages, escalation, the theme, and the Document
+Library, HR Requests, and What People Ask pages; the rest of the React
+components are checked only by `tsc` and ESLint (see
+[Known limitations](#known-limitations)).
 
 `make acceptance` needs Docker Compose 2.24 or later because
 `docker-compose.acceptance.yml` uses `!reset`. Older Compose fails to parse
@@ -982,23 +1056,34 @@ The product name lives in three places: `APP_NAME` in
 
 ## Known limitations
 
-- **Authentication is a shared password** (or two), not per-employee accounts, and
-  conversations are not scoped to a user. Fine for a pilot. It is the first
+- **Authentication is a shared password** (or two, plus one for Human
+  Resources), not per-employee accounts. Fine for a pilot. It is the first
   thing to change before a real deployment.
 - **The similarity threshold is untuned** against a real corpus. On the sample
   corpus it does not separate covered questions from uncovered ones on nearby
   topics, so the coverage judge behind it does that work (#192). The judge is a
   model call: it adds latency and cost to every grounded turn, and it was
-  measured on the 20-case smoke tier, not a real corpus. See
+  measured on the fictional sample corpus only: the 20-case smoke tier and one
+  59-case full-tier run on the beta, which refused no answerable question. See
   [above](#hallucination-refuse-rather-than-guess).
 - **Frontend unit coverage is intentionally focused.** Vitest and React Testing
   Library cover the chat stream, message and escalation behavior, theme toggle,
-  and theme storage. `tsc`, ESLint, and the production build cover the wider web
-  application, but visual regression and full browser tests remain future work.
+  theme storage, and the Document Library, HR Requests, and What People Ask
+  pages. `tsc`, ESLint, and the production build cover the wider web
+  application, but visual regression and full browser tests remain future
+  work.
 - **Document search uses `$regex`**, which does not use an index. Fine at this
   corpus size. Move to Atlas Search if the library grows large.
 - **JWTs live in browser local storage.** Acceptable for an internal pilot
-  behind one shared credential, not for a multi-user security model.
+  behind shared credentials, not for a multi-user security model.
+- **Conversations belong to a browser, not a person.** There is no per-user
+  sign-in, so the owner of a conversation is a random id the browser keeps in
+  local storage ([#290](https://github.com/CMSC495-GROUP3/Sourcebook/issues/290)).
+  Clearing site data or moving to another device loses the history, and anyone
+  who copies that id and knows a password can read it, as with the token
+  stored next to it. The HR and manager passwords guard pages, not
+  conversations: a session sees only its own browser's conversations whichever
+  password opened it.
 - **Do not deploy under gunicorn `--preload`.** `MongoClient` is not fork-safe
   and the collection handles bind at import. `uvicorn --workers` is safe
   because each worker imports the app after forking. See

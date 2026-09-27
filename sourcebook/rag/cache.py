@@ -121,6 +121,15 @@ def get_cached_embedding(text: str) -> list[float] | None:
     return doc["embedding"] if doc else None
 
 
+def get_cached_embeddings(texts: list[str]) -> dict[str, list[float]]:
+    """The cached vectors for any of `texts`, in one query. Misses are absent."""
+    if not CACHE_ENABLED or not texts:
+        return {}
+    keys = {embedding_cache_key(text): text for text in texts}
+    docs = get_collection("embedding_cache").find({"_id": {"$in": list(keys)}}, {"embedding": 1})
+    return {keys[doc["_id"]]: doc["embedding"] for doc in docs}
+
+
 def put_cached_embedding(text: str, embedding: list[float]) -> None:
     if not CACHE_ENABLED:
         return
@@ -244,6 +253,7 @@ __all__ = [
     "embed_cached",
     "embedding_cache_key",
     "get_cached_answer",
+    "get_cached_embeddings",
     "get_corpus_version",
     "is_cacheable_turn",
     "normalize",

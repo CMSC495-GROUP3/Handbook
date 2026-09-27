@@ -7,6 +7,7 @@ production ``query_logs``.
 from __future__ import annotations
 
 import copy
+import itertools
 from datetime import UTC, datetime
 from itertools import pairwise
 from typing import Any
@@ -16,6 +17,12 @@ from pymongo.errors import ServerSelectionTimeoutError
 
 from sourcebook.rag import mongo
 from sourcebook.rag import query_log_reports as reports
+
+# Each row gets its own conversation unless a test names one, so "asked twice"
+# still means two conversations in the fixtures below.
+_SESSIONS = itertools.count(1)
+_NEW_SESSION = object()
+_MISSING = object()
 
 SINCE = datetime(2026, 8, 1, tzinfo=UTC)
 UNTIL = datetime(2026, 9, 1, tzinfo=UTC)
@@ -29,9 +36,11 @@ def _doc(
     best_score: float | None = 0.7,
     question_raw: str | None = "raw?",
     question_condensed: str | None = "condensed?",
+    session_id: Any = _NEW_SESSION,
     extra: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     row: dict[str, Any] = {"created_at": created_at}
+    row["session_id"] = f"session-{next(_SESSIONS)}" if session_id is _NEW_SESSION else session_id
     if question_hash is not None:
         row["question_hash"] = question_hash
     if refused is not None:
@@ -101,6 +110,13 @@ class SyntheticQueryLogs:
                 rows = self._sort(rows, spec)
             elif op == "$limit":
                 rows = rows[: int(spec)]
+            elif op == "$addFields":
+                rows = [
+                    {**row, **{field: self._resolve(row, e) for field, e in spec.items()}}
+                    for row in rows
+                ]
+            elif op == "$project":
+                rows = [{k: v for k, v in row.items() if spec.get(k) != 0} for row in rows]
             elif op == "$facet":
                 return [{name: self._run(branch, rows) for name, branch in spec.items()}]
             elif op == "$bucket":
@@ -128,7 +144,20 @@ class SyntheticQueryLogs:
 
     def _resolve(self, doc: dict[str, Any], expr: Any) -> Any:
         if isinstance(expr, str) and expr.startswith("$"):
-            return doc.get(expr[1:])
+            value = self._field(doc, expr[1:])
+            return None if value is _MISSING else value
+        if isinstance(expr, dict) and not any(key.startswith("$") for key in expr):
+            # An object of expressions, as in a compound $group _id. Mongo
+            # leaves out a field whose path is missing.
+            return {
+                key: self._resolve(doc, sub)
+                for key, sub in expr.items()
+                if not (
+                    isinstance(sub, str)
+                    and sub.startswith("$")
+                    and self._field(doc, sub[1:]) is _MISSING
+                )
+            }
         if isinstance(expr, dict):
             if "$eq" in expr:
                 left, right = expr["$eq"]
@@ -136,7 +165,22 @@ class SyntheticQueryLogs:
             if "$cond" in expr:
                 predicate, when_true, when_false = expr["$cond"]
                 return when_true if self._resolve(doc, predicate) else when_false
+            if "$size" in expr:
+                return len(self._resolve(doc, expr["$size"]))
+            if "$slice" in expr:
+                array, n = expr["$slice"]
+                return self._resolve(doc, array)[:n]
         return expr
+
+    @staticmethod
+    def _field(doc: dict[str, Any], path: str) -> Any:
+        """Follow a dotted path ("_id.hash"); _MISSING if any step is absent."""
+        value: Any = doc
+        for part in path.split("."):
+            if not isinstance(value, dict) or part not in value:
+                return _MISSING
+            value = value[part]
+        return value
 
     def _accumulate(self, current: Any, spec: Any, doc: dict[str, Any], *, first: bool) -> Any:
         if isinstance(spec, dict):
@@ -151,6 +195,10 @@ class SyntheticQueryLogs:
                 if first:
                     return self._resolve(doc, spec["$first"])
                 return current
+            if "$addToSet" in spec:
+                members = [] if current is None else current
+                value = self._resolve(doc, spec["$addToSet"])
+                return members if value in members else [*members, value]
             if "$min" in spec:
                 value = self._resolve(doc, spec["$min"])
                 if value is None:
@@ -180,17 +228,19 @@ class SyntheticQueryLogs:
         order: list[Any] = []
         for doc in docs:
             key = self._resolve(doc, key_expr)
-            if key not in buckets:
-                buckets[key] = {"_id": key}
-                order.append(key)
+            # A compound _id resolves to a dict; its items in order are the key.
+            slot = tuple(key.items()) if isinstance(key, dict) else key
+            if slot not in buckets:
+                buckets[slot] = {"_id": key}
+                order.append(slot)
                 first = True
             else:
                 first = False
             for field, accumulator in spec.items():
                 if field == "_id":
                     continue
-                buckets[key][field] = self._accumulate(
-                    buckets[key].get(field),
+                buckets[slot][field] = self._accumulate(
+                    buckets[slot].get(field),
                     accumulator,
                     doc,
                     first=first,
@@ -458,6 +508,8 @@ def test_pipelines_are_read_only_and_window_first():
     for pipeline in (
         reports.content_gap_pipeline(SINCE, UNTIL, 5),
         reports.faq_pipeline(SINCE, UNTIL, 5, 2),
+        reports.wording_pipeline(SINCE, UNTIL, 5, refused_only=True),
+        reports.wording_pipeline(SINCE, UNTIL, 5, refused_only=False),
         reports.score_distribution_pipeline(SINCE, UNTIL),
     ):
         assert list(pipeline[0]) == ["$match"]
@@ -718,3 +770,28 @@ def test_get_client_applies_the_timeout_only_when_asked():
         assert mongo.get_client() is client
     finally:
         mongo.reset_client()
+
+
+def test_faq_counts_conversations_not_asks(use_collection):
+    """One conversation repeating a question is not a FAQ; two conversations are."""
+    docs = [
+        *(
+            _doc(created_at=datetime(2026, 8, 2, tzinfo=UTC), question_hash="solo", session_id="s1")
+            for _ in range(4)
+        ),
+        _doc(created_at=datetime(2026, 8, 3, tzinfo=UTC), question_hash="shared"),
+        _doc(created_at=datetime(2026, 8, 4, tzinfo=UTC), question_hash="shared"),
+    ]
+    use_collection(SyntheticQueryLogs(docs))
+
+    text = reports.run_report(since=SINCE, until=UNTIL, min_repeat=2)
+    faq_section = text.split("2. FAQ candidates", 1)[1].split("3. Answered", 1)[0]
+
+    assert "hash=shared" in faq_section
+    assert "conversations=2" in faq_section
+    assert "hash=solo" not in faq_section
+
+
+def test_faq_pipeline_drops_session_ids_before_output():
+    stages = reports.faq_pipeline(SINCE, UNTIL, 5, 2)
+    assert {"$project": {"sessions": 0}} in stages

@@ -90,8 +90,11 @@ describe('Message', () => {
 
     expect(screen.getByText('Not answered by any policy')).toBeInTheDocument()
     expect(
-      screen.getByText(/Some policies mention related topics, but none of them answers this question/),
+      screen.getByText(/Some policies mention related topics, but none of them answers this question as asked/),
     ).toBeInTheDocument()
+    // A vague question on a covered topic lands here too, so the card says
+    // what to do next.
+    expect(screen.getByText(/ask the full question again with them/)).toBeInTheDocument()
     expect(screen.queryByText('No matching policy')).not.toBeInTheDocument()
     expect(screen.queryByText(/Nothing indexed came close/)).not.toBeInTheDocument()
     expect(screen.queryByText('Strong match')).not.toBeInTheDocument()

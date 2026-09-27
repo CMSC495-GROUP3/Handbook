@@ -1,0 +1,13 @@
+{
+  "name": "sourcebook-lighthouse",
+  "private": true,
+  "description": "Lighthouse runs against a deployed Sourcebook, per theme and width (#214)",
+  "type": "module",
+  "scripts": {
+    "run": "node run.mjs"
+  },
+  "dependencies": {
+    "lighthouse": "13.5.0",
+    "puppeteer-core": "25.12.0"
+  }
+}

@@ -58,6 +58,12 @@ os.environ.setdefault("MONGODB_URI", "mongodb://stubbed-never-contacted")
 # main also checks that this is a bcrypt hash. `make stub` sets a real one;
 # run.py logs in with password "loadtest", so the hash must match that word.
 os.environ.setdefault("APP_PASSWORD_HASH", bcrypt.hashpw(b"loadtest", bcrypt.gensalt(4)).decode())
+# "loadtest-hr" opens both restricted pages, and "loadtest-manager" What People
+# Ask, when the stub is run without make.
+os.environ.setdefault("HR_PASSWORD_HASH", bcrypt.hashpw(b"loadtest-hr", bcrypt.gensalt(4)).decode())
+os.environ.setdefault(
+    "MANAGER_PASSWORD_HASH", bcrypt.hashpw(b"loadtest-manager", bcrypt.gensalt(4)).decode()
+)
 os.environ["LLM_PROVIDER"] = "fake"
 os.environ.pop("APP_ENV", None)  # FakeProvider refuses to run as production
 

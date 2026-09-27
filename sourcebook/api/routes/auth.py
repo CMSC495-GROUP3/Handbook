@@ -2,16 +2,17 @@ import hashlib
 import logging
 import os
 import re
+import uuid
 from datetime import UTC, datetime, timedelta
 
 import anyio
 import bcrypt
 from anyio import CapacityLimiter
 from fastapi import APIRouter, HTTPException, Request, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from sourcebook.api.limiter import limiter
-from sourcebook.api.tokens import encode_token
+from sourcebook.api.tokens import OWNER_ID_PATTERN, encode_token
 from sourcebook.rag.config import LOGIN_THREADPOOL_TOKENS
 
 logger = logging.getLogger(__name__)
@@ -46,13 +47,31 @@ def is_bcrypt_hash(value: str) -> bool:
     return _BCRYPT_HASH.fullmatch(value) is not None
 
 
-# The two environment variables that may hold an accepted password hash: the
-# team's, which is required, and an optional second so a reviewer's password
-# can be handed out and rotated without touching the team's. This is a pair,
-# not a list: a third password means editing this tuple, .env.example, and the
+# The environment variables that may hold an accepted password hash: the
+# team's, which is required; an optional second so a reviewer's password can
+# be handed out and rotated without touching the team's; an optional one for
+# Human Resources, the only password that opens the HR Requests queue
+# (require_hr in deps.py); and an optional one for managers and supervisors,
+# which opens the What People Ask report and nothing else HR-only
+# (require_report_reader). HR can read that report too. This is a fixed set,
+# not a list: another password means editing this tuple, .env.example, and the
 # README together. Separate variables rather than one delimited list because a
 # bcrypt hash is full of `$`, which makes a list painful to quote in .env.
-PASSWORD_HASH_VARS = ("APP_PASSWORD_HASH", "APP_PASSWORD_HASH_2")
+#
+# Order matters. Login takes the first match. The shared password comes first,
+# so an HR or manager hash made from it grants nobody extra access. HR comes
+# before manager, so the same hash in both opens everything rather than less.
+# Both come before the second password, so a deployment can give the
+# reviewer's password manager access by setting MANAGER_PASSWORD_HASH to the
+# same hash as APP_PASSWORD_HASH_2 (the course deployment does).
+HR_PASSWORD_HASH_VAR = "HR_PASSWORD_HASH"
+MANAGER_PASSWORD_HASH_VAR = "MANAGER_PASSWORD_HASH"
+PASSWORD_HASH_VARS = (
+    "APP_PASSWORD_HASH",
+    HR_PASSWORD_HASH_VAR,
+    MANAGER_PASSWORD_HASH_VAR,
+    "APP_PASSWORD_HASH_2",
+)
 PRIMARY_PASSWORD_HASH_VAR = PASSWORD_HASH_VARS[0]
 
 
@@ -75,8 +94,8 @@ def validate_password_hashes() -> list[tuple[str, str]]:
     newline in a mounted secret would lock everyone out and log it as failed
     logins. main.py runs this at import so that refuses to start instead;
     login runs it again so a value that changes under a live process fails
-    just as loudly. The first variable is required; the second, if set at
-    all, has to be right.
+    just as loudly. The first variable is required; the others, if set at
+    all, have to be right.
     """
     hashes = configured_password_hashes()
     if not any(name == PRIMARY_PASSWORD_HASH_VAR for name, _ in hashes):
@@ -91,6 +110,9 @@ def validate_password_hashes() -> list[tuple[str, str]]:
 
 class LoginRequest(BaseModel):
     password: str
+    # The browser's owner id, kept in local storage so its conversations
+    # survive signing out. Optional: a script that sends none gets a fresh one.
+    client_id: str | None = Field(default=None, pattern=OWNER_ID_PATTERN)
 
 
 class TokenResponse(BaseModel):
@@ -159,7 +181,7 @@ def create_access_token(data: dict, expires_delta: timedelta) -> str:
     return encode_token(payload)
 
 
-def _authenticate(password: str, client_host: str) -> TokenResponse:
+def _authenticate(password: str, client_id: str | None, client_host: str) -> TokenResponse:
     """Verify the password and mint a token. Runs on the login thread pool."""
     hashes = _password_hashes()
 
@@ -180,15 +202,17 @@ def _authenticate(password: str, client_host: str) -> TokenResponse:
             detail="Incorrect password.",
         )
 
-    # Both passwords open the same door. Recording which one was used is the
-    # only way to tell a reviewer's session from the team's afterwards. cred is
-    # the variable name; fingerprint binds the session to that hash so rotating
-    # it revokes those sessions without touching JWT_SECRET_KEY.
+    # Every password opens the employee routes. Recording which one was used
+    # is the only way to tell a reviewer's session from the team's afterwards,
+    # and it is what require_hr and require_report_reader check for the
+    # restricted pages. cred is the variable
+    # name; fingerprint binds the session to that hash so rotating it revokes
+    # those sessions without touching JWT_SECRET_KEY.
     cred, password_hash = matched
     logger.info("Login with %s from %s", cred, client_host)
     token = create_access_token(
         data={
-            "sub": "user",
+            "sub": client_id or uuid.uuid4().hex,
             "cred": cred,
             "fingerprint": credential_fingerprint(password_hash),
         },
@@ -203,6 +227,7 @@ async def login(request: Request, body: LoginRequest):
     return await anyio.to_thread.run_sync(
         _authenticate,
         body.password,
+        body.client_id,
         _client_host(request),
         limiter=_login_limiter,
     )
