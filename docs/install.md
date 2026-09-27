@@ -391,7 +391,7 @@ transactions.
 
 ## Deployment
 
-The pilot runs on a single EC2 instance at <https://sourcebook.duckdns.org>.
+The demo site runs on a single EC2 instance at <https://sourcebook.duckdns.org>.
 DuckDNS provides the name for free and Caddy fetches the certificate, so the
 instance needs no manual TLS setup. The stack is the same Compose file used
 locally, plus one variable in `.env`.
@@ -437,7 +437,7 @@ locally, plus one variable in `.env`.
    runs a weekly `docker builder prune -f --keep-storage 300M` so the build
    cache cannot fill the root volume between rebuilds. `auto_deploy.sh`
    also prunes when root free space drops under 1 GiB before a rebuild.
-   The pilot host's root volume was grown to 16 GB on 2026-09-05 (issue
+   The demo host's root volume was grown to 16 GB on 2026-09-05 (issue
    #79), so a rebuild no longer competes with the build cache for space. If
    `df -h /` ever shows under about 1 GB free again, run
    `docker builder prune -f` by hand before a deploy that rebuilds both
@@ -463,7 +463,7 @@ locally, plus one variable in `.env`.
 
 From then on the host polls upstream `main` every two minutes and rebuilds
 only what changed, gated on `/api/health`.
-[ci-cd.md § From merge to the pilot containers](ci-cd.md#from-merge-to-the-pilot-containers)
+[ci-cd.md § From merge to the demo containers](ci-cd.md#from-merge-to-the-demo-containers)
 walks each tick: which paths rebuild which service, the health gate, and the
 failure cap. `sudo journalctl -u auto-deploy.service` shows what the last run
 did. Run the script by hand as `ubuntu`, not under `sudo`; it refuses to run on
@@ -586,7 +586,7 @@ serving and that client addresses reach the API the way the trust chain intends
 
 ### Root disk
 
-The pilot instance launched with a ~7 GB root volume. Docker images are about
+The demo host launched with a ~7 GB root volume. Docker images are about
 500 MB and one full rebuild leaves ~1 GB of build cache, which was enough to
 make the next rebuild fail for lack of space (issue #79). The volume was grown
 to 16 GB on 2026-09-05, which left about 8 GB free after a warm rebuild, and
@@ -603,7 +603,7 @@ sudo resize2fs /dev/xvda1
 df -h /
 ```
 
-Device names come from `lsblk`. The pilot host shows `/dev/xvda`; Nitro
+Device names come from `lsblk`. The demo host shows `/dev/xvda`; Nitro
 instance types show `/dev/nvme0n1` and `nvme0n1p1` instead. `growpart` prints
 `NOCHANGE` when the partition already fills the volume, which means the volume
 itself has not been grown yet.
@@ -624,18 +624,20 @@ window that ends earlier than that prints an empty report rather than an error.
 What People Ask reads per-day counts rather than the rows
 ([architecture.md](architecture.md#learning-from-the-query-log)). Rows logged
 before those counts existed need a one-time backfill after the deploy that
-adds them. Rerunning it is safe, since it skips rows it has already recorded:
+adds them. Rerunning it skips rows it has already recorded. A run
+interrupted between recording a row and marking it counts that one ask twice
+on the next run, so let it finish:
 
     python -m sourcebook.rag.query_log_rollup --backfill
 
-On the pilot, run both inside the API container so they read the app's
+On the demo host, run both inside the API container so they read the app's
 settings: `docker compose exec -T api python -m ... < /dev/null`.
 
 ### Removing ownerless conversations
 
 Conversations and projects stored before each browser had an owner id stay in
 Mongo, and nothing in the app can reach or delete them. They still hold the
-questions employees typed, so remove them once the upgrade has settled. The
+questions people typed, so remove them once the upgrade has settled. The
 script counts them and changes nothing until it is given `--delete`:
 
 ```bash

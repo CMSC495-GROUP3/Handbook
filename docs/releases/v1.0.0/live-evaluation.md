@@ -1,6 +1,6 @@
 # Final live evaluation
 
-The smoke tier and the full tier from `evaluation/`, run against the real provider and the pilot's Atlas index
+The smoke tier and the full tier from `evaluation/`, run against the real provider and the demo site's Atlas index
 through the Live evaluation workflow. The method, metric definitions, and
 scoring rules are in [docs/evaluation.md](../../evaluation.md). The alpha and
 beta smoke runs in
@@ -52,7 +52,7 @@ cited a policy covering the same ground as the expected one.
 **The corpus changed after the beta.** #284 aligned the injury policy's
 reporting window with the Workplace Health and Safety Policy: incidents are
 reported no later than 24 hours after they happen, where it used to say by the
-end of the shift. The pilot was re-ingested on 2026-09-26, so the final's
+end of the shift. The demo site was re-ingested on 2026-09-26, so the final's
 corpus version differs from the beta's `9b803f5208c341baaa35f4dacd3bec61`.
 The final ran on `43eafff6687547a3a479360e2a259f9c`.
 

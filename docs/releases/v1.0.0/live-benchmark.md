@@ -1,6 +1,6 @@
 # Final performance benchmark against the real services
 
-The same bounded workload as the alpha and beta, against the deployed pilot
+The same bounded workload as the alpha and beta, against the deployed demo site
 with OpenAI, Atlas, Caddy, Nginx, rate limits, and provider bounds all on. The
 protocol, the caps, and the targets are unchanged and are in
 [../v0.1.0-alpha.1/live-benchmark.md](../v0.1.0-alpha.1/live-benchmark.md).
@@ -11,7 +11,7 @@ of three. Load against the deployed system is a separate measurement,
 [#212](https://github.com/CMSC495-GROUP3/Sourcebook/issues/212).
 
 Status: **Done on the candidate.** Run `e6615d05` on 2026-09-27 against the
-pilot running `7d3c779`. All five targets pass. The raw output is
+demo site running `7d3c779`. All five targets pass. The raw output is
 [live-benchmark-results.json](live-benchmark-results.json); it holds timings
 and synthetic session labels, no answer text and no credential.
 

@@ -1,8 +1,8 @@
 # Documentation
 
-Narrative docs live here, grouped by what you want to do, in the same order
-as the [README](../README.md#start-here)'s Start here table. The README is the
-short version of what the system is and why.
+Narrative docs live here, grouped by what you want to do. The
+[README](../README.md) is the short version of what the system is and why, and
+its [Start here](../README.md#start-here) table says what to read first.
 
 ## Use it
 
@@ -15,7 +15,7 @@ short version of what the system is and why.
 | Page | Covers |
 | --- | --- |
 | [install.md](install.md) | the live site, the offline stub, real services with every `.env` variable, deployment, and maintenance on the host |
-| [ci-cd.md](ci-cd.md) | the five workflows, the merge-to-deploy path on the pilot host, and the tag and release procedure |
+| [ci-cd.md](ci-cd.md) | the five workflows, the merge-to-deploy path on the demo host, and the tag and release procedure |
 
 ## Understand and judge it
 
@@ -24,7 +24,7 @@ short version of what the system is and why.
 | [architecture.md](architecture.md) | how a question is answered, the four risks the design answers, the query log, and the limitations in full |
 | [evaluation.md](evaluation.md) | the labeled question sets in `evaluation/` and how to run the live evaluation |
 | [load-testing.md](load-testing.md) | throughput measurements from `scripts/loadtest/`, the `THREADPOOL_TOKENS` decision, and the What People Ask report at planned volume |
-| [load-testing-pilot.md](load-testing-pilot.md) | the concurrent load run against the deployed pilot with the real model, and how to repeat it |
+| [load-testing-demo.md](load-testing-demo.md) | the concurrent load run against the deployed demo site with the real model, and how to repeat it |
 | [quality.md](quality.md) | code review, coverage, and performance evidence, each number tied to a file, PR, or run |
 | [team.md](team.md) | each member's role, commits, pull requests, and reviews |
 
@@ -46,7 +46,7 @@ the deployed system, and the evidence behind them.
 
 | Release | Handoff | Notes | Measured |
 | --- | --- | --- | --- |
-| [v1.0.0](https://github.com/CMSC495-GROUP3/Sourcebook/releases/tag/v1.0.0) | [handoff](releases/v1.0.0/handoff.md) | [release notes](releases/v1.0.0/release-notes.md), [portfolio](releases/v1.0.0/portfolio.md) | [benchmark](releases/v1.0.0/live-benchmark.md), [evaluation](releases/v1.0.0/live-evaluation.md), [load](load-testing-pilot.md), [Lighthouse](releases/v1.0.0/evidence/lighthouse.md) |
+| [v1.0.0](https://github.com/CMSC495-GROUP3/Sourcebook/releases/tag/v1.0.0) | [handoff](releases/v1.0.0/handoff.md) | [release notes](releases/v1.0.0/release-notes.md), [portfolio](releases/v1.0.0/portfolio.md) | [benchmark](releases/v1.0.0/live-benchmark.md), [evaluation](releases/v1.0.0/live-evaluation.md), [load](load-testing-demo.md), [Lighthouse](releases/v1.0.0/evidence/lighthouse.md) |
 | [v0.2.0](https://github.com/CMSC495-GROUP3/Sourcebook/releases/tag/v0.2.0) | [handoff](releases/v0.2.0/handoff.md) | [release notes](releases/v0.2.0/release-notes.md) | [benchmark](releases/v0.2.0/live-benchmark.md), [evaluation](releases/v0.2.0/live-evaluation.md) |
 | [v0.1.0-alpha.1](https://github.com/CMSC495-GROUP3/Sourcebook/releases/tag/v0.1.0-alpha.1) | [handoff](releases/v0.1.0-alpha.1/handoff.md) | [release notes](releases/v0.1.0-alpha.1/release-notes.md) | [benchmark](releases/v0.1.0-alpha.1/live-benchmark.md), [evaluation](releases/v0.1.0-alpha.1/live-evaluation.md) |
 

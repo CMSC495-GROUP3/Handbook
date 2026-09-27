@@ -1,89 +1,89 @@
-# auto-deploy.service on the pilot host, from the v0.1.0-alpha.1 tag to the v1.0.0 tag
+# auto-deploy.service on the demo host, from the v0.1.0-alpha.1 tag to the v1.0.0 tag
 # From: journalctl -u auto-deploy.service -o short-iso --since '2026-09-11 00:20:02' --until '2026-09-27 16:03:12' (UTC), pulled 2026-09-27.
 # Kept: each run's 'deploy <from> -> <to>: <services>' line, each refusal, and each failed run. Left out: Docker build, container, and
-# status lines, and systemd start/finish lines. The host name is replaced with pilot-host. Nothing else is changed.
+# status lines, and systemd start/finish lines. The host name is replaced with demo-host. Nothing else is changed.
 # 74 deploys, all finished. 5 runs on 2026-09-27 refused because an untracked .env backup was left in the checkout; the next run deployed.
-2026-09-11T00:24:19+00:00 pilot-host auto_deploy.sh[398118]: deploy d7199f5 -> 08b4eca: nothing to rebuild
-2026-09-11T00:29:18+00:00 pilot-host auto_deploy.sh[398286]: deploy 08b4eca -> ade19b8: nothing to rebuild
-2026-09-11T00:50:15+00:00 pilot-host auto_deploy.sh[398738]: deploy ade19b8 -> 3e4bcdd: nothing to rebuild
-2026-09-11T00:52:19+00:00 pilot-host auto_deploy.sh[398808]: deploy 3e4bcdd -> d5d71d9: api web
-2026-09-11T01:29:17+00:00 pilot-host auto_deploy.sh[400374]: deploy d5d71d9 -> eed9ce0: nothing to rebuild
-2026-09-11T01:49:59+00:00 pilot-host auto_deploy.sh[400896]: deploy eed9ce0 -> 238cb90: api web
-2026-09-11T01:58:39+00:00 pilot-host auto_deploy.sh[401816]: deploy 238cb90 -> a37f17f: nothing to rebuild
-2026-09-11T15:59:19+00:00 pilot-host auto_deploy.sh[421460]: deploy a37f17f -> c00b30c: web
-2026-09-11T20:14:09+00:00 pilot-host auto_deploy.sh[427907]: deploy c00b30c -> fce88ed: web
-2026-09-11T20:59:18+00:00 pilot-host auto_deploy.sh[429575]: deploy fce88ed -> 71fd537: nothing to rebuild
-2026-09-11T22:22:19+00:00 pilot-host auto_deploy.sh[431610]: deploy 71fd537 -> 7d028ef: nothing to rebuild
-2026-09-12T15:10:16+00:00 pilot-host auto_deploy.sh[455606]: deploy 7d028ef -> 5f3ed1e: nothing to rebuild
-2026-09-12T15:37:18+00:00 pilot-host auto_deploy.sh[456785]: deploy 5f3ed1e -> e617cc6: api
-2026-09-12T15:39:40+00:00 pilot-host auto_deploy.sh[457350]: deploy e617cc6 -> cd4e64a: api
-2026-09-13T23:37:18+00:00 pilot-host auto_deploy.sh[503117]: deploy cd4e64a -> a4dae3e: web
-2026-09-13T23:55:01+00:00 pilot-host auto_deploy.sh[504067]: deploy a4dae3e -> 8a01ceb: nothing to rebuild
-2026-09-14T00:01:23+00:00 pilot-host auto_deploy.sh[504690]: deploy 8a01ceb -> 112c96e: api
-2026-09-14T00:12:19+00:00 pilot-host auto_deploy.sh[505536]: deploy 112c96e -> ba8bf33: nothing to rebuild
-2026-09-14T00:22:19+00:00 pilot-host auto_deploy.sh[505770]: deploy ba8bf33 -> 646872a: nothing to rebuild
-2026-09-14T00:27:07+00:00 pilot-host auto_deploy.sh[505894]: deploy 646872a -> 7fd6617: nothing to rebuild
-2026-09-14T00:29:18+00:00 pilot-host auto_deploy.sh[506008]: deploy 7fd6617 -> 41d2413: web
-2026-09-14T00:39:08+00:00 pilot-host auto_deploy.sh[506860]: deploy 41d2413 -> d85e110: api
-2026-09-14T01:02:06+00:00 pilot-host auto_deploy.sh[507972]: deploy d85e110 -> 6eca333: api
-2026-09-14T01:31:46+00:00 pilot-host auto_deploy.sh[509151]: deploy 6eca333 -> a5bb2d8: web
-2026-09-14T01:41:18+00:00 pilot-host auto_deploy.sh[510045]: deploy a5bb2d8 -> 4be9ffe: nothing to rebuild
-2026-09-14T01:51:18+00:00 pilot-host auto_deploy.sh[510283]: deploy 4be9ffe -> 23154dd: nothing to rebuild
-2026-09-14T02:37:08+00:00 pilot-host auto_deploy.sh[511749]: deploy 23154dd -> ffac874: web
-2026-09-14T02:55:01+00:00 pilot-host auto_deploy.sh[512691]: deploy ffac874 -> fc616f6: nothing to rebuild
-2026-09-14T03:12:10+00:00 pilot-host auto_deploy.sh[513535]: deploy fc616f6 -> 534a661: api
-2026-09-14T03:34:12+00:00 pilot-host auto_deploy.sh[514661]: deploy 534a661 -> 7040ae8: api
-2026-09-14T21:07:19+00:00 pilot-host auto_deploy.sh[539748]: deploy 7040ae8 -> f971d92: web
-2026-09-16T00:15:19+00:00 pilot-host auto_deploy.sh[578506]: deploy f971d92 -> e4ccabf: api
-2026-09-16T00:17:52+00:00 pilot-host auto_deploy.sh[578945]: deploy e4ccabf -> 88e8a13: api
-2026-09-21T02:55:01+00:00 pilot-host auto_deploy.sh[754041]: deploy 88e8a13 -> c6a92e5: nothing to rebuild
-2026-09-21T02:57:07+00:00 pilot-host auto_deploy.sh[754109]: deploy c6a92e5 -> e41ce13: nothing to rebuild
-2026-09-21T03:04:18+00:00 pilot-host auto_deploy.sh[754330]: deploy e41ce13 -> 5513cc4: nothing to rebuild
-2026-09-21T11:50:15+00:00 pilot-host auto_deploy.sh[766697]: deploy 5513cc4 -> a4c0a9e: api web
-2026-09-22T18:50:15+00:00 pilot-host auto_deploy.sh[810947]: deploy a4c0a9e -> d897c5f: web
-2026-09-22T20:20:15+00:00 pilot-host auto_deploy.sh[813826]: deploy d897c5f -> 8a55b7d: api
-2026-09-22T23:59:19+00:00 pilot-host auto_deploy.sh[819778]: deploy 8a55b7d -> c527c9e: web
-2026-09-23T01:20:15+00:00 pilot-host auto_deploy.sh[822568]: deploy c527c9e -> 8ea93bb: api web
-2026-09-23T01:22:19+00:00 pilot-host auto_deploy.sh[823372]: deploy 8ea93bb -> 2397b0a: nothing to rebuild
-2026-09-23T01:44:20+00:00 pilot-host auto_deploy.sh[824089]: deploy 2397b0a -> 14f81a8: web
-2026-09-24T20:52:19+00:00 pilot-host auto_deploy.sh[885346]: deploy 14f81a8 -> d82749d: api web
-2026-09-24T21:39:19+00:00 pilot-host auto_deploy.sh[887026]: deploy d82749d -> 231e652: api
-2026-09-24T21:52:19+00:00 pilot-host auto_deploy.sh[887828]: deploy 231e652 -> 201754e: web
-2026-09-24T22:10:16+00:00 pilot-host auto_deploy.sh[888953]: deploy 201754e -> 383cea5: nothing to rebuild
-2026-09-24T22:17:52+00:00 pilot-host auto_deploy.sh[889137]: deploy 383cea5 -> 54903d7: nothing to rebuild
-2026-09-24T22:20:15+00:00 pilot-host auto_deploy.sh[889204]: deploy 54903d7 -> dc5d16f: nothing to rebuild
-2026-09-24T22:32:19+00:00 pilot-host auto_deploy.sh[889534]: deploy dc5d16f -> 59ca4be: api web
-2026-09-24T22:52:19+00:00 pilot-host auto_deploy.sh[890690]: deploy 59ca4be -> 5212e17: web
-2026-09-24T22:57:07+00:00 pilot-host auto_deploy.sh[891188]: deploy 5212e17 -> 181fbf2: nothing to rebuild
-2026-09-25T20:45:18+00:00 pilot-host auto_deploy.sh[921868]: deploy 181fbf2 -> 16185da: nothing to rebuild
-2026-09-25T21:15:18+00:00 pilot-host auto_deploy.sh[922568]: deploy 16185da -> 5a76db9: web
-2026-09-25T22:17:53+00:00 pilot-host auto_deploy.sh[924505]: deploy 5a76db9 -> 5b35d3c: nothing to rebuild
-2026-09-26T16:05:10+00:00 pilot-host auto_deploy.sh[949580]: deploy 5b35d3c -> d2ae7ba: api
-2026-09-26T18:17:19+00:00 pilot-host auto_deploy.sh[953003]: deploy d2ae7ba -> 0e829d6: web
-2026-09-26T19:12:19+00:00 pilot-host auto_deploy.sh[954664]: deploy 0e829d6 -> 9813aa4: web
-2026-09-26T19:42:18+00:00 pilot-host auto_deploy.sh[955783]: deploy 9813aa4 -> d1cb078: web
-2026-09-26T19:54:29+00:00 pilot-host auto_deploy.sh[956447]: deploy d1cb078 -> de97f5b: nothing to rebuild
-2026-09-26T22:15:18+00:00 pilot-host auto_deploy.sh[960431]: deploy de97f5b -> b3fb1e7: nothing to rebuild
-2026-09-26T22:22:19+00:00 pilot-host auto_deploy.sh[960604]: deploy b3fb1e7 -> 936dad7: api web
-2026-09-27T00:55:01+00:00 pilot-host auto_deploy.sh[965022]: deploy 936dad7 -> 2dd6f6e: api web
-2026-09-27T01:02:19+00:00 pilot-host auto_deploy.sh[966275]: deploy 2dd6f6e -> 7f10320: web
-2026-09-27T01:25:02+00:00 pilot-host auto_deploy.sh[967171]: deploy 7f10320 -> c7de767: api web
-2026-09-27T01:29:19+00:00 pilot-host auto_deploy.sh[968151]: deploy c7de767 -> cd930bb: api
-2026-09-27T13:31:18+00:00 pilot-host auto_deploy.sh[986537]: checkout has local changes; refusing to deploy
-2026-09-27T13:31:18+00:00 pilot-host systemd[1]: auto-deploy.service: Failed with result 'exit-code'.
-2026-09-27T13:34:18+00:00 pilot-host auto_deploy.sh[986607]: checkout has local changes; refusing to deploy
-2026-09-27T13:34:18+00:00 pilot-host systemd[1]: auto-deploy.service: Failed with result 'exit-code'.
-2026-09-27T13:37:19+00:00 pilot-host auto_deploy.sh[986625]: checkout has local changes; refusing to deploy
-2026-09-27T13:37:19+00:00 pilot-host systemd[1]: auto-deploy.service: Failed with result 'exit-code'.
-2026-09-27T13:40:15+00:00 pilot-host auto_deploy.sh[986642]: checkout has local changes; refusing to deploy
-2026-09-27T13:40:15+00:00 pilot-host systemd[1]: auto-deploy.service: Failed with result 'exit-code'.
-2026-09-27T13:42:18+00:00 pilot-host auto_deploy.sh[986664]: checkout has local changes; refusing to deploy
-2026-09-27T13:42:18+00:00 pilot-host systemd[1]: auto-deploy.service: Failed with result 'exit-code'.
-2026-09-27T13:44:40+00:00 pilot-host auto_deploy.sh[986858]: deploy cd930bb -> f885a31: api web
-2026-09-27T13:48:51+00:00 pilot-host auto_deploy.sh[988230]: deploy f885a31 -> 95db28f: api web
-2026-09-27T14:09:58+00:00 pilot-host auto_deploy.sh[989970]: deploy 95db28f -> 7d3c779: api
-2026-09-27T14:22:19+00:00 pilot-host auto_deploy.sh[990729]: deploy 7d3c779 -> 3473071: nothing to rebuild
-2026-09-27T15:37:19+00:00 pilot-host auto_deploy.sh[993930]: deploy 3473071 -> 67e4953: nothing to rebuild
-2026-09-27T15:57:08+00:00 pilot-host auto_deploy.sh[994506]: deploy 67e4953 -> c92124a: nothing to rebuild
-2026-09-27T15:59:15+00:00 pilot-host auto_deploy.sh[994609]: deploy c92124a -> cb4119b: nothing to rebuild
-2026-09-27T16:01:18+00:00 pilot-host auto_deploy.sh[994685]: deploy cb4119b -> a0f7810: nothing to rebuild
+2026-09-11T00:24:19+00:00 demo-host auto_deploy.sh[398118]: deploy d7199f5 -> 08b4eca: nothing to rebuild
+2026-09-11T00:29:18+00:00 demo-host auto_deploy.sh[398286]: deploy 08b4eca -> ade19b8: nothing to rebuild
+2026-09-11T00:50:15+00:00 demo-host auto_deploy.sh[398738]: deploy ade19b8 -> 3e4bcdd: nothing to rebuild
+2026-09-11T00:52:19+00:00 demo-host auto_deploy.sh[398808]: deploy 3e4bcdd -> d5d71d9: api web
+2026-09-11T01:29:17+00:00 demo-host auto_deploy.sh[400374]: deploy d5d71d9 -> eed9ce0: nothing to rebuild
+2026-09-11T01:49:59+00:00 demo-host auto_deploy.sh[400896]: deploy eed9ce0 -> 238cb90: api web
+2026-09-11T01:58:39+00:00 demo-host auto_deploy.sh[401816]: deploy 238cb90 -> a37f17f: nothing to rebuild
+2026-09-11T15:59:19+00:00 demo-host auto_deploy.sh[421460]: deploy a37f17f -> c00b30c: web
+2026-09-11T20:14:09+00:00 demo-host auto_deploy.sh[427907]: deploy c00b30c -> fce88ed: web
+2026-09-11T20:59:18+00:00 demo-host auto_deploy.sh[429575]: deploy fce88ed -> 71fd537: nothing to rebuild
+2026-09-11T22:22:19+00:00 demo-host auto_deploy.sh[431610]: deploy 71fd537 -> 7d028ef: nothing to rebuild
+2026-09-12T15:10:16+00:00 demo-host auto_deploy.sh[455606]: deploy 7d028ef -> 5f3ed1e: nothing to rebuild
+2026-09-12T15:37:18+00:00 demo-host auto_deploy.sh[456785]: deploy 5f3ed1e -> e617cc6: api
+2026-09-12T15:39:40+00:00 demo-host auto_deploy.sh[457350]: deploy e617cc6 -> cd4e64a: api
+2026-09-13T23:37:18+00:00 demo-host auto_deploy.sh[503117]: deploy cd4e64a -> a4dae3e: web
+2026-09-13T23:55:01+00:00 demo-host auto_deploy.sh[504067]: deploy a4dae3e -> 8a01ceb: nothing to rebuild
+2026-09-14T00:01:23+00:00 demo-host auto_deploy.sh[504690]: deploy 8a01ceb -> 112c96e: api
+2026-09-14T00:12:19+00:00 demo-host auto_deploy.sh[505536]: deploy 112c96e -> ba8bf33: nothing to rebuild
+2026-09-14T00:22:19+00:00 demo-host auto_deploy.sh[505770]: deploy ba8bf33 -> 646872a: nothing to rebuild
+2026-09-14T00:27:07+00:00 demo-host auto_deploy.sh[505894]: deploy 646872a -> 7fd6617: nothing to rebuild
+2026-09-14T00:29:18+00:00 demo-host auto_deploy.sh[506008]: deploy 7fd6617 -> 41d2413: web
+2026-09-14T00:39:08+00:00 demo-host auto_deploy.sh[506860]: deploy 41d2413 -> d85e110: api
+2026-09-14T01:02:06+00:00 demo-host auto_deploy.sh[507972]: deploy d85e110 -> 6eca333: api
+2026-09-14T01:31:46+00:00 demo-host auto_deploy.sh[509151]: deploy 6eca333 -> a5bb2d8: web
+2026-09-14T01:41:18+00:00 demo-host auto_deploy.sh[510045]: deploy a5bb2d8 -> 4be9ffe: nothing to rebuild
+2026-09-14T01:51:18+00:00 demo-host auto_deploy.sh[510283]: deploy 4be9ffe -> 23154dd: nothing to rebuild
+2026-09-14T02:37:08+00:00 demo-host auto_deploy.sh[511749]: deploy 23154dd -> ffac874: web
+2026-09-14T02:55:01+00:00 demo-host auto_deploy.sh[512691]: deploy ffac874 -> fc616f6: nothing to rebuild
+2026-09-14T03:12:10+00:00 demo-host auto_deploy.sh[513535]: deploy fc616f6 -> 534a661: api
+2026-09-14T03:34:12+00:00 demo-host auto_deploy.sh[514661]: deploy 534a661 -> 7040ae8: api
+2026-09-14T21:07:19+00:00 demo-host auto_deploy.sh[539748]: deploy 7040ae8 -> f971d92: web
+2026-09-16T00:15:19+00:00 demo-host auto_deploy.sh[578506]: deploy f971d92 -> e4ccabf: api
+2026-09-16T00:17:52+00:00 demo-host auto_deploy.sh[578945]: deploy e4ccabf -> 88e8a13: api
+2026-09-21T02:55:01+00:00 demo-host auto_deploy.sh[754041]: deploy 88e8a13 -> c6a92e5: nothing to rebuild
+2026-09-21T02:57:07+00:00 demo-host auto_deploy.sh[754109]: deploy c6a92e5 -> e41ce13: nothing to rebuild
+2026-09-21T03:04:18+00:00 demo-host auto_deploy.sh[754330]: deploy e41ce13 -> 5513cc4: nothing to rebuild
+2026-09-21T11:50:15+00:00 demo-host auto_deploy.sh[766697]: deploy 5513cc4 -> a4c0a9e: api web
+2026-09-22T18:50:15+00:00 demo-host auto_deploy.sh[810947]: deploy a4c0a9e -> d897c5f: web
+2026-09-22T20:20:15+00:00 demo-host auto_deploy.sh[813826]: deploy d897c5f -> 8a55b7d: api
+2026-09-22T23:59:19+00:00 demo-host auto_deploy.sh[819778]: deploy 8a55b7d -> c527c9e: web
+2026-09-23T01:20:15+00:00 demo-host auto_deploy.sh[822568]: deploy c527c9e -> 8ea93bb: api web
+2026-09-23T01:22:19+00:00 demo-host auto_deploy.sh[823372]: deploy 8ea93bb -> 2397b0a: nothing to rebuild
+2026-09-23T01:44:20+00:00 demo-host auto_deploy.sh[824089]: deploy 2397b0a -> 14f81a8: web
+2026-09-24T20:52:19+00:00 demo-host auto_deploy.sh[885346]: deploy 14f81a8 -> d82749d: api web
+2026-09-24T21:39:19+00:00 demo-host auto_deploy.sh[887026]: deploy d82749d -> 231e652: api
+2026-09-24T21:52:19+00:00 demo-host auto_deploy.sh[887828]: deploy 231e652 -> 201754e: web
+2026-09-24T22:10:16+00:00 demo-host auto_deploy.sh[888953]: deploy 201754e -> 383cea5: nothing to rebuild
+2026-09-24T22:17:52+00:00 demo-host auto_deploy.sh[889137]: deploy 383cea5 -> 54903d7: nothing to rebuild
+2026-09-24T22:20:15+00:00 demo-host auto_deploy.sh[889204]: deploy 54903d7 -> dc5d16f: nothing to rebuild
+2026-09-24T22:32:19+00:00 demo-host auto_deploy.sh[889534]: deploy dc5d16f -> 59ca4be: api web
+2026-09-24T22:52:19+00:00 demo-host auto_deploy.sh[890690]: deploy 59ca4be -> 5212e17: web
+2026-09-24T22:57:07+00:00 demo-host auto_deploy.sh[891188]: deploy 5212e17 -> 181fbf2: nothing to rebuild
+2026-09-25T20:45:18+00:00 demo-host auto_deploy.sh[921868]: deploy 181fbf2 -> 16185da: nothing to rebuild
+2026-09-25T21:15:18+00:00 demo-host auto_deploy.sh[922568]: deploy 16185da -> 5a76db9: web
+2026-09-25T22:17:53+00:00 demo-host auto_deploy.sh[924505]: deploy 5a76db9 -> 5b35d3c: nothing to rebuild
+2026-09-26T16:05:10+00:00 demo-host auto_deploy.sh[949580]: deploy 5b35d3c -> d2ae7ba: api
+2026-09-26T18:17:19+00:00 demo-host auto_deploy.sh[953003]: deploy d2ae7ba -> 0e829d6: web
+2026-09-26T19:12:19+00:00 demo-host auto_deploy.sh[954664]: deploy 0e829d6 -> 9813aa4: web
+2026-09-26T19:42:18+00:00 demo-host auto_deploy.sh[955783]: deploy 9813aa4 -> d1cb078: web
+2026-09-26T19:54:29+00:00 demo-host auto_deploy.sh[956447]: deploy d1cb078 -> de97f5b: nothing to rebuild
+2026-09-26T22:15:18+00:00 demo-host auto_deploy.sh[960431]: deploy de97f5b -> b3fb1e7: nothing to rebuild
+2026-09-26T22:22:19+00:00 demo-host auto_deploy.sh[960604]: deploy b3fb1e7 -> 936dad7: api web
+2026-09-27T00:55:01+00:00 demo-host auto_deploy.sh[965022]: deploy 936dad7 -> 2dd6f6e: api web
+2026-09-27T01:02:19+00:00 demo-host auto_deploy.sh[966275]: deploy 2dd6f6e -> 7f10320: web
+2026-09-27T01:25:02+00:00 demo-host auto_deploy.sh[967171]: deploy 7f10320 -> c7de767: api web
+2026-09-27T01:29:19+00:00 demo-host auto_deploy.sh[968151]: deploy c7de767 -> cd930bb: api
+2026-09-27T13:31:18+00:00 demo-host auto_deploy.sh[986537]: checkout has local changes; refusing to deploy
+2026-09-27T13:31:18+00:00 demo-host systemd[1]: auto-deploy.service: Failed with result 'exit-code'.
+2026-09-27T13:34:18+00:00 demo-host auto_deploy.sh[986607]: checkout has local changes; refusing to deploy
+2026-09-27T13:34:18+00:00 demo-host systemd[1]: auto-deploy.service: Failed with result 'exit-code'.
+2026-09-27T13:37:19+00:00 demo-host auto_deploy.sh[986625]: checkout has local changes; refusing to deploy
+2026-09-27T13:37:19+00:00 demo-host systemd[1]: auto-deploy.service: Failed with result 'exit-code'.
+2026-09-27T13:40:15+00:00 demo-host auto_deploy.sh[986642]: checkout has local changes; refusing to deploy
+2026-09-27T13:40:15+00:00 demo-host systemd[1]: auto-deploy.service: Failed with result 'exit-code'.
+2026-09-27T13:42:18+00:00 demo-host auto_deploy.sh[986664]: checkout has local changes; refusing to deploy
+2026-09-27T13:42:18+00:00 demo-host systemd[1]: auto-deploy.service: Failed with result 'exit-code'.
+2026-09-27T13:44:40+00:00 demo-host auto_deploy.sh[986858]: deploy cd930bb -> f885a31: api web
+2026-09-27T13:48:51+00:00 demo-host auto_deploy.sh[988230]: deploy f885a31 -> 95db28f: api web
+2026-09-27T14:09:58+00:00 demo-host auto_deploy.sh[989970]: deploy 95db28f -> 7d3c779: api
+2026-09-27T14:22:19+00:00 demo-host auto_deploy.sh[990729]: deploy 7d3c779 -> 3473071: nothing to rebuild
+2026-09-27T15:37:19+00:00 demo-host auto_deploy.sh[993930]: deploy 3473071 -> 67e4953: nothing to rebuild
+2026-09-27T15:57:08+00:00 demo-host auto_deploy.sh[994506]: deploy 67e4953 -> c92124a: nothing to rebuild
+2026-09-27T15:59:15+00:00 demo-host auto_deploy.sh[994609]: deploy c92124a -> cb4119b: nothing to rebuild
+2026-09-27T16:01:18+00:00 demo-host auto_deploy.sh[994685]: deploy cb4119b -> a0f7810: nothing to rebuild

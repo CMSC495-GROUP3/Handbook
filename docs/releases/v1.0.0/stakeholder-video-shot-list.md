@@ -17,7 +17,7 @@ or the portfolio/handoff pages owned by other lanes.
 | --- | --- |
 | Resolution | 1080p |
 | Layout | One take per segment, cut together |
-| Browser | Full window on the pilot / tagged host; hide personal bookmarks |
+| Browser | Full window on the demo site / tagged host; hide personal bookmarks |
 | Secrets | No passwords, tokens, or `.env` values on screen or in narration |
 | SHA bug | Show deployed commit once on the title and once before the live demo ends — value **pending** until tag |
 
@@ -29,7 +29,7 @@ or the portfolio/handoff pages owned by other lanes.
 | S02 | 0:20–1:50 | Problem | Slide or README "The problem" section on screen | Architecture narrator | No live answers yet |
 | S03 | 1:50–2:40 | Architecture | Mermaid / three-container diagram (`caddy`, `web`, `api`) | Architecture narrator | Freeze frame OK |
 | S04 | 2:40–3:50 | Architecture | Same diagram; highlight grounding gate and refuse path | Architecture narrator | Name cosine + coverage judge; server-side history |
-| S05 | 3:50–4:10 | Demo sign-in | Sign-in page on pilot | Demo operator | Credential via course channel, not spoken |
+| S05 | 3:50–4:10 | Demo sign-in | Sign-in page on the demo site | Demo operator | Credential via course channel, not spoken |
 | S06 | 4:10–4:40 | Grounded answer | Chat: send eval `answerable_01` | Demo operator | Outcome class `answer` expected; **wording pending live run** |
 | S07 | 4:40–5:00 | Citation | Sources panel / match percentage visible | Demo operator | Do not invent citation text in editing |
 | S08 | 5:00–5:30 | Source open | Policy Library / cited document view | Demo operator | Same conversation turn |
@@ -39,7 +39,7 @@ or the portfolio/handoff pages owned by other lanes.
 | S12 | 7:00–7:30 | Escalation form | Ask Human Resources form filled (non-secret fields) | Demo operator | No PII beyond demo question |
 | S13 | 7:30–7:50 | Escalation confirmed | Confirmation / escalation id on screen | Demo operator | Keep id for S14 |
 | S14 | 7:50–8:50 | HR handling | **HR Requests** (`/escalations`) two-pane queue as on tagged deploy | Demo operator + HR handler | Signed in with the HR password, typed off camera; confirm page on tagged host; do not stage a fake console |
-| S14b | 8:50–9:20 | What People Ask | **What People Ask** (`/gaps`), 30-day window | HR handler | Same HR session; show the rows the pilot has, no seeded questions |
+| S14b | 8:50–9:20 | What People Ask | **What People Ask** (`/gaps`), 30-day window | HR handler | Same HR session; show the rows the demo site has, no seeded questions |
 | S15 | 9:20–10:20 | RAG rationale | Slide: RAG vs fine-tuning bullets | Architecture narrator | Citations + ingest without retrain |
 | S16 | 10:20–11:00 | Grounding | Slide or code pointer: cosine vs threshold + coverage judge | Architecture narrator | No live metric invention |
 | S17 | 11:00–11:50 | CI/CD | `docs/ci-cd.md` or Actions overview (public pages only) | Architecture narrator | Final run URLs **pending** tagged SHA |

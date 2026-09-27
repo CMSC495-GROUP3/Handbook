@@ -8,17 +8,17 @@ token, or session id may be visible in any image.
 | --- | --- | --- |
 | [numbers.md](numbers.md) | the shared figures for the position papers ([#217](https://github.com/CMSC495-GROUP3/Sourcebook/issues/217)) | Every row filled; the last three on 2026-09-27 |
 | [review-events.csv](review-events.csv) | every human review of someone else's pull request, from the reviews API, up to the `v1.0.0` tag | Pulled 2026-09-27 |
-| [auto-deploys-since-alpha.txt](auto-deploys-since-alpha.txt) | each auto-deploy and refusal on the pilot host from the alpha tag to the `v1.0.0` tag, from its `auto-deploy.service` journal | Pulled 2026-09-27 |
-| [host-uptime.txt](host-uptime.txt) | the pilot host's boot record: up without a reboot since 2026-09-02 | Pulled 2026-09-27 |
+| [auto-deploys-since-alpha.txt](auto-deploys-since-alpha.txt) | each auto-deploy and refusal on the demo host from the alpha tag to the `v1.0.0` tag, from its `auto-deploy.service` journal | Pulled 2026-09-27 |
+| [host-uptime.txt](host-uptime.txt) | the demo host's boot record: up without a reboot since 2026-09-02 | Pulled 2026-09-27 |
 | [coverage.md](coverage.md) | Python and web coverage for the candidate ([#210](https://github.com/CMSC495-GROUP3/Sourcebook/issues/210)) | Done on `7d3c779` |
-| [lighthouse.md](lighthouse.md) | Lighthouse on the pilot, both themes, phone and desktop ([#214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214)), with [lighthouse-summary.json](lighthouse-summary.json) | Done on `7d3c779` |
-| [pilot-load.json](pilot-load.json), [pilot-load-host.csv](pilot-load-host.csv) | the load run against the pilot and the host samples during it ([#212](https://github.com/CMSC495-GROUP3/Sourcebook/issues/212)); results in [../../../load-testing-pilot.md](../../../load-testing-pilot.md#results) | Done, code identical to `7d3c779` |
+| [lighthouse.md](lighthouse.md) | Lighthouse on the demo site, both themes, phone and desktop ([#214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214)), with [lighthouse-summary.json](lighthouse-summary.json) | Done on `7d3c779` |
+| [pilot-load.json](pilot-load.json), [pilot-load-host.csv](pilot-load-host.csv) | the load run against the demo site and the host samples during it ([#212](https://github.com/CMSC495-GROUP3/Sourcebook/issues/212)); results in [../../../load-testing-demo.md](../../../load-testing-demo.md#results) | Done, code identical to `7d3c779` |
 | End-to-end pass screenshots | the 22 files below, from the pass in [../handoff.md](../handoff.md#end-to-end-pass-by-hand) | Done on `7d3c779` |
 | `ci-green.png`, `security-green.png`, `pr-checks-green.png`, `pr-path-labels-green.png`, `live-evaluation-green.png`, `auto-deploy-green.png`, [auto-deploy-journal.txt](auto-deploy-journal.txt) | green CI, Security, PR checks, path labels, and full-tier evaluation runs, and the auto-deploy of the candidate ([#207](https://github.com/CMSC495-GROUP3/Sourcebook/issues/207)); each is linked with its run in [../../../ci-cd.md](../../../ci-cd.md) | Done on `7d3c779` and #274 |
 
 ## End-to-end pass screenshots
 
-Taken on 2026-09-27 against the pilot running `7d3c779`, in Google Chrome
+Taken on 2026-09-27 against the demo site running `7d3c779`, in Google Chrome
 153.0.8010.53 at 1440x1000, and 390x844 for `22`. On the two What People Ask
 captures the question text is blurred, since a question can identify who
 asked. The HR Requests captures show only test questions from this pass and

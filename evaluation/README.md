@@ -44,7 +44,7 @@ pytest tests/test_live_evaluation_fail_closed.py
 
 When a maintainer needs smoke numbers for a branch that is not yet on
 `origin/main` (for example before merging a grounding fix), run evaluation on
-the pilot host — not through the Actions workflow:
+the demo host — not through the Actions workflow:
 
 1. On the host, clone or fetch the pull-request head into a **separate**
    directory (do not displace the deployed checkout).

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Sample host load and per-container CPU and memory while a load run is going,
-# for docs/load-testing-pilot.md (issue #212). Run it on the pilot host, in a
+# for docs/load-testing-demo.md (issue #212). Run it on the pilot host, in a
 # second shell, just before pilot_load.py starts on the client; stop it with
 # Ctrl-C when the run ends.
 #

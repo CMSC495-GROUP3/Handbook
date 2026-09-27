@@ -1,7 +1,7 @@
 # Sourcebook v0.2.0
 
 The second tagged version of Sourcebook, released as a prerelease for the
-CMSC 495 Unit 6 beta. It is a pilot, not a production system, and the
+CMSC 495 Unit 6 beta. It is a class demo, not a production system, and the
 sections below say plainly what it does, what is broken, and what nobody has
 measured yet.
 
@@ -36,7 +36,7 @@ streams back with the policies it drew on and a match score.
   error and `Retry-After` instead of a generic failure, and the web app offers
   one Retry that resends the same question (PRs #247, #254).
 - **A knowledge-gap report** over the query log (PR #171).
-- **A unique index on passage identity**, migrated on the pilot (PR #176).
+- **A unique index on passage identity**, migrated on the demo site (PR #176).
 - **Phone fixes** to the drawer and the source pane (PRs #234, #242, #240).
 - **Web tests** with Vitest and React Testing Library, run in CI with an 80%
   floor (PR #252).
@@ -45,7 +45,7 @@ streams back with the policies it drew on and a match score.
 
 ## Getting access
 
-**The pilot** runs at <https://sourcebook.duckdns.org> on a single instance
+**The demo site** runs at <https://sourcebook.duckdns.org> on a single instance
 and stays up while the course runs. It needs a password. The team supplies the
 reviewer password through the course channel, never through this repository.
 
@@ -67,7 +67,7 @@ make web
 | Issue | What a user would see | Impact | Mitigation |
 | --- | --- | --- | --- |
 | [#266](https://github.com/CMSC495-GROUP3/Sourcebook/issues/266) | on a phone, Back can reopen the request or policy just left, and focus falls to the top of the page when the panes switch | confusing navigation for keyboard and screen-reader users | use the "All requests" link, or a desktop window where both panes show |
-| [#142](https://github.com/CMSC495-GROUP3/Sourcebook/issues/142) | assigning and deleting a project at the same moment can race | a conversation can point at a deleted project; the list treats it as ungrouped | unlikely at pilot volume with one operator |
+| [#142](https://github.com/CMSC495-GROUP3/Sourcebook/issues/142) | assigning and deleting a project at the same moment can race | a conversation can point at a deleted project; the list treats it as ungrouped | unlikely at demo volume with one operator |
 | [#269](https://github.com/CMSC495-GROUP3/Sourcebook/issues/269) | a question the coverage judge refuses shows "Strong match" and its score under "No matching policy", and says nothing indexed came close | the user may doubt a correct refusal | the refusal and the Ask Human Resources button are right; ignore the badge |
 | Vague questions on covered topics | "Can I expense this trip?" is refused where the alpha answered in general terms | the user gets the refusal card instead of a pointer to the travel policy | ask a more specific question, or use Ask Human Resources |
 
@@ -88,7 +88,7 @@ make web
 
 ## Reproducing this exact version
 
-The pilot host follows `main`, so it moves past this tag. The tag does not.
+The demo host follows `main`, so it moves past this tag. The tag does not.
 
 ```bash
 git clone https://github.com/CMSC495-GROUP3/Sourcebook.git
@@ -97,5 +97,5 @@ git checkout v0.2.0
 make setup && make stub
 ```
 
-Showing the pilot at the tagged version is the by-hand procedure in the
+Showing the demo site at the tagged version is the by-hand procedure in the
 [alpha handoff](../v0.1.0-alpha.1/handoff.md#the-tag-and-reproducing-this-version-later).

@@ -13,7 +13,7 @@ called verified without a link that shows it.
 
 ## Where to start
 
-- **See it running.** The pilot is at <https://sourcebook.duckdns.org>. It has
+- **See it running.** The demo site is at <https://sourcebook.duckdns.org>. It has
   a reviewer password separate from the team's; the team supplies it through
   the course channel, not through this repository. The README's Configure
   section explains how the second password works.
@@ -37,7 +37,7 @@ the corpus.
 | Commit | `d7199f57e3eb600e646d4202de43c97f2c5cc770`, the merge of PR #191 into `main` on 2026-09-11 |
 | Tag and release | [`v0.1.0-alpha.1`](https://github.com/CMSC495-GROUP3/Sourcebook/releases/tag/v0.1.0-alpha.1), annotated, prerelease, on that commit |
 | Running at | <https://sourcebook.duckdns.org> |
-| Deployed commit | the same, per `refs/deployed/main` on the pilot host, checked 2026-09-11 00:20 UTC. The pilot follows `main`, so it moves on from here; the evidence below records the commit each check ran against |
+| Deployed commit | the same, per `refs/deployed/main` on the demo host, checked 2026-09-11 00:20 UTC. The demo site follows `main`, so it moves on from here; the evidence below records the commit each check ran against |
 | CI | [run 34545903866](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/34545903866), success |
 | Security | [run 34545903887](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/34545903887), success |
 | Proposed tag | `v0.1.0-alpha.1`, annotated, marked prerelease |
@@ -64,13 +64,13 @@ this one.
 | Learn from the query log (content gaps, FAQ ranking, threshold tuning) | Logging yes; reports not in this commit | `sourcebook/api/analytics.py`, `tests/test_analytics.py` | The specification asks for a weekly human-read knowledge-gap report over `query_logs`. That report is in draft as PR #171 and did not make this commit, so #160 stands as a gap against the specification |
 | Policy Library renders whole documents | Yes | PR #167, `web/src/components/Documents` | none known |
 | Conversation history, projects, reload | Yes | `tests/test_conversations.py`, PRs #126, #133 | #142: project assignment and deletion are not transactional |
-| Shared-password sign-in with a second reviewer password | Yes | PRs #75 (for #74), #110, #154; `tests/test_auth.py`, `tests/test_tokens.py` | A shared credential by design for the pilot, with no per-user accounts |
+| Shared-password sign-in with a second reviewer password | Yes | PRs #75 (for #74), #110, #154; `tests/test_auth.py`, `tests/test_tokens.py` | A shared credential by design for the demo site, with no per-user accounts |
 | Rate limits and provider bounds so a stalled provider cannot take the site down | Yes | PRs #112, #144; `tests/test_provider_timeout.py`, `tests/test_proxy_headers.py` | #118: saturation reports as a generic error rather than a retryable one |
 | Serve 10,000 concurrent users, which the design specification reads as about 100 requests per second | Synthetic evidence only | `docs/load-testing.md`: 98.7 requests per second on one worker at `THREADPOOL_TOKENS=320`, zero failures, 0.17s time to first byte, with the model faked | The measurement is 1.3% under the 100 figure, not over it. Four workers at the shipped default project to about 124 requests per second, and that is arithmetic rather than a measurement. The real-service run described in [live-benchmark.md](live-benchmark.md) is deliberately small and cannot settle any of this |
 | Model call behind one interface, so a self-hosted model can replace the vendor (pitch risk: lock-in) | Yes | `LLMProvider` in `sourcebook/rag/llm.py`, with `OpenAIProvider` and `FakeProvider` registered in `_PROVIDERS` and chosen by `LLM_PROVIDER`; `tests/test_provider_timeout.py` | One real vendor is implemented. The fake exists for tests and refuses to start in production, so the swap is unproven against a second real provider |
 | Customer record lookup behind one interface, shown to be workable rather than integrated | Not yet | `CustomerDataProvider` in section 2 of the design specification and grey in its Figure 1 | The requirement is a demonstration, so the alpha implements the contract with a simulated provider rather than reading a real customer system. Not written yet, and not tracked by an issue |
-| Passages, metadata, and embeddings in one database rather than a vector store beside a document store (pitch) | Yes | `sourcebook/rag/mongo.py`, the index setup in `sourcebook/api/db.py`, `tests/test_indexes.py`; Atlas Vector Search index `vector_index` | The Atlas free tier caps the pilot corpus at 512 MB, which the pitch names as a risk |
-| Deployed pilot with TLS and automatic deploys | Yes | README "Deployment" and "Checking a deploy"; `scripts/auto_deploy.sh`, `tests/test_auto_deploy.py` | One instance, no redundancy, a free DuckDNS name |
+| Passages, metadata, and embeddings in one database rather than a vector store beside a document store (pitch) | Yes | `sourcebook/rag/mongo.py`, the index setup in `sourcebook/api/db.py`, `tests/test_indexes.py`; Atlas Vector Search index `vector_index` | The Atlas free tier caps the demo corpus at 512 MB, which the pitch names as a risk |
+| Deployed demo with TLS and automatic deploys | Yes | README "Deployment" and "Checking a deploy"; `scripts/auto_deploy.sh`, `tests/test_auto_deploy.py` | One instance, no redundancy, a free DuckDNS name |
 | Redesigned web app, responsive, keyboard-usable | Redesign shipped in PR #161 and its follow-ups | milestone "refactor: new UI/UX" | #51 responsive pass, #52 keyboard pass, #174 theme switch on a phone, #53 deployment verification, all open |
 
 ## Where the implementation differs from the Unit 3 design specification
@@ -82,7 +82,7 @@ them here.
 
 | Item | Design specification | This commit | Why it changed |
 | --- | --- | --- | --- |
-| Edge | Figure 1 has one edge component: Nginx serves the app and proxies `/api` with buffering off | Caddy terminates TLS for `SITE_ADDRESS` and forwards to Nginx, which still serves the app and proxies `/api`. Only Caddy publishes ports | TLS with a Let's Encrypt certificate for the DuckDNS name arrived with the pilot host, after the specification was written. No contract changed. Figure 1 is stale |
+| Edge | Figure 1 has one edge component: Nginx serves the app and proxies `/api` with buffering off | Caddy terminates TLS for `SITE_ADDRESS` and forwards to Nginx, which still serves the app and proxies `/api`. Only Caddy publishes ports | TLS with a Let's Encrypt certificate for the DuckDNS name arrived with the demo host, after the specification was written. No contract changed. Figure 1 is stale |
 | Endpoint contract | Section 2.1 lists login, chat, chat/stream, conversations (list, create, get), documents, and escalations (create, list, patch) | Also `GET /api/health` and `/api/config`, `PATCH` and `DELETE /api/conversations/{id}`, `GET /api/documents/categories`, `/body`, and `/passages`, `POST /api/documents/reindex`, `GET /api/escalations/{id}`, `POST /api/escalations/{id}/retry-delivery`, and the whole `/api/projects` resource | Every addition is additive, and Figure 1 already names projects among the route files. Section 2.1 needs the extra rows |
 | Rate limits | Login 10 a minute per IP, escalation 5 | The same two, plus `CHAT_RATE_LIMIT` at 30 a minute per address per worker and `REINDEX_RATE_LIMIT` at 2 a minute | The chat cap is the binding ceiling for interactive use and is missing from section 2 of the specification |
 | Throughput target | "the 10,000-user target, which we read as about 100 requests per second" | README and `docs/load-testing.md` derive 83 requests per second from 10,000 employees each asking one question in a 120-second peak, and use that as their pass mark | Two readings of one requirement, from the same 10,000 employees. The team states the specification's figure of about 100 requests per second. `docs/load-testing.md` keeps 83 as its internal pass mark because that is what its own arithmetic gives, so the two documents differ on the target and agree on the measurement. Both rest on synthetic runs with the model faked |
@@ -101,7 +101,7 @@ message_index)` index, and the error and validation table in section 2.5.
 | Python lint, tests on 3.11 to 3.14 with an 80% coverage floor, web lint and types and build, both Docker images, Compose validation, the proxy-chain acceptance script | Passed | [CI run 34534962223](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/34534962223) |
 | CodeQL, dependency audit, secret scan | Passed | [Security run 34534962098](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/34534962098) |
 | Answer quality against the live system | Measured on the smoke tier, on `4e90382` and on the pre-#138 baseline; one defect found | [live-evaluation.md](live-evaluation.md): retrieval, citation, and grounded answers 100% of 12 on both commits; the grounding gate stopped none of the five refusal cases, now [#192](https://github.com/CMSC495-GROUP3/Sourcebook/issues/192) |
-| Real-service latency and error rate on the pilot | Passed, on a sample of seven | [live-benchmark.md](live-benchmark.md): all five agreed targets met on `4352966`, 1.21s median time to first token, no errors, no rate limiting |
+| Real-service latency and error rate on the demo site | Passed, on a sample of seven | [live-benchmark.md](live-benchmark.md): all five agreed targets met on `4352966`, 1.21s median time to first token, no errors, no rate limiting |
 | End-to-end pass through the deployed app by hand | Passed, with one defect found | [below](#end-to-end-pass-by-hand): all eight steps pass on `4e90382`; the uncovered-question step surfaced [#189](https://github.com/CMSC495-GROUP3/Sourcebook/issues/189) |
 | Escalation after a failed generation | Fixed in [PR #188](https://github.com/CMSC495-GROUP3/Sourcebook/pull/188) | `tests/test_escalations.py` covers the id path and the legacy index path. The browser pass ran before that merge, so its two escalation steps exercised the old path |
 
@@ -113,7 +113,7 @@ skips it. It last ran on the pull request that produced this commit.
 The measurement was taken on 2026-09-11 and is written up in
 [live-evaluation.md](live-evaluation.md), with every answer and score in
 `live-evaluation-results.json` beside it. The gate on #137 asked for three
-things, and each was done with the real provider and the pilot's Atlas index,
+things, and each was done with the real provider and the demo site's Atlas index,
 exit-code verified, on both `4e90382` (tip `main`, prompt `v2`) and the
 pre-#138 baseline `9871e3ed2faa798cc21d237b421c7ac68963a9a2` (prompt `v1`):
 
@@ -216,17 +216,17 @@ CONTRIBUTING.md. Tracked as #158.
 
 ## Known defects and limitations
 
-| Issue | What a pilot user would see | Mitigation in the alpha |
+| Issue | What a demo-site user would see | Mitigation in the alpha |
 | --- | --- | --- |
 | #189 | an uncovered question asked as a follow-up can clear the grounding gate, so it is answered with a decline that cites unrelated policies instead of the refusal card | ask an uncovered question in a new conversation, where the gate scores it correctly |
 | #192 | an uncovered question on an HR-adjacent topic, or a prompt injection, clears the grounding gate even as a first question; the model declines in prose, but the refusal card and its button do not appear | the answer text says the policies do not cover it; "Not what you needed?" under the answer still files the escalation |
 | #118 | provider saturation reads as a generic error, so the user does not know it is worth retrying | `OPENAI_MAX_CONCURRENT_REQUESTS` bounds the damage; retry by hand |
-| #142 | concurrent project assignment and deletion can race | a single-operator pilot makes this unlikely at this volume |
+| #142 | concurrent project assignment and deletion can race | a single-operator demo makes this unlikely at this volume |
 | #158 | nothing at the database level prevents duplicate passage identities | ingestion upserts by `(source, chunk_index)`; PR #176 adds the constraint |
 | #159 | Human Resources has no in-app queue | the handler works the queue through the API or a webhook-fed channel |
 | #160 | no report over the query log yet | query the collection directly, or run the draft report from PR #171 by hand |
-| #174, #51, #52 | phone and keyboard usability gaps | review the pilot in a desktop browser |
-| README known limitations | a shared password, an untuned threshold, non-atomic re-ingestion, one instance, regex document search, a fictional corpus | documented in the README; none of them blocks a pilot |
+| #174, #51, #52 | phone and keyboard usability gaps | review the demo site in a desktop browser |
+| README known limitations | a shared password, an untuned threshold, non-atomic re-ingestion, one instance, regex document search, a fictional corpus | documented in the README; none of them blocks a class demo |
 
 ## What this alpha does not establish
 
@@ -239,7 +239,7 @@ default project to about 124 requests per second, but that number is
 multiplication, not a run. `docs/load-testing.md` gives the method and
 the raw tables, and lists what its own harness cannot capture: real model
 latency is slower and more variable, real Atlas is slower than a 15 ms
-dictionary, and a development laptop is not the t3.micro the pilot runs on.
+dictionary, and a development laptop is not the t3.micro the demo site runs on.
 None of this measures the deployed system under load, and the bounded run in
 [live-benchmark.md](live-benchmark.md) is too small to become one.
 
@@ -272,7 +272,7 @@ reviewers; rate limits and provider timeouts; a query log for later analysis;
 and a Docker Compose deployment behind Caddy that redeploys itself when `main`
 moves.
 
-The pilot runs at <https://sourcebook.duckdns.org> on a single instance and
+The demo site runs at <https://sourcebook.duckdns.org> on a single instance and
 stays up while the course runs. The reviewer password comes from the team
 through the course channel.
 
@@ -285,7 +285,7 @@ here, because a release page is read on its own.
 
 ## The tag, and reproducing this version later
 
-The pilot host follows `main`, so it moves past the tag. The tag does not. To
+The demo host follows `main`, so it moves past the tag. The tag does not. To
 see the submitted version:
 
 ```bash
@@ -296,10 +296,10 @@ make setup && make stub        # fake model, in-memory database, no accounts
 ```
 
 With a `.env` holding real credentials, `docker compose up --build` at that
-checkout runs the full stack instead. The commit deployed on the pilot at any
+checkout runs the full stack instead. The commit deployed on the demo site at any
 moment is `refs/deployed/main` on the host, which the README's "Automatic
-deploys" section explains. The pilot is expected to move past the tag; the
-tag, not the pilot, is the submitted version. If the pilot ever has to be
+deploys" section explains. The demo site is expected to move past the tag; the
+tag, not the demo site, is the submitted version. If the demo site ever has to be
 shown at the tagged version, the operator stops the auto-deploy timer,
 because it refuses a checkout that is not on `main` and would otherwise
 fast-forward it back, checks out the tag in the host checkout, runs

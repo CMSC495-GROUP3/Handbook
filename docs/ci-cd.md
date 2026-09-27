@@ -1,6 +1,6 @@
 # Continuous integration, delivery, and release evidence
 
-Five GitHub Actions workflows plus a timer on the pilot host. CI success is
+Five GitHub Actions workflows plus a timer on the demo host. CI success is
 not live evaluation. Live evaluation is not a quality verdict. A healthy
 deploy is not a tagged release. The `v1.0.0` screenshots and a sanitized
 host journal, taken on the release candidate `7d3c779`, are in
@@ -185,9 +185,9 @@ need human review of cited passages and the labeled cases.
 > the scores and the six hand-reviewed dispositions are in
 > [`live-evaluation.md`](releases/v1.0.0/live-evaluation.md).
 
-## From merge to the pilot containers
+## From merge to the demo containers
 
-The pilot polls. It does not take a deployment webhook. The systemd unit
+The demo host polls. It does not take a deployment webhook. The systemd unit
 [`scripts/systemd/auto-deploy.timer`](../scripts/systemd/auto-deploy.timer)
 starts [`auto-deploy.service`](../scripts/systemd/auto-deploy.service) two
 minutes after boot and every two minutes after that. The oneshot service runs
@@ -246,7 +246,7 @@ A successful probe means the selected services came up and `/api/health`
 answered. It does not re-run CI, does not score answers, and does not freeze
 the public site at a release tag.
 
-> **Evidence, `v1.0.0` candidate deployment:** the pilot's auto-deploy of
+> **Evidence, `v1.0.0` candidate deployment:** the demo site's auto-deploy of
 > `95db28f -> 7d3c779` at 14:09:58 UTC on 2026-09-27 rebuilt and recreated
 > only `api`, then printed every container up:
 > [`auto-deploy-journal.txt`](releases/v1.0.0/evidence/auto-deploy-journal.txt), rendered as
@@ -303,5 +303,5 @@ artifact.
 > On the tagged commit: [CI 36331671207](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36331671207) and [Security 36331671210](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36331671210),
 > both green. The Live evaluation and deployment evidence above were taken on
 > the candidate `7d3c779`; every commit from it to the tag changed
-> documentation only, and the pilot deployed the tagged commit at 16:03 UTC
+> documentation only, and the demo site deployed the tagged commit at 16:03 UTC
 > with nothing to rebuild.

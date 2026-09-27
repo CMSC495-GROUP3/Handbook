@@ -4,10 +4,10 @@
 it. The measurements and the reasoning behind `THREADPOOL_TOKENS` are in
 [docs/load-testing.md](../../docs/load-testing.md).
 
-`live_benchmark.py` and `pilot_load.py` run against the deployed pilot with the
-real model, capped; `host_stats.sh` samples the host while they do. The pilot
+`live_benchmark.py` and `pilot_load.py` run against the deployed demo site with the
+real model, capped; `host_stats.sh` samples the host while they do. The demo site
 load protocol and results are in
-[docs/load-testing-pilot.md](../../docs/load-testing-pilot.md).
+[docs/load-testing-demo.md](../../docs/load-testing-demo.md).
 
 `report_timing.py` seeds a throwaway MongoDB with one popular question and
 times the What People Ask pipelines that grouped raw `query_logs` rows (issue
