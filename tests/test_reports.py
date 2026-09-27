@@ -1013,7 +1013,7 @@ def test_the_holder_renews_a_lease_it_still_holds():
     assert not report_snapshots.acquire_lease(snapshots, now + timedelta(minutes=10), hold, "b")
 
 
-def test_the_lease_covers_every_window_at_its_timeout():
+def test_the_lease_covers_every_window_at_its_timeouts():
     reports.refresh_snapshots()
     snapshots = FAKE_DB[report_snapshots.SNAPSHOT_COLLECTION]
     lease = snapshots.find_one({"_id": report_snapshots.LEASE_ID})
@@ -1023,7 +1023,8 @@ def test_the_lease_covers_every_window_at_its_timeout():
     snapshot = snapshots.find_one({"_id": key})
 
     held = lease["expires_at"] - snapshot["until"]
-    assert held >= timedelta(milliseconds=3 * reports.REFRESH_TIMEOUT_MS)
+    # Three windows, each an aggregation and a round of sample lookups.
+    assert held >= timedelta(milliseconds=3 * 2 * reports.REFRESH_TIMEOUT_MS)
 
 
 def test_a_worker_without_the_lease_does_not_refresh(monkeypatch):
@@ -1102,3 +1103,13 @@ def test_fake_facet_and_inclusion_project():
         "renamed": [{"x": 2, "b": 3}, {"x": 5, "b": 7}],
         "kept_id": [{"_id": 1, "a": 2}, {"_id": 2, "a": 5}],
     }
+
+
+def test_a_lease_upsert_stores_no_filter_operators():
+    """The fake keeps only equality fields from an upsert's filter, as Mongo
+    does, so the lease document holds no $or."""
+    snapshots = FAKE_DB[report_snapshots.SNAPSHOT_COLLECTION]
+    report_snapshots.acquire_lease(snapshots, datetime.now(UTC), timedelta(minutes=5), "a")
+
+    lease = snapshots.find_one({"_id": report_snapshots.LEASE_ID})
+    assert set(lease) == {"_id", "expires_at", "holder"}

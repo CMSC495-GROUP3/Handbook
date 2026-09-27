@@ -397,9 +397,9 @@ What this says:
 - **The refresh costs about 56 s of database time every five minutes at 200k
   questions a day**, about a fifth of the interval. Each window stops at
   `REFRESH_TIMEOUT_MS` (120 s), and the lease is held long enough to cover
-  all three aggregations at that limit. The sample-text lookups after each
-  aggregation have their own timeout that the lease does not budget for, so
-  in a very slow refresh two workers could overlap.
+  all three windows at their limits: each window's aggregation, and its
+  sample-text lookups together, are bounded by that timeout, so two workers
+  never refresh at once.
 - **Counts on the page are normally up to one interval old**, and never more
   than three: past that the route computes the window live. `until` in the
   response says when the snapshot was taken.

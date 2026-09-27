@@ -624,9 +624,9 @@ window that ends earlier than that prints an empty report rather than an error.
 What People Ask reads per-day counts rather than the rows
 ([architecture.md](architecture.md#learning-from-the-query-log)). Rows logged
 before those counts existed need a one-time backfill after the deploy that
-adds them. Rerunning it skips rows it has already recorded. A run
-interrupted between recording a row and marking it counts that one ask twice
-on the next run, so let it finish:
+adds them. Rerunning it is safe: it skips rows it has already recorded, and
+it never counts a row twice, though a run killed mid-row can leave that one
+ask out:
 
     python -m sourcebook.rag.query_log_rollup --backfill
 
