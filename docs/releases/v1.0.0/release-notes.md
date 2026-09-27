@@ -111,7 +111,21 @@ make web
 
 ## What this release does not establish
 
-Pending: written at the freeze from what was measured. See
+- **10,000 users.** The pilot answered every request at 20 concurrent users.
+  At 40, OpenAI's token rate limit on the team's account and the pilot's own
+  cap refused most requests. The 10,000-user figure still rests on a
+  synthetic run with the model faked.
+- **Answer quality on real questions.** The evaluation's 59 cases were written
+  by the team against the sample policies.
+- **A full accessibility audit.** Lighthouse's automated checks score 100;
+  nobody has tested with a screen reader from start to finish.
+- **What People Ask at the planned volume.** It was timed on a local database,
+  and a 90-day window at the planned volume misses the 5-second limit.
+- **Per-person identity, uptime, and a real corpus.** Access is by shared
+  password, the pilot is one instance with no monitoring, and the policies are
+  fictional.
+
+The evidence for each is in
 [handoff.md](handoff.md#what-this-release-does-not-establish).
 
 ## Reproducing this exact version

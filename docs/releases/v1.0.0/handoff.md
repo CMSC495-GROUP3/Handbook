@@ -155,17 +155,65 @@ Carried from the beta unless fixed before the freeze. Update at the freeze.
 
 ## What this release does not establish
 
-Pending: rewrite at the freeze from what was measured. Start from the beta's
-list: load (#212), full-tier quality (#213), accessibility and web performance
-(#214), `CustomerDataProvider` not written, a fictional corpus, one instance
-with no failover. Add the question judge: its numbers come from 120 pairs
-written by the team on the sample policies, not from real employees'
-questions, and `gpt-4o-mini`'s verdicts varied between runs. Add the What
-People Ask report at volume: #296 timed it on
-a local `mongo:7`, not Atlas, and neither query shape answers a 90-day window
-within the route's 5 s limit at the 7M rows a day planned in `config.py`
-([#291](https://github.com/CMSC495-GROUP3/Sourcebook/issues/291)). Remove
-only the items the measurements above actually settle.
+The beta listed five gaps. The measurements on this candidate close three of
+them in part, and none of them completely. What is still unmeasured, or
+measured only on this fictional sample, is below.
+
+**The 10,000-user requirement is not shown on the deployed system.** The load
+run ([#212](https://github.com/CMSC495-GROUP3/Sourcebook/issues/212)) measured the pilot up to 40 concurrent users. It answered
+every request at 20 concurrent, at 8.86 requests a second. At 40, OpenAI's
+limit of 30,000 gpt-4o tokens a minute on the team's account refused 20
+requests, and the pilot's own cap of 20 model calls refused 13. The 10,000
+figure, read as 83 questions a second in
+[docs/load-testing.md](../../load-testing.md), still rests on that page's
+synthetic run: model faked, database in memory, limiter off. Reaching it would
+take a higher OpenAI usage tier and more than the one API worker on one small
+instance, and neither has been tried.
+
+**Answer quality is measured on 59 written cases, not on real questions.** The
+smoke tier (20 cases) and the full tier (59 cases, [#213](https://github.com/CMSC495-GROUP3/Sourcebook/issues/213)) both ran on
+the candidate. Their questions were written by the team against the sample
+policies. The three prompt-injection cases and three ambiguous ones are scored
+by one reader's judgement, recorded in
+[live-evaluation.md](live-evaluation.md#manual-review), not by a metric. The two
+full-tier misses give the right answer and cite a sibling policy; the metric
+counts them as misses and so does this page.
+
+**Accessibility is Lighthouse's automated checks, not an audit.** Lighthouse
+scored accessibility 100 on all 12 runs ([#214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214),
+[evidence/lighthouse.md](evidence/lighthouse.md)). That covers what an
+automated tool can see: contrast, labels, landmarks, and the like. Nobody has
+tested Sourcebook with a screen reader from start to finish. Keyboard focus
+was checked only on the #266 path, in the browser pass. The scores come
+from one run on one laptop, and phone performance moves by several points
+between runs.
+
+**The What People Ask report is not shown at the planned volume.** #296 timed
+the report on a local `mongo:7`, not on Atlas. Neither query shape answers a
+90-day window within the route's 5 s limit at the 7M rows a day that
+`config.py` plans for the 83-questions-a-second target
+([#291](https://github.com/CMSC495-GROUP3/Sourcebook/issues/291)). On the pilot's real log it loads at once, because the log is
+small: 87 questions in the 30 days before the browser pass.
+
+**The question judge is measured on the team's own pairs.** The numbers behind
+it (16 to 18 of 60 paraphrases merged, 0 or 1 of 60 different questions) come
+from 120 pairs the team wrote on the sample policies, and `gpt-4o-mini` gave
+different verdicts on the same pairs from one run to the next
+([docs/evaluation.md](../../evaluation.md#the-model-check-below-the-threshold)).
+The #293 target, half the paraphrases with none of the different questions,
+was not met.
+
+**There is no per-person identity.** Access is by shared password, and
+conversations belong to a browser, not a person (#299). Nothing here shows
+who asked a question, and nothing could.
+
+**Uptime is not measured.** The pilot runs on one instance with no failover
+and no monitoring export, so this release makes no availability claim.
+
+**`CustomerDataProvider` is designed and not written.**
+
+**The corpus is fictional.** Sourcebook has never been run against a real
+company's policies.
 
 ## The tag
 
