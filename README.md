@@ -476,10 +476,10 @@ The first two lists are on the What People Ask page in the web app, over the las
 7, 30, or 90 days. The page and its route need the manager or HR password, and
 a manager sees only questions asked in several separate conversations (see
 [Configure](#1-configure)). The page also merges wordings whose embeddings are within
-`QUESTION_GROUP_THRESHOLD` cosine (default 0.85, #287). On 120 labelled pairs
-that merged 6 of 60 paraphrases and 2 of 60 different questions
+`QUESTION_GROUP_THRESHOLD` cosine (default 0.91, #287). On 120 labelled pairs
+that alone merged 3 of 60 paraphrases and none of 60 different questions
 ([measurement](docs/evaluation.md#question-grouping-threshold)). For pairs
-between 0.7 and 0.85 the utility model decides whether the two wordings are
+between 0.7 and 0.91 the utility model decides whether the two wordings are
 one question, in one call per page load (#293). If that call fails, the page
 groups on cosine alone and says so. The terminal report below groups by exact
 wording only.

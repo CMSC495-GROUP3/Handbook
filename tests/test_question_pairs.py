@@ -21,18 +21,7 @@ def test_results_cover_the_committed_pairs():
     assert {s["id"] for s in RESULTS["scores"]} == {p["id"] for p in PAIRS}
 
 
-# Different pairs one word apart that clear 0.85 on cosine alone, found by the
-# pairs added for #293: HSA versus FSA (0.862), and sick versus a sick child
-# (0.907). Raising the threshold past them is a separate decision; see
-# docs/evaluation.md.
-KNOWN_COSINE_FALSE_MERGES = {"diff_56", "diff_58"}
-
-
-def test_the_default_merges_no_other_measured_pair_of_different_questions():
+def test_the_default_merges_no_measured_pair_of_different_questions():
     """Lowering the default below a measured near miss needs a new measurement."""
-    merged = {
-        s["id"]
-        for s in RESULTS["scores"]
-        if s["label"] == "different" and s["cosine"] >= QUESTION_GROUP_THRESHOLD
-    }
-    assert merged == KNOWN_COSINE_FALSE_MERGES
+    different = [s["cosine"] for s in RESULTS["scores"] if s["label"] == "different"]
+    assert max(different) < QUESTION_GROUP_THRESHOLD

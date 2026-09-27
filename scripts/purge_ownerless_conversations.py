@@ -19,11 +19,12 @@ import argparse
 
 from dotenv import load_dotenv
 
-from sourcebook.api.db import conversations_col, projects_col
-
-# Same as the other entrypoints, so the documented command works on a host
-# whose settings live in .env. get_client reads MONGODB_URI lazily.
+# Before the db import: sourcebook.api.db opens its collections at import, so
+# MONGODB_URI has to be in the environment by then. On the pilot host it is
+# only in .env, and loading it after the import failed there on 2026-09-27.
 load_dotenv()
+
+from sourcebook.api.db import conversations_col, projects_col  # noqa: E402
 
 OWNERLESS = {"owner": {"$exists": False}}
 
