@@ -244,7 +244,7 @@ def test_a_slow_report_answers_503(client, hr_auth, monkeypatch):
     assert calls == [{"maxTimeMS": reports.QUERY_TIMEOUT_MS}]
 
 
-def test_a_report_over_the_memory_limit_answers_503(client, auth, monkeypatch):
+def test_a_report_over_the_memory_limit_answers_503(client, hr_auth, monkeypatch):
     """$addToSet cannot spill, so one very common question can hit code 146 (#291)."""
 
     def too_big(_pipeline, **_kwargs):
@@ -252,20 +252,20 @@ def test_a_report_over_the_memory_limit_answers_503(client, auth, monkeypatch):
 
     monkeypatch.setattr(reports.query_logs_col, "aggregate", too_big)
 
-    response = client.get(URL, headers=auth)
+    response = client.get(URL, headers=hr_auth)
 
     assert response.status_code == 503
     assert "shorter window" in response.json()["detail"]
 
 
-def test_other_mongo_failures_are_not_reported_as_slow(client, auth, monkeypatch):
+def test_other_mongo_failures_are_not_reported_as_slow(client, hr_auth, monkeypatch):
     def unauthorized(_pipeline, **_kwargs):
         raise OperationFailure("not authorized", code=13)
 
     monkeypatch.setattr(reports.query_logs_col, "aggregate", unauthorized)
 
     with pytest.raises(OperationFailure):
-        client.get(URL, headers=auth)
+        client.get(URL, headers=hr_auth)
 
 
 def test_fake_sort_puts_null_first_ascending_like_mongo():
@@ -504,12 +504,14 @@ def test_wording_pipeline_returns_a_capped_sample_of_session_ids(monkeypatch):
     assert len(row["sessions"]) == 2
 
 
-def test_a_wording_past_the_sample_cap_reports_its_exact_conversations(client, auth, monkeypatch):
+def test_a_wording_past_the_sample_cap_reports_its_exact_conversations(
+    client, hr_auth, monkeypatch
+):
     monkeypatch.setattr(query_log_reports, "WORDING_SESSION_SAMPLE", 2)
     vectors(monkeypatch, {"Where do I park?": PARKING})
     for session in ("a", "b", "c"):
         log("Where do I park?", refused=False, session_id=session)
 
-    [row] = client.get(URL, headers=auth).json()["faq"]
+    [row] = client.get(URL, headers=hr_auth).json()["faq"]
 
     assert row["conversations"] == 3
