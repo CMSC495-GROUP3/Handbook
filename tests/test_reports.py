@@ -49,21 +49,34 @@ def test_requires_a_token(client):
     assert client.get(URL).status_code in (401, 403)
 
 
-def test_empty_log(client, auth):
-    body = client.get(URL, headers=auth).json()
+def test_an_employee_token_is_forbidden(client, auth):
+    """The shared password opens the chat, not the report on everyone's questions."""
+    response = client.get(URL, headers=auth)
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Human Resources sign-in required."
+
+
+def test_forbidden_without_an_hr_password_configured(client, auth, monkeypatch):
+    """With only APP_PASSWORD_HASH set, nobody can open the report."""
+    monkeypatch.delenv("HR_PASSWORD_HASH", raising=False)
+    assert client.get(URL, headers=auth).status_code == 403
+
+
+def test_empty_log(client, hr_auth):
+    body = client.get(URL, headers=hr_auth).json()
     assert body["days"] == 30
     assert (body["total"], body["refused"]) == (0, 0)
     assert body["gaps"] == []
     assert body["faq"] == []
 
 
-def test_refused_questions_rank_by_count(client, auth):
+def test_refused_questions_rank_by_count(client, hr_auth):
     for _ in range(3):
         log("Can I bring my dog?", refused=True)
     log("Is there a sabbatical?", refused=True)
     log("How much PTO do I get?", refused=False)
 
-    body = client.get(URL, headers=auth).json()
+    body = client.get(URL, headers=hr_auth).json()
 
     assert (body["total"], body["refused"]) == (5, 4)
     assert [(g["question"], g["count"], g["conversations"]) for g in body["gaps"]] == [
@@ -72,12 +85,12 @@ def test_refused_questions_rank_by_count(client, auth):
     ]
 
 
-def test_faq_counts_repeats_and_their_refusals(client, auth):
+def test_faq_counts_repeats_and_their_refusals(client, hr_auth):
     log("How much PTO do I get?", refused=False)
     log("How much PTO do I get?", refused=True)
     log("Asked once", refused=False)
 
-    faq = client.get(URL, headers=auth).json()["faq"]
+    faq = client.get(URL, headers=hr_auth).json()["faq"]
 
     assert faq == [
         {
@@ -92,7 +105,7 @@ def test_faq_counts_repeats_and_their_refusals(client, auth):
     ]
 
 
-def test_one_conversation_repeating_itself_is_not_a_faq(client, auth):
+def test_one_conversation_repeating_itself_is_not_a_faq(client, hr_auth):
     """Three asks from one conversation say nothing about how many people
     share the question; two conversations asking once each do."""
     for _ in range(3):
@@ -100,21 +113,21 @@ def test_one_conversation_repeating_itself_is_not_a_faq(client, auth):
     log("Asked by two people", refused=False)
     log("Asked by two people", refused=False)
 
-    faq = client.get(URL, headers=auth).json()["faq"]
+    faq = client.get(URL, headers=hr_auth).json()["faq"]
 
     assert [(g["question"], g["count"], g["conversations"]) for g in faq] == [
         ("Asked by two people", 2, 2),
     ]
 
 
-def test_faq_ranks_on_conversations_before_asks(client, auth):
+def test_faq_ranks_on_conversations_before_asks(client, hr_auth):
     for _ in range(5):
         log("Many asks, few people", refused=False, session_id="one")
     log("Many asks, few people", refused=False, session_id="two")
     for _ in range(3):
         log("Fewer asks, more people", refused=False)
 
-    faq = client.get(URL, headers=auth).json()["faq"]
+    faq = client.get(URL, headers=hr_auth).json()["faq"]
 
     assert [(g["question"], g["count"], g["conversations"]) for g in faq] == [
         ("Fewer asks, more people", 3, 3),
@@ -122,14 +135,14 @@ def test_faq_ranks_on_conversations_before_asks(client, auth):
     ]
 
 
-def test_gaps_rank_on_asks_and_count_conversations(client, auth):
+def test_gaps_rank_on_asks_and_count_conversations(client, hr_auth):
     """Every refusal is a gap, even one person's, so the gaps list keeps asks."""
     for _ in range(4):
         log("One person, four tries", refused=True, session_id="stuck")
     log("Two people", refused=True)
     log("Two people", refused=True)
 
-    gaps = client.get(URL, headers=auth).json()["gaps"]
+    gaps = client.get(URL, headers=hr_auth).json()["gaps"]
 
     assert [(g["question"], g["count"], g["conversations"]) for g in gaps] == [
         ("One person, four tries", 4, 1),
@@ -137,18 +150,18 @@ def test_gaps_rank_on_asks_and_count_conversations(client, auth):
     ]
 
 
-def test_rows_outside_the_window_are_left_out(client, auth):
+def test_rows_outside_the_window_are_left_out(client, hr_auth):
     log("Last week", refused=True, age=timedelta(days=6))
     log("Last month", refused=True, age=timedelta(days=20))
 
-    body = client.get(URL, params={"days": 7}, headers=auth).json()
+    body = client.get(URL, params={"days": 7}, headers=hr_auth).json()
 
     assert body["days"] == 7
     assert [g["question"] for g in body["gaps"]] == ["Last week"]
     assert body["total"] == 1
 
 
-def test_prefers_the_condensed_question(client, auth):
+def test_prefers_the_condensed_question(client, hr_auth):
     """The hash groups on the condensed rewrite, so a follow-up's raw text
     ("what about part-time?") would misname the group."""
     log(
@@ -158,27 +171,27 @@ def test_prefers_the_condensed_question(client, auth):
     )
     log("", refused=True, question_condensed=None, question_hash="blank")
 
-    gaps = client.get(URL, headers=auth).json()["gaps"]
+    gaps = client.get(URL, headers=hr_auth).json()["gaps"]
 
     assert {g["question"] for g in gaps} == {"Do part-time employees get PTO?", None}
 
 
-def test_top_caps_each_list(client, auth):
+def test_top_caps_each_list(client, hr_auth):
     for n in range(5):
         log(f"Question {n}", refused=True)
 
-    gaps = client.get(URL, params={"top": 2}, headers=auth).json()["gaps"]
+    gaps = client.get(URL, params={"top": 2}, headers=hr_auth).json()["gaps"]
 
     assert len(gaps) == 2
 
 
-def test_a_window_longer_than_the_log_ttl_is_shortened(client, auth, monkeypatch):
+def test_a_window_longer_than_the_log_ttl_is_shortened(client, hr_auth, monkeypatch):
     """A short QUERY_LOG_TTL_SECONDS must not turn the default request into a 422."""
     monkeypatch.setattr(reports, "TTL_DAYS", 7)
     log("Inside the TTL", refused=True, age=timedelta(days=3))
     log("Past the TTL", refused=True, age=timedelta(days=20))
 
-    response = client.get(URL, params={"days": 90}, headers=auth)
+    response = client.get(URL, params={"days": 90}, headers=hr_auth)
 
     assert response.status_code == 200
     assert response.json()["days"] == 7
@@ -189,11 +202,11 @@ def test_a_window_longer_than_the_log_ttl_is_shortened(client, auth, monkeypatch
     "params",
     [{"days": 0}, {"days": MAX_WINDOW_DAYS + 1}, {"top": 0}, {"top": 101}, {"days": "a"}],
 )
-def test_rejects_out_of_range_parameters(client, auth, params):
-    assert client.get(URL, params=params, headers=auth).status_code == 422
+def test_rejects_out_of_range_parameters(client, hr_auth, params):
+    assert client.get(URL, params=params, headers=hr_auth).status_code == 422
 
 
-def test_a_refused_chat_shows_up_as_a_gap(client, auth, retrieval, conversation):
+def test_a_refused_chat_shows_up_as_a_gap(client, auth, hr_auth, retrieval, conversation):
     """End to end: the chat route logs the refusal and the report finds it."""
     retrieval.passages = make_passages(0.30)
     client.post(
@@ -202,7 +215,7 @@ def test_a_refused_chat_shows_up_as_a_gap(client, auth, retrieval, conversation)
         headers=auth,
     )
 
-    body = client.get(URL, headers=auth).json()
+    body = client.get(URL, headers=hr_auth).json()
 
     assert body["refused"] == 1
     assert [g["question"] for g in body["gaps"]] == ["Can I bring my dog to work?"]
@@ -214,7 +227,7 @@ def test_fake_aggregate_still_rejects_vector_search():
         FakeCollection().aggregate([{"$vectorSearch": {}}])
 
 
-def test_a_slow_report_answers_503(client, auth, monkeypatch):
+def test_a_slow_report_answers_503(client, hr_auth, monkeypatch):
     calls: list[dict] = []
 
     def too_slow(_pipeline, **kwargs):
@@ -223,7 +236,7 @@ def test_a_slow_report_answers_503(client, auth, monkeypatch):
 
     monkeypatch.setattr(reports.query_logs_col, "aggregate", too_slow)
 
-    response = client.get(URL, headers=auth)
+    response = client.get(URL, headers=hr_auth)
 
     assert response.status_code == 503
     assert "too long" in response.json()["detail"]
@@ -261,7 +274,7 @@ def vectors(monkeypatch, table: dict[str, list[float]]) -> list[list[str]]:
     return calls
 
 
-def test_rephrasings_share_a_row_with_summed_counts(client, auth, monkeypatch):
+def test_rephrasings_share_a_row_with_summed_counts(client, hr_auth, monkeypatch):
     vectors(
         monkeypatch,
         {"How much PTO do I get?": PTO, "How many vacation days do I have?": PTO_REPHRASED},
@@ -271,7 +284,7 @@ def test_rephrasings_share_a_row_with_summed_counts(client, auth, monkeypatch):
     log("How many vacation days do I have?", refused=True, session_id="c")
     log("How many vacation days do I have?", refused=False, session_id="a")
 
-    body = client.get(URL, headers=auth).json()
+    body = client.get(URL, headers=hr_auth).json()
 
     assert body["grouping"] == "meaning"
     [row] = body["faq"]
@@ -284,7 +297,7 @@ def test_rephrasings_share_a_row_with_summed_counts(client, auth, monkeypatch):
     assert (gap["question"], gap["count"]) == ("How much PTO do I get?", 3)
 
 
-def test_two_single_asks_in_other_words_reach_asked_most(client, auth, monkeypatch):
+def test_two_single_asks_in_other_words_reach_asked_most(client, hr_auth, monkeypatch):
     """Neither wording repeats on its own; together they are asked twice."""
     vectors(
         monkeypatch,
@@ -293,12 +306,12 @@ def test_two_single_asks_in_other_words_reach_asked_most(client, auth, monkeypat
     log("How much PTO do I get?", refused=False, session_id="a")
     log("How many vacation days do I have?", refused=False, session_id="b")
 
-    faq = client.get(URL, headers=auth).json()["faq"]
+    faq = client.get(URL, headers=hr_auth).json()["faq"]
 
     assert [(row["count"], row["other_wording_count"]) for row in faq] == [(2, 1)]
 
 
-def test_a_near_miss_below_the_threshold_stays_apart(client, auth, monkeypatch):
+def test_a_near_miss_below_the_threshold_stays_apart(client, hr_auth, monkeypatch):
     vectors(
         monkeypatch,
         {"How much PTO do I get?": PTO, "Does unused PTO carry over?": PTO_CARRYOVER},
@@ -306,7 +319,7 @@ def test_a_near_miss_below_the_threshold_stays_apart(client, auth, monkeypatch):
     log("How much PTO do I get?", refused=True)
     log("Does unused PTO carry over?", refused=True)
 
-    gaps = client.get(URL, headers=auth).json()["gaps"]
+    gaps = client.get(URL, headers=hr_auth).json()["gaps"]
 
     assert sorted(g["question"] for g in gaps) == [
         "Does unused PTO carry over?",
@@ -314,7 +327,7 @@ def test_a_near_miss_below_the_threshold_stays_apart(client, auth, monkeypatch):
     ]
 
 
-def test_cached_vectors_are_used_and_nothing_is_written(client, auth, monkeypatch):
+def test_cached_vectors_are_used_and_nothing_is_written(client, hr_auth, monkeypatch):
     from sourcebook.rag import cache
 
     cache.put_cached_embedding("How much PTO do I get?", PTO)
@@ -323,13 +336,13 @@ def test_cached_vectors_are_used_and_nothing_is_written(client, auth, monkeypatc
     log("Where do I park?", refused=True)
     before = FAKE_DB["embedding_cache"].count_documents({})
 
-    client.get(URL, headers=auth)
+    client.get(URL, headers=hr_auth)
 
     assert calls == [["Where do I park?"]]
     assert FAKE_DB["embedding_cache"].count_documents({}) == before
 
 
-def test_a_provider_failure_falls_back_to_exact_wording(client, auth, monkeypatch):
+def test_a_provider_failure_falls_back_to_exact_wording(client, hr_auth, monkeypatch):
     from sourcebook.rag.llm import ProviderBusyError
 
     def busy(_texts):
@@ -339,25 +352,25 @@ def test_a_provider_failure_falls_back_to_exact_wording(client, auth, monkeypatc
     log("How much PTO do I get?", refused=True)
     log("How many vacation days do I have?", refused=True)
 
-    response = client.get(URL, headers=auth)
+    response = client.get(URL, headers=hr_auth)
 
     assert response.status_code == 200
     assert response.json()["grouping"] == "exact"
     assert len(response.json()["gaps"]) == 2
 
 
-def test_a_repeat_load_makes_no_provider_call(client, auth, monkeypatch):
+def test_a_repeat_load_makes_no_provider_call(client, hr_auth, monkeypatch):
     calls = vectors(monkeypatch, {"Where do I park?": PARKING, "How much PTO do I get?": PTO})
     log("Where do I park?", refused=True)
     log("How much PTO do I get?", refused=True)
 
-    client.get(URL, headers=auth)
-    client.get(URL, headers=auth)
+    client.get(URL, headers=hr_auth)
+    client.get(URL, headers=hr_auth)
 
     assert calls == [["How much PTO do I get?", "Where do I park?"]]
 
 
-def test_asked_most_candidates_are_picked_by_conversations(client, auth, monkeypatch):
+def test_asked_most_candidates_are_picked_by_conversations(client, hr_auth, monkeypatch):
     """One person asking five times must not take the only slot from a
     question asked once each in three conversations."""
     monkeypatch.setattr(reports, "CANDIDATE_LIMIT", 1)
@@ -367,7 +380,7 @@ def test_asked_most_candidates_are_picked_by_conversations(client, auth, monkeyp
     for session in ("a", "b", "c"):
         log("Asked by three", refused=False, session_id=session)
 
-    faq = client.get(URL, headers=auth).json()["faq"]
+    faq = client.get(URL, headers=hr_auth).json()["faq"]
 
     assert [row["question"] for row in faq] == ["Asked by three"]
 
@@ -381,13 +394,13 @@ def test_the_vector_memo_evicts_the_least_recently_used(monkeypatch):
     assert set(reports._recall(["a", "b", "c"])) == {"a", "c"}
 
 
-def test_cache_disabled_turns_the_vector_memo_off(client, auth, monkeypatch):
+def test_cache_disabled_turns_the_vector_memo_off(client, hr_auth, monkeypatch):
     monkeypatch.setattr(reports, "CACHE_ENABLED", False)
     calls = vectors(monkeypatch, {"Where do I park?": PARKING})
     log("Where do I park?", refused=True)
 
-    client.get(URL, headers=auth)
-    client.get(URL, headers=auth)
+    client.get(URL, headers=hr_auth)
+    client.get(URL, headers=hr_auth)
 
     assert calls == [["Where do I park?"], ["Where do I park?"]]
     assert len(reports._vector_memo) == 0

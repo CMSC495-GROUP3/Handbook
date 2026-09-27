@@ -31,10 +31,14 @@ os.environ["CACHE_ENABLED"] = "1"
 os.environ.pop("APP_ENV", None)  # FakeProvider refuses to run as production
 
 TEST_PASSWORD = "correct-horse-battery-staple"
+HR_TEST_PASSWORD = "human-resources-only"
 
 # Cost 4 is bcrypt's minimum and exists only to keep the suite fast. Never use
 # it for a real hash.
 os.environ["APP_PASSWORD_HASH"] = bcrypt.hashpw(TEST_PASSWORD.encode(), bcrypt.gensalt(4)).decode()
+os.environ["HR_PASSWORD_HASH"] = bcrypt.hashpw(
+    HR_TEST_PASSWORD.encode(), bcrypt.gensalt(4)
+).decode()
 
 from scripts.loadtest.fakemongo import FakeDB  # noqa: E402
 from sourcebook.rag import mongo  # noqa: E402
@@ -55,6 +59,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 from sourcebook.api.limiter import limiter  # noqa: E402
 from sourcebook.api.routes.auth import (  # noqa: E402
+    HR_PASSWORD_HASH_VAR,
     PRIMARY_PASSWORD_HASH_VAR,
     create_access_token,
     credential_fingerprint,
@@ -117,18 +122,29 @@ def client():
         yield test_client
 
 
-@pytest.fixture
-def auth() -> dict:
-    password_hash = os.environ["APP_PASSWORD_HASH"]
+def _bearer(cred: str) -> dict:
+    """Headers carrying a token minted as login would for the hash in ``cred``."""
     token = create_access_token(
         {
             "sub": "user",
-            "cred": PRIMARY_PASSWORD_HASH_VAR,
-            "fingerprint": credential_fingerprint(password_hash),
+            "cred": cred,
+            "fingerprint": credential_fingerprint(os.environ[cred]),
         },
         timedelta(hours=1),
     )
     return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def auth() -> dict:
+    """An employee: signed in with the shared password."""
+    return _bearer(PRIMARY_PASSWORD_HASH_VAR)
+
+
+@pytest.fixture
+def hr_auth() -> dict:
+    """Human Resources: signed in with the HR password."""
+    return _bearer(HR_PASSWORD_HASH_VAR)
 
 
 class Retrieval:

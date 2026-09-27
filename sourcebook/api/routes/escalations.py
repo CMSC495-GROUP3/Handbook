@@ -12,7 +12,9 @@ Two callers:
 - The chat UI creates one from the refusal card, or from under an answer that
   did not help. `reason` records which.
 - Human Resources lists the open ones and marks them resolved, from the HR
-  Requests page in the web app or from a script or webhook-fed channel.
+  Requests page in the web app or from a script or webhook-fed channel. Those
+  routes (list, get, resolve, retry) take a session opened with the HR
+  password (`require_hr`); filing one takes any signed-in session.
 
 Escalating the same message twice returns the first record rather than
 creating a second. A double click should not file two tickets. The check on
@@ -44,7 +46,7 @@ from pymongo.errors import DuplicateKeyError
 from sourcebook.api import notify
 from sourcebook.api.db import conversations_col, escalations_col
 from sourcebook.api.limiter import limiter
-from sourcebook.api.routes.deps import require_auth
+from sourcebook.api.routes.deps import HR_ONLY_RESPONSES, require_auth, require_hr
 from sourcebook.rag.config import (
     ESCALATION_CONTACT,
     ESCALATION_NOTE_MAX_LENGTH,
@@ -353,7 +355,11 @@ def create_escalation(request: Request, body: CreateEscalationRequest, backgroun
     return _present(dict(record))
 
 
-@router.post("/escalations/{escalation_id}/retry-delivery", dependencies=[Depends(require_auth)])
+@router.post(
+    "/escalations/{escalation_id}/retry-delivery",
+    responses=HR_ONLY_RESPONSES,
+    dependencies=[Depends(require_hr)],
+)
 @limiter.limit("5/minute")
 def retry_delivery(request: Request, escalation_id: str):
     """Re-attempt webhook delivery for a failed escalation.
@@ -384,7 +390,7 @@ def retry_delivery(request: Request, escalation_id: str):
     return _present(current or claimed)
 
 
-@router.get("/escalations", dependencies=[Depends(require_auth)])
+@router.get("/escalations", responses=HR_ONLY_RESPONSES, dependencies=[Depends(require_hr)])
 def list_escalations(
     status: EscalationStatus | None = None,
     session_id: str | None = None,
@@ -402,7 +408,9 @@ def list_escalations(
     return {"items": items, "total": escalations_col.count_documents(query)}
 
 
-@router.get("/escalations/{escalation_id}", dependencies=[Depends(require_auth)])
+@router.get(
+    "/escalations/{escalation_id}", responses=HR_ONLY_RESPONSES, dependencies=[Depends(require_hr)]
+)
 def get_escalation(escalation_id: str):
     doc = escalations_col.find_one({"escalation_id": escalation_id}, {"_id": 0})
     if not doc:
@@ -410,7 +418,9 @@ def get_escalation(escalation_id: str):
     return _present(doc)
 
 
-@router.patch("/escalations/{escalation_id}", dependencies=[Depends(require_auth)])
+@router.patch(
+    "/escalations/{escalation_id}", responses=HR_ONLY_RESPONSES, dependencies=[Depends(require_hr)]
+)
 def update_escalation(escalation_id: str, body: UpdateEscalationRequest):
     now = datetime.now(UTC)
     updates: dict = {

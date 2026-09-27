@@ -10,9 +10,14 @@
  * ochre at the end.
  *
  * ?days= picks the window (30 by default) so a link reproduces the view.
+ *
+ * Only an HR session can load it (require_hr, #290). The header says so, and a
+ * 403 explains who the page is for instead of offering a retry that cannot
+ * work. The sidebar already hides the link from other sessions.
  */
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { isAxiosError } from 'axios'
 import { getCoverageReport } from '../api/reports'
 import { READING_COLUMN, READING_GUTTER } from '../lib/layout'
 import type { CoverageReport, QuestionGroup } from '../types'
@@ -190,6 +195,7 @@ export default function CoverageGapsPage() {
   const [state, setState] = useState<ReportState | null>(null)
   const [failedDays, setFailedDays] = useState<number | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
+  const [forbidden, setForbidden] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -199,8 +205,10 @@ export default function CoverageGapsPage() {
         setState({ days, report })
         setFailedDays(null)
       })
-      .catch(() => {
-        if (!cancelled) setFailedDays(days)
+      .catch((error: unknown) => {
+        if (cancelled) return
+        if (isAxiosError(error) && error.response?.status === 403) setForbidden(true)
+        else setFailedDays(days)
       })
     return () => {
       cancelled = true
@@ -222,7 +230,13 @@ export default function CoverageGapsPage() {
   const shownDays = report?.days ?? days
 
   let body: React.ReactNode
-  if (failed) {
+  if (forbidden) {
+    body = (
+      <p role="alert" className="text-[14px] text-ink-2">
+        This page is for Human Resources. Sign out and sign in with the HR password to see it.
+      </p>
+    )
+  } else if (failed) {
     body = (
       <div>
         <p role="alert" className="text-[14px] text-brick">Unable to load this report.</p>
@@ -281,30 +295,44 @@ export default function CoverageGapsPage() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <header className={`flex min-h-15 shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-rule py-3 ${READING_GUTTER}`}>
-        <h1 className="font-display text-[22px] leading-none font-medium tracking-tight text-ink">
-          What People Ask
-        </h1>
-        <div className="flex gap-1.5" role="group" aria-label="Time window">
-          {WINDOWS.map((option) => (
-            <button
-              key={option.days}
-              type="button"
-              onClick={() => changeWindow(option.days)}
-              aria-pressed={option.days === shownDays}
-              className={`h-7 cursor-pointer rounded-full border px-3 text-[12.5px] transition-colors ${
-                option.days === shownDays
-                  ? 'border-accent bg-accent text-paper'
-                  : 'border-rule bg-paper-3 text-ink-2 hover:border-ink-3 hover:text-ink'
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
+        <div className="flex items-center gap-2.5">
+          <h1 className="font-display text-[22px] leading-none font-medium tracking-tight text-ink">
+            What People Ask
+          </h1>
+          <span className="rounded-full border border-rule-strong px-2 py-0.5 text-[11px] font-medium tracking-wide text-ink-2 uppercase">
+            HR only
+          </span>
         </div>
+        {!forbidden && (
+          <div className="flex gap-1.5" role="group" aria-label="Time window">
+            {WINDOWS.map((option) => (
+              <button
+                key={option.days}
+                type="button"
+                onClick={() => changeWindow(option.days)}
+                aria-pressed={option.days === shownDays}
+                className={`h-7 cursor-pointer rounded-full border px-3 text-[12.5px] transition-colors ${
+                  option.days === shownDays
+                    ? 'border-accent bg-accent text-paper'
+                    : 'border-rule bg-paper-3 text-ink-2 hover:border-ink-3 hover:text-ink'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        )}
       </header>
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className={`${READING_GUTTER} py-8 sm:py-10`}>
-          <div className={READING_COLUMN} aria-busy={!report && !failed}>
+          <div className={READING_COLUMN} aria-busy={!report && !failed && !forbidden}>
+            {!forbidden && (
+              <p className="mb-8 text-[13.5px] leading-normal text-ink-2">
+                Only Human Resources can open this page. It lists questions as employees typed
+                them. Nothing here says who asked, but a question can still identify someone, so
+                keep what you read here inside HR.
+              </p>
+            )}
             {body}
           </div>
         </div>

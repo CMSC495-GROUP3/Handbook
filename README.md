@@ -42,7 +42,8 @@ make stub     # terminal 1: API on :8000, fake model, in-memory Mongo
 make web      # terminal 2: React on :5173 with hot reload
 ```
 
-Open <http://localhost:5173> and sign in with the password `dev`. Every answer
+Open <http://localhost:5173> and sign in with the password `dev`, or `hr` to
+see the HR Requests and What People Ask pages too. Every answer
 is canned in this mode, so use it to see the UI and the refusal path
 (`make stub REFUSE=1`), not to judge retrieval quality.
 
@@ -360,6 +361,9 @@ which lists open escalations, resolves or reopens them with a note, and retries
 failed webhook delivery. The same operations are available as
 `GET /api/escalations?status=open`, `PATCH /api/escalations/{id}`, and
 `POST /api/escalations/{id}/retry-delivery` for a script or a webhook-fed channel.
+All of them need a session opened with the HR password (`HR_PASSWORD_HASH`, see
+[Configure](#1-configure)); any other valid token gets 403. Filing an escalation from
+the chat works with any password.
 
 ### Vendor lock-in: one interface, one env var
 
@@ -467,7 +471,8 @@ That log is how the system improves from evidence rather than intuition.
   collect it.
 
 The first two lists are on the What People Ask page in the web app, over the last
-7, 30, or 90 days. The page also merges wordings whose embeddings are within
+7, 30, or 90 days. Like HR Requests, the page and its route need the HR
+password. The page also merges wordings whose embeddings are within
 `QUESTION_GROUP_THRESHOLD` cosine (default 0.85, #287). That catches a missing
 question mark or a close rewording, not most paraphrases: on 80 labelled pairs
 it merged 4 of 40 paraphrases and none of 40 different questions
@@ -555,19 +560,35 @@ most shells interpret, so paste it with a text editor rather than `echo`.
 
 To hand out a second password without sharing the first, for a reviewer or a
 grader, generate its hash the same way and put it in `APP_PASSWORD_HASH_2`.
-Either password logs in; both variables are checked at startup and a
-malformed hash in either one stops the server from booting. Leave the second
-unset to accept only one password.
+Either password logs in; every configured hash is checked at startup and a
+malformed one stops the server from booting. Leave the second unset to accept
+only the shared password (plus the HR one below, if set).
 
-Three things to know before handing one out. Both passwords open the same
-door, so the deployment is exactly as strong as the weaker of the two; do not
-make the second one short because it is temporary. Each successful login logs
-which variable matched and puts that name in the token's `cred` claim, which
-is how to tell a reviewer's session from the team's afterwards. Changing or
-unsetting a hash signs out everyone who logged in with it: each session is
-bound to a fingerprint of that hash, so the next request with the old token
-fails. Rotating `JWT_SECRET_KEY` is no longer needed just to revoke one
-password's sessions; the other password's sessions keep working.
+Three things to know before handing one out. Every configured password opens
+the employee routes, so the deployment is only as strong as the weakest one;
+do not make the second one short because it is temporary. Each successful
+login logs which variable matched and puts that name in the token's `cred`
+claim, which is how to tell a reviewer's session from the team's afterwards.
+Changing or unsetting a hash signs out everyone who logged in with it: each
+session is bound to a fingerprint of that hash, so the next request with the
+old token fails. Rotating `JWT_SECRET_KEY` is no longer needed just to revoke
+one password's sessions; sessions from the other passwords keep working.
+
+Give Human Resources its own password in `HR_PASSWORD_HASH`, generated the same
+way. A session opened with it can do everything the shared password can, and
+it is the only one that can open the HR Requests queue and the What People Ask
+report, both of which show questions employees typed. Every other valid token
+gets 403 on those routes, and the web app hides their links unless the stored
+token's `cred` claim is `HR_PASSWORD_HASH`. Leave it unset and nobody can open
+either page. Use a password different from the shared one: login checks
+`APP_PASSWORD_HASH` first, so an HR hash of the shared password never matches
+and grants nobody HR access. Login checks `HR_PASSWORD_HASH` before
+`APP_PASSWORD_HASH_2`, so setting both to the same hash makes the second
+password the HR one. The course deployment does this, so the grader can open
+both HR pages. Tokens issued before an upgrade carry `APP_PASSWORD_HASH` or
+`APP_PASSWORD_HASH_2` as their `cred`, never `HR_PASSWORD_HASH`, so HR staff
+(and the grader) sign out and back in once to see the HR pages. The HR password
+does not protect conversations; see [Known limitations](#known-limitations).
 
 ### 2. Load the corpus
 
@@ -993,8 +1014,8 @@ The product name lives in three places: `APP_NAME` in
 
 ## Known limitations
 
-- **Authentication is a shared password** (or two), not per-employee accounts, and
-  conversations are not scoped to a user. Fine for a pilot. It is the first
+- **Authentication is a shared password** (or two, plus one for Human
+  Resources), not per-employee accounts. Fine for a pilot. It is the first
   thing to change before a real deployment.
 - **The similarity threshold is untuned** against a real corpus. On the sample
   corpus it does not separate covered questions from uncovered ones on nearby
@@ -1012,11 +1033,14 @@ The product name lives in three places: `APP_NAME` in
 - **Document search uses `$regex`**, which does not use an index. Fine at this
   corpus size. Move to Atlas Search if the library grows large.
 - **JWTs live in browser local storage.** Acceptable for an internal pilot
-  behind one shared credential, not for a multi-user security model.
-- **Every signed-in user can open the HR pages.** Sign-in has no roles, so HR
-  Requests and What People Ask show other employees' questions to anyone with
-  the password. Conversations are listed to every user as well. An HR-only
-  credential is [#290](https://github.com/CMSC495-GROUP3/Sourcebook/issues/290).
+  behind shared credentials, not for a multi-user security model.
+- **The HR password guards two pages, not conversations.** HR Requests and
+  What People Ask need `HR_PASSWORD_HASH`
+  ([#290](https://github.com/CMSC495-GROUP3/Sourcebook/issues/290)).
+  `GET /api/conversations` and `GET /api/conversations/{session_id}` still
+  have no owner filter, so anyone with a password can list and open every
+  conversation, including the question text those pages show. Scoping them to
+  the caller needs a per-user identity, which the pilot does not have.
 - **Do not deploy under gunicorn `--preload`.** `MongoClient` is not fork-safe
   and the collection handles bind at import. `uvicorn --workers` is safe
   because each worker imports the app after forking. See

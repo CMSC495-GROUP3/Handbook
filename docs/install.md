@@ -56,10 +56,12 @@ make stub     # terminal 1: the API on :8000 with a fake model and in-memory Mon
 make web      # terminal 2: the React app on :5173, proxying /api to :8000
 ```
 
-Open <http://localhost:5173> and sign in with the password `dev`. `make stub`
-hashes that password when it starts, so `make stub DEV_PASSWORD=something`
-changes it, and it launches `scripts/loadtest/server.py`, which patches the
-fakes in around the real app.
+Open <http://localhost:5173> and sign in with the password `dev`. Sign in
+with `hr` instead to see the HR Requests and What People Ask pages, which only
+the Human Resources password opens. `make stub` hashes both passwords when it
+starts, so `make stub DEV_PASSWORD=something DEV_HR_PASSWORD=other` changes
+them, and it launches `scripts/loadtest/server.py`, which patches the fakes in
+around the real app.
 
 Every answer in this mode is the same canned paragraph about PTO, and the
 suggested follow-ups are canned too. Retrieval scores are fixed rather than
@@ -115,6 +117,19 @@ hash has to be pasted rather than echoed. It also explains what a second
 password in `APP_PASSWORD_HASH_2` does and does not give you. Read that before
 handing one to a reviewer.
 
+Set `HR_PASSWORD_HASH` too if anyone will work escalations or read the
+coverage report in the web app. It is the Human Resources password, generated
+the same way and different from `APP_PASSWORD_HASH`. It may be the same hash
+as `APP_PASSWORD_HASH_2`, which makes the second password the HR one; the
+course deployment does this for the grader. Only a session opened with it
+can use the HR Requests queue (`GET /api/escalations`, and `GET`, `PATCH`,
+and retry-delivery on `/api/escalations/{escalation_id}`) and What People Ask
+(`GET /api/reports/gaps`); every other valid token gets 403 there, and the sidebar hides both links from it. With it
+unset, nobody can open either page, and employees can still escalate from the
+chat. It does not scope conversations: any password still lists and opens
+every conversation. The README's
+[Known limitations](../README.md#known-limitations) says why.
+
 Every variable `.env.example` sets or mentions is listed below, once, with
 what it is for and where its value comes from. The comments in
 `.env.example` and the defaults in `sourcebook/rag/config.py` and
@@ -148,6 +163,7 @@ are optional.
 | Name | What it is for | Where it comes from |
 | --- | --- | --- |
 | `APP_PASSWORD_HASH_2` | a second accepted password | generated like the first |
+| `HR_PASSWORD_HASH` | the Human Resources password; the only one that opens HR Requests and What People Ask | generated like the first, with a different password |
 | `SITE_ADDRESS` | the public hostname Caddy serves and gets a certificate for | your DNS; leave unset for local Compose |
 | `APP_ENV` | environment label; `production` makes the fake provider refuse to start | you |
 | `APP_NAME` | the product name; change it in `web/src/config.ts` and `web/index.html` too | you |

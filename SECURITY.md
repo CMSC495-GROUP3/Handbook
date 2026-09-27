@@ -10,7 +10,8 @@ you think the impact is. A maintainer will reply on the advisory thread.
 
 ## What counts
 
-This is a pilot internal tool with a single shared password, a JWT session,
+This is a pilot internal tool with a shared password (optionally a second one,
+plus a Human Resources password that alone opens the HR pages), a JWT session,
 and a policy corpus that is not confidential in the sample data but would be
 in a real deployment. Reports we want:
 

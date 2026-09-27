@@ -11,7 +11,7 @@
  * must show "Incorrect password." instead of being navigated away.
  */
 import axios from 'axios'
-import { TOKEN_KEY } from '../config'
+import { HR_CRED, TOKEN_KEY } from '../config'
 
 export { TOKEN_KEY }
 
@@ -30,21 +30,39 @@ export function signOut(): void {
 }
 
 /**
+ * The payload of a JWT, decoded but not verified, or null if it will not parse.
+ * The browser has no signing key; the server checks every token it is sent.
+ */
+function readClaims(token: string): Record<string, unknown> | null {
+  try {
+    const parts = token.split('.')
+    if (parts.length < 2) return null
+    const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const pad = (4 - (b64.length % 4)) % 4
+    const claims: unknown = JSON.parse(atob(b64 + '='.repeat(pad)))
+    return claims && typeof claims === 'object' ? (claims as Record<string, unknown>) : null
+  } catch {
+    return null
+  }
+}
+
+/**
  * True when `token` is expired, malformed, or missing an `exp` claim.
  */
 export function isTokenExpired(token: string): boolean {
-  try {
-    const parts = token.split('.')
-    if (parts.length < 2) return true
-    const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
-    const pad = (4 - (b64.length % 4)) % 4
-    const json = atob(b64 + '='.repeat(pad))
-    const claims = JSON.parse(json) as { exp?: unknown }
-    if (typeof claims.exp !== 'number') return true
-    return claims.exp * 1000 <= Date.now()
-  } catch {
-    return true
-  }
+  const exp = readClaims(token)?.exp
+  if (typeof exp !== 'number') return true
+  return exp * 1000 <= Date.now()
+}
+
+/**
+ * True when the stored token was issued for the HR password. This only decides
+ * which links to show: the server answers 403 to any other token on the HR
+ * routes, whatever the client shows.
+ */
+export function isHrSession(): boolean {
+  const token = localStorage.getItem(TOKEN_KEY)
+  return token !== null && readClaims(token)?.cred === HR_CRED
 }
 
 function isLoginRequest(url: string | undefined): boolean {
