@@ -50,11 +50,6 @@ from sourcebook.rag.mongo import get_client, get_collection
 DEFAULT_TOP = 20
 MAX_TOP = 100
 DEFAULT_MIN_REPEAT = 2
-# Session ids wording_pipeline returns per wording, for the web route's union
-# across merged wordings. A full list would pass Mongo's 16 MB result document
-# limit at about 370k conversations for one wording (#291); 1,000 UUIDs is
-# about 45 KB. session_count stays exact either way.
-WORDING_SESSION_SAMPLE = 1000
 # pymongo waits 30 s for server selection by default. That is right for the
 # API, which fails at startup, but this is the first interactive consumer and a
 # wrong URI should fail fast enough to read as a config error.
@@ -183,54 +178,6 @@ def faq_pipeline(
         {"$match": {"session_count": {"$gte": min_repeat}}},
         {"$sort": {"session_count": -1, "count": -1, "_id": 1}},
         {"$limit": top},
-    ]
-
-
-def wording_pipeline(
-    since: datetime,
-    until: datetime,
-    limit: int,
-    *,
-    refused_only: bool,
-    min_sessions: int = 1,
-) -> list[dict[str, Any]]:
-    """Aggregation: every hash group in the window, for grouping by meaning.
-
-    Singletons are kept, because two wordings asked once each can be one
-    question asked twice. Up to ``WORDING_SESSION_SAMPLE`` session ids stay in
-    each result, unlike the other rankings, because merging wordings means
-    taking the union of their sessions; the web route counts them and returns
-    only the counts. ``session_count`` is exact, so a merged group never
-    reports fewer conversations than its largest wording.
-
-    The cap picks candidates the way each list ranks: refused wordings by asks,
-    all wordings by conversations, so one person repeating a question cannot
-    take a slot from a wording asked once each in several conversations.
-
-    ``min_sessions`` drops wordings asked in fewer conversations before the
-    sort and cap, so wordings below it cannot crowd out wordings above it.
-    The web route uses it for a manager's view.
-    """
-    match = {**_time_match(since, until), **({"refused": True} if refused_only else {})}
-    order = (
-        {"count": -1, "_id": 1} if refused_only else {"session_count": -1, "count": -1, "_id": 1}
-    )
-    return [
-        {"$match": match},
-        {
-            "$group": {
-                "_id": "$question_hash",
-                **_group_fields(),
-                "refused_count": {
-                    "$sum": {"$cond": [{"$eq": ["$refused", True]}, 1, 0]},
-                },
-            }
-        },
-        {"$addFields": {"session_count": {"$size": "$sessions"}}},
-        *([{"$match": {"session_count": {"$gte": min_sessions}}}] if min_sessions > 1 else []),
-        {"$sort": order},
-        {"$limit": limit},
-        {"$addFields": {"sessions": {"$slice": ["$sessions", WORDING_SESSION_SAMPLE]}}},
     ]
 
 

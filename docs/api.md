@@ -369,9 +369,18 @@ sources, cache hit, latency). How that log is used is in the README section
 
 `GET /api/reports/gaps` ranks that log for the What People Ask page. It needs
 a manager or HR session ([HR-only routes](#hr-only-routes)). `days`
-(1–90, default 30) sets the window back from now; `top` (1–100, default 20)
+(1–90, default 30) sets the window in whole UTC days, today included, so
+`since` is a UTC midnight; `top` (1–100, default 20)
 caps each list. A window longer than the log's TTL is shortened to it, and
-`days` in the response is the one used.
+`days` in the response is the one used. The counts come from a per-question,
+per-day rollup kept as each ask is logged, not from the raw rows (#291).
+
+The page's windows, 7, 30, and 90 days, are read from snapshots that the API
+refreshes in the background every `REPORT_REFRESH_SECONDS` (default 300), so
+their counts can be up to that old. `until` in the response is when the
+snapshot was taken, and `since` is the UTC midnight its window starts at. Any
+other `days`, or a window whose snapshot is missing or more than three
+intervals old, is computed when it is asked for.
 
 - `gaps`: refused questions, most asks first. Every refusal is a gap, even one
   person's, so this list ranks on asks.
@@ -387,7 +396,11 @@ number, or `null` on an HR session, which sees every wording. `total` and
 
 Each row carries `count` (every ask, including one person asking again) and
 `conversations` (distinct `session_id` values). A conversation is not a
-person, but it is the closest the log gets. Near-identical wordings share a
+person, but it is the closest the log gets. A conversation is counted on the
+day of its first ask of that question, so one that first asked before the
+window and asked again inside it adds an ask but not a conversation. The count
+can be lower than the raw log's, never higher, which keeps a manager's
+`min_conversations` filter on the safe side. Near-identical wordings share a
 row; see [Grouping by meaning](#grouping-by-meaning) below.
 
 `question` is the logged condensed question, or the truncated raw one, or
@@ -397,11 +410,14 @@ one), which is why the route is limited to manager and HR sessions and a
 manager's view drops rare wordings. It is the one place HR or a manager sees
 questions across browsers.
 
-Each query stops after five seconds. A report that runs longer returns HTTP
+Each query stops after five seconds. A snapshot read never comes near that. A
+window computed when asked can: a 90-day one at the planned volume does. A
+report that runs longer returns HTTP
 503 with `{"detail": "This report took too long. Try a shorter window."}`.
-One that passes MongoDB's per-stage memory limit (one question asked in about
-1.6M conversations, see [load testing](load-testing.md)) returns 503 with
-`{"detail": "This report needs too much memory. Try a shorter window."}`.
+One that passes MongoDB's per-stage memory limit returns 503 with
+`{"detail": "This report needs too much memory. Try a shorter window."}`. The
+rollup's `$group` holds only sums, so it should not hit that limit; see
+[load testing](load-testing.md).
 
 ### Grouping by meaning
 
@@ -467,7 +483,7 @@ Authorization: Bearer <hr_access_token>
 
 ```json
 {
-  "since": "2026-08-27T14:00:00+00:00",
+  "since": "2026-08-28T00:00:00+00:00",
   "until": "2026-09-26T14:00:00+00:00",
   "days": 30,
   "grouping": "meaning",

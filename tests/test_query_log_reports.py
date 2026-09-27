@@ -508,8 +508,6 @@ def test_pipelines_are_read_only_and_window_first():
     for pipeline in (
         reports.content_gap_pipeline(SINCE, UNTIL, 5),
         reports.faq_pipeline(SINCE, UNTIL, 5, 2),
-        reports.wording_pipeline(SINCE, UNTIL, 5, refused_only=True),
-        reports.wording_pipeline(SINCE, UNTIL, 5, refused_only=False),
         reports.score_distribution_pipeline(SINCE, UNTIL),
     ):
         assert list(pipeline[0]) == ["$match"]

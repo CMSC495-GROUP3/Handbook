@@ -97,8 +97,8 @@ def test_fake_provider_embeds_a_batch_with_one_delay(monkeypatch):
 
 
 def test_a_capped_member_keeps_its_exact_count_as_a_floor():
-    """wording_pipeline returns a sample of session ids past its cap (#291),
-    so the union can undercount. The largest exact member count is a floor."""
+    """The route reads no session ids for a wording past the rollup's sample
+    cap (#291), so the union can undercount. The largest exact member count is a floor."""
     words = [
         Wording("pto", "pto", 9, 0, frozenset({"s1", "s2"}), session_count=6),
         Wording("vacation", "vacation", 1, 0, frozenset({"s9"}), session_count=1),

@@ -78,8 +78,9 @@ class QuestionGroup:
         group counts as one conversation between them; chat requests always
         log a session, so only hand-written rows hit this.
 
-        ``sessions`` holds at most ``WORDING_SESSION_SAMPLE`` ids per wording,
-        so past that the union undercounts. Each wording's exact
+        The route reads ``sessions`` only for wordings at or under
+        ``ROLLUP_SESSION_SAMPLE`` conversations (#291), so past that the union
+        undercounts. Each wording's exact
         ``session_count`` is then the floor: exact below the cap, a lower
         bound above it."""
         union = len(frozenset().union(*(member.sessions for member in self.members)))

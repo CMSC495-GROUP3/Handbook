@@ -297,3 +297,94 @@ docker run -d --rm --name sourcebook-report-timing -p 27099:27017 mongo:7
   --rows 1000000 --sessions 800000
 docker stop sourcebook-report-timing
 ```
+
+### The per-day rollup
+
+The 90-day report did not fit inside 5 s at the 7M rows a day planned in
+`config.py`, with either `$group` shape. At the measured rate (about 1.2 s for
+600k rows) even a one-day window of 7M rows would take on the order of 14 s,
+so a shorter window cannot fix it. The route now reads
+`query_log_daily` instead (`sourcebook/rag/query_log_rollup.py`). Each ask
+updates one document per question and UTC day as it is logged, and a
+per-(question, conversation) marker makes sure each conversation counts once.
+The report's cost then grows with distinct questions per day, not with asks.
+
+What changes:
+
+- **Asks are exact. Conversations can be lower, never higher.** A
+  conversation counts on the day of its first ask of a question. If that day
+  falls before the window, a later ask inside the window adds an ask but not
+  a conversation.
+- **Windows are whole UTC days**, today included.
+- **Each ask costs up to three more writes**: one marker, or two when it is
+  refused, and one upsert. The marker collection grows with distinct
+  (question, conversation) pairs over 90 days, up to about the size of
+  `query_logs` itself, but with small documents.
+- **The terminal report is unchanged.** It still reads the raw rows. It has no
+  timeout and is exact.
+
+Measured on the same local `mongo:7` container as above (7.0.43, Apple M3,
+8 GB for Docker), so the absolute times are local ones.
+`scripts/loadtest/rollup_timing.py` seeds `query_log_daily` directly at 7M
+asks a day for 90 days: one hot question with 1% of the asks, the rest spread
+over N other questions a day, 80% of which come back every day. Distinct
+questions a day is a flag because the pilot has not measured it. Times are
+medians of five runs unless noted.
+
+**The rollup alone was not enough.** At 50k questions a day, the rollup's
+ranking as first written read 27.9 GB of day documents (each carries up to
+2,000 session ids) and took 52.9 s untimed for the gaps list alone. A
+covering index on `day`, `question_hash`, and the four counts, with sample
+text fetched afterwards for the listed wordings, cut one pass that builds all
+four lists and the totals to these times:
+
+| Distinct questions a day | Day documents | 7 days | 30 days | 90 days |
+|---|---|---|---|---|
+| 50,000 | 4.5M (27.9 GB) | 485 ms | 2,096 ms | 6.5 to 7.2 s in three runs without the limit |
+| 200,000 | 18M (30.4 GB) | 3,236 ms | over 5 s | over 5 s |
+
+**So the page reads snapshots.** The API recomputes the page's three
+windows every `REPORT_REFRESH_SECONDS` (300 by default) on a background
+thread, under a lease so only one worker does it, and the route reads the
+stored result (`sourcebook/rag/report_snapshots.py`). A window the page does
+not offer, or one whose snapshot is missing or stale, is still computed live,
+with the times above.
+
+| Distinct questions a day | Refresh, all three windows | Snapshot read | Session ids, per list |
+|---|---|---|---|
+| 50,000 | 8.4 s (one run) | 1 ms | 0 to 600 ms median, 1.5 s worst |
+| 200,000 | 56.2 s (one run) | 1 ms | 8 to 326 ms median, 4.4 s worst |
+
+"Session ids" is the route's other database read: the conversation ids of
+listed wordings with at most 1,000 conversations, for the union across
+grouped wordings. It depends on the window, so each list was timed at 7, 30,
+and 90 days; the table gives the range of medians and the slowest single run.
+
+What this says:
+
+- **The route now answers every window inside its 5 s budget at 7M asks a
+  day**, up to 200k distinct questions a day. Its snapshot read is 1 ms.
+- **The session-id read has the least headroom.** Its worst run, 4.4 s, was the
+  first 90-day gaps read at 200k questions a day, when the day documents were
+  not yet in memory; later runs took 61 to 326 ms. It is bounded by 1,000 ids
+  per wording and 200 wordings per list, but a cold cache on a smaller
+  server could push it past 5 s, which the route answers with a 503.
+- **The refresh costs about 56 s of database time every five minutes at 200k
+  questions a day**, about a fifth of the interval. Each window stops at
+  `REFRESH_TIMEOUT_MS` (120 s), and the lease is held long enough to cover
+  all three at that limit, so two workers never refresh at once.
+- **Counts on the page are up to one interval old.** `until` in the response
+  says when the snapshot was taken.
+
+**Not measured on Atlas.** The seed writes about 30 GB, which does not belong
+in the production cluster, so these runs used the local container. Point
+`--uri` at a scratch Atlas cluster to repeat them there. The `--db` guard
+stops the script from dropping a real collection:
+
+```bash
+docker run -d --rm --name sourcebook-report-timing -p 27099:27017 mongo:7
+.venv/bin/python -m scripts.loadtest.rollup_timing --uri mongodb://localhost:27099
+.venv/bin/python -m scripts.loadtest.rollup_timing --uri mongodb://localhost:27099 \
+  --questions-per-day 200000
+docker stop sourcebook-report-timing
+```

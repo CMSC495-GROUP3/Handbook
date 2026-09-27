@@ -1,6 +1,7 @@
 """The coverage report behind the What People Ask page."""
 
 import itertools
+import threading
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -10,8 +11,9 @@ from pymongo.errors import ExecutionTimeout, OperationFailure
 from scripts.loadtest.fakemongo import FakeCollection
 from sourcebook.api.routes import reports
 from sourcebook.api.routes.reports import MAX_WINDOW_DAYS
-from sourcebook.rag import query_log_reports
+from sourcebook.rag import query_log_rollup, report_snapshots
 from sourcebook.rag.config import MANAGER_MIN_CONVERSATIONS
+from sourcebook.rag.query_log_rollup import record_ask
 
 URL = "/api/reports/gaps"
 # Each logged row is its own conversation unless a test passes session_id.
@@ -35,17 +37,25 @@ def full_ttl(monkeypatch):
 
 
 def log(question: str, *, refused: bool, age: timedelta = timedelta(hours=1), **fields) -> None:
-    """One query_logs row, shaped like analytics.log_query writes it."""
-    FAKE_DB["query_logs"].insert_one(
-        {
-            "created_at": datetime.now(UTC) - age,
-            "question_raw": question,
-            "question_condensed": question,
-            "question_hash": question.lower(),
-            "refused": refused,
-            "session_id": f"session-{next(_SESSIONS)}",
-            **fields,
-        }
+    """One ask, recorded in the rollup the report reads, as analytics.log_query does."""
+    row = {
+        "created_at": datetime.now(UTC) - age,
+        "question_raw": question,
+        "question_condensed": question,
+        "question_hash": question.lower(),
+        "refused": refused,
+        "session_id": f"session-{next(_SESSIONS)}",
+        **fields,
+    }
+    record_ask(
+        FAKE_DB[query_log_rollup.DAILY_COLLECTION],
+        FAKE_DB[query_log_rollup.SESSIONS_COLLECTION],
+        created_at=row["created_at"],
+        session_id=row["session_id"],
+        question_hash=row["question_hash"],
+        question_raw=row["question_raw"],
+        question_condensed=row["question_condensed"],
+        refused=row["refused"],
     )
 
 
@@ -240,22 +250,24 @@ def test_a_slow_report_answers_503(client, hr_auth, monkeypatch):
         calls.append(kwargs)
         raise ExecutionTimeout("operation exceeded time limit")
 
-    monkeypatch.setattr(reports.query_logs_col, "aggregate", too_slow)
+    monkeypatch.setattr(reports.query_log_daily_col, "aggregate", too_slow)
 
     response = client.get(URL, headers=hr_auth)
 
     assert response.status_code == 503
     assert "too long" in response.json()["detail"]
-    assert calls == [{"maxTimeMS": reports.QUERY_TIMEOUT_MS}]
+    assert calls == [
+        {"hint": query_log_rollup.COVERING_INDEX_NAME, "maxTimeMS": reports.QUERY_TIMEOUT_MS}
+    ]
 
 
 def test_a_report_over_the_memory_limit_answers_503(client, hr_auth, monkeypatch):
-    """$addToSet cannot spill, so one very common question can hit code 146 (#291)."""
+    """Code 146 answers 503 like a timeout, should a pipeline hit it (#291)."""
 
     def too_big(_pipeline, **_kwargs):
         raise OperationFailure("$group exceeded memory limit", code=146)
 
-    monkeypatch.setattr(reports.query_logs_col, "aggregate", too_big)
+    monkeypatch.setattr(reports.query_log_daily_col, "aggregate", too_big)
 
     response = client.get(URL, headers=hr_auth)
 
@@ -267,7 +279,7 @@ def test_other_mongo_failures_are_not_reported_as_slow(client, hr_auth, monkeypa
     def unauthorized(_pipeline, **_kwargs):
         raise OperationFailure("not authorized", code=13)
 
-    monkeypatch.setattr(reports.query_logs_col, "aggregate", unauthorized)
+    monkeypatch.setattr(reports.query_log_daily_col, "aggregate", unauthorized)
 
     with pytest.raises(OperationFailure):
         client.get(URL, headers=hr_auth)
@@ -707,33 +719,10 @@ def test_a_zero_pair_cap_turns_the_judge_off(client, hr_auth, monkeypatch):
     assert body["unjudged"] == 0
 
 
-def test_wording_pipeline_returns_a_capped_sample_of_session_ids(monkeypatch):
-    """A popular wording's full id list would pass the 16 MB result document
-    limit at about 370k conversations (#291). The count stays exact."""
-    monkeypatch.setattr(query_log_reports, "WORDING_SESSION_SAMPLE", 2)
-    now = datetime.now(UTC)
-    collection = FakeCollection()
-    collection.insert_many(
-        [
-            {"created_at": now, "question_hash": "pto", "refused": False, "session_id": s}
-            for s in ("a", "b", "c", "d")
-        ]
-    )
-
-    [row] = collection.aggregate(
-        query_log_reports.wording_pipeline(
-            now - timedelta(days=1), now + timedelta(days=1), 10, refused_only=False
-        )
-    )
-
-    assert row["session_count"] == 4
-    assert len(row["sessions"]) == 2
-
-
 def test_a_wording_past_the_sample_cap_reports_its_exact_conversations(
     client, hr_auth, monkeypatch
 ):
-    monkeypatch.setattr(query_log_reports, "WORDING_SESSION_SAMPLE", 2)
+    monkeypatch.setattr(reports, "ROLLUP_SESSION_SAMPLE", 2)
     vectors(monkeypatch, {"Where do I park?": PARKING})
     for session in ("a", "b", "c"):
         log("Where do I park?", refused=False, session_id=session)
@@ -894,3 +883,222 @@ def test_the_manager_threshold_is_configurable(client, manager_auth, monkeypatch
 
     assert body["min_conversations"] == 2
     assert [g["question"] for g in body["faq"]] == ["Where do I find my W-2?"]
+
+
+# ── Snapshots (#291) ──────────────────────────────────────────────────────────
+
+
+def _no_live_reads(monkeypatch):
+    def live(*_args, **_kwargs):
+        raise AssertionError("computed live despite a fresh snapshot")
+
+    monkeypatch.setattr(reports.query_log_daily_col, "aggregate", live)
+
+
+def test_a_fresh_snapshot_is_served_without_computing_live(client, hr_auth, monkeypatch):
+    log("Can I bring my dog?", refused=True)
+    reports.refresh_snapshots()
+    # Asked after the snapshot, so it shows only on the next refresh.
+    log("Is there a sabbatical?", refused=True)
+    _no_live_reads(monkeypatch)
+
+    body = client.get(URL, headers=hr_auth).json()
+
+    assert [g["question"] for g in body["gaps"]] == ["Can I bring my dog?"]
+    assert (body["total"], body["refused"]) == (1, 1)
+
+
+def test_the_refresh_stores_each_page_window(monkeypatch):
+    monkeypatch.setattr(reports, "TTL_DAYS", 30)
+    reports.refresh_snapshots()
+
+    stored = {
+        doc["_id"]
+        for doc in FAKE_DB[report_snapshots.SNAPSHOT_COLLECTION].find({})
+        if doc["_id"] != report_snapshots.LEASE_ID
+    }
+    limits = {"limit": reports.CANDIDATE_LIMIT, "min_sessions": reports.MANAGER_MIN_CONVERSATIONS}
+    # 90 days is past the TTL, so it is stored as 30.
+    assert stored == {report_snapshots.snapshot_id(d, **limits) for d in (7, 30)}
+
+
+def test_a_manager_reads_the_filtered_lists_from_the_snapshot(client, manager_auth, monkeypatch):
+    _ask("Where do I find my W-2?", 3, refused=False)
+    _ask("Asked once", 1, refused=False)
+    reports.refresh_snapshots()
+    _no_live_reads(monkeypatch)
+
+    body = client.get(URL, headers=manager_auth).json()
+
+    assert [g["question"] for g in body["faq"]] == ["Where do I find my W-2?"]
+
+
+def test_a_stale_snapshot_is_computed_live(client, hr_auth, monkeypatch):
+    log("Can I bring my dog?", refused=True)
+    reports.refresh_snapshots()
+    log("Is there a sabbatical?", refused=True)
+    monkeypatch.setattr(reports, "SNAPSHOT_MAX_AGE", timedelta(seconds=-1))
+
+    body = client.get(URL, headers=hr_auth).json()
+
+    assert {g["question"] for g in body["gaps"]} == {
+        "Can I bring my dog?",
+        "Is there a sabbatical?",
+    }
+
+
+def test_a_window_the_page_does_not_offer_is_computed_live(client, hr_auth):
+    reports.refresh_snapshots()
+    log("Can I bring my dog?", refused=True)
+
+    body = client.get(URL, headers=hr_auth, params={"days": 14}).json()
+
+    assert [g["question"] for g in body["gaps"]] == ["Can I bring my dog?"]
+
+
+def test_a_snapshot_taken_with_another_manager_threshold_is_not_used(client, hr_auth, monkeypatch):
+    reports.refresh_snapshots()
+    log("Can I bring my dog?", refused=True)
+    monkeypatch.setattr(reports, "MANAGER_MIN_CONVERSATIONS", 5)
+
+    body = client.get(URL, headers=hr_auth).json()
+
+    assert [g["question"] for g in body["gaps"]] == ["Can I bring my dog?"]
+
+
+def test_the_snapshot_until_is_when_it_was_taken(client, hr_auth):
+    reports.refresh_snapshots()
+    [snapshot] = [
+        doc
+        for doc in FAKE_DB[report_snapshots.SNAPSHOT_COLLECTION].find({})
+        if doc["_id"].startswith("30d|")
+    ]
+
+    body = client.get(URL, headers=hr_auth).json()
+
+    assert body["until"] == snapshot["until"].isoformat()
+    assert body["since"] == snapshot["since"].isoformat()
+
+
+def test_refresh_off_always_computes_live(client, hr_auth, monkeypatch):
+    reports.refresh_snapshots()
+    log("Can I bring my dog?", refused=True)
+    monkeypatch.setattr(reports, "REPORT_REFRESH_SECONDS", 0)
+
+    body = client.get(URL, headers=hr_auth).json()
+
+    assert [g["question"] for g in body["gaps"]] == ["Can I bring my dog?"]
+    assert reports.start_refresh() is None
+
+
+def test_only_one_worker_holds_the_refresh_lease():
+    snapshots = FAKE_DB[report_snapshots.SNAPSHOT_COLLECTION]
+    now = datetime.now(UTC)
+    hold = timedelta(minutes=5)
+
+    assert report_snapshots.acquire_lease(snapshots, now, hold, holder="a")
+    assert not report_snapshots.acquire_lease(snapshots, now + timedelta(minutes=1), hold, "b")
+    assert report_snapshots.acquire_lease(snapshots, now + timedelta(minutes=6), hold, "b")
+
+
+def test_the_holder_renews_a_lease_it_still_holds():
+    """The hold covers a refresh at its timeout, longer than the interval, so
+    the holder must be able to renew before it expires."""
+    snapshots = FAKE_DB[report_snapshots.SNAPSHOT_COLLECTION]
+    now = datetime.now(UTC)
+    hold = timedelta(minutes=6)
+
+    assert report_snapshots.acquire_lease(snapshots, now, hold, holder="a")
+    assert report_snapshots.acquire_lease(snapshots, now + timedelta(minutes=5), hold, "a")
+    assert not report_snapshots.acquire_lease(snapshots, now + timedelta(minutes=10), hold, "b")
+
+
+def test_the_lease_covers_every_window_at_its_timeout():
+    reports.refresh_snapshots()
+    snapshots = FAKE_DB[report_snapshots.SNAPSHOT_COLLECTION]
+    lease = snapshots.find_one({"_id": report_snapshots.LEASE_ID})
+    key = report_snapshots.snapshot_id(
+        7, reports.CANDIDATE_LIMIT, reports.MANAGER_MIN_CONVERSATIONS
+    )
+    snapshot = snapshots.find_one({"_id": key})
+
+    held = lease["expires_at"] - snapshot["until"]
+    assert held >= timedelta(milliseconds=3 * reports.REFRESH_TIMEOUT_MS)
+
+
+def test_a_worker_without_the_lease_does_not_refresh(monkeypatch):
+    monkeypatch.setattr(report_snapshots, "acquire_lease", lambda *_args: False)
+    reports.refresh_snapshots()
+
+    assert FAKE_DB[report_snapshots.SNAPSHOT_COLLECTION].count_documents({}) == 0
+
+
+def test_a_failed_refresh_is_logged_and_the_next_one_still_runs(caplog):
+    runs = []
+    stop = threading.Event()
+
+    def task():
+        runs.append(1)
+        if len(runs) == 1:
+            raise RuntimeError("cluster unreachable")
+        stop.set()
+
+    report_snapshots.run_every(0, task, stop)
+
+    assert len(runs) == 2
+    assert "refresh failed" in caplog.text
+
+
+def test_the_refresh_thread_stops_when_asked():
+    ran = threading.Event()
+    stop = report_snapshots.start(3600, ran.set)
+
+    assert ran.wait(5)
+    stop.set()
+
+
+def test_naive_stored_datetimes_are_read_as_utc():
+    """The app's Mongo client is not tz_aware, so stored times come back naive."""
+    snapshots = FAKE_DB[report_snapshots.SNAPSHOT_COLLECTION]
+    taken = datetime(2026, 9, 27, 12, 0)
+    snapshots.insert_one(
+        {
+            "_id": report_snapshots.snapshot_id(7, limit=10, min_sessions=3),
+            "since": datetime(2026, 9, 21),
+            "until": taken,
+            "report": {},
+        }
+    )
+
+    loaded = report_snapshots.load(
+        snapshots,
+        7,
+        limit=10,
+        min_sessions=3,
+        now=taken.replace(tzinfo=UTC) + timedelta(minutes=1),
+        max_age=timedelta(minutes=5),
+    )
+
+    assert loaded["until"] == taken.replace(tzinfo=UTC)
+    assert loaded["since"].tzinfo is UTC
+
+
+def test_fake_facet_and_inclusion_project():
+    collection = FakeCollection()
+    collection.insert_many([{"_id": 1, "a": 2, "b": 3}, {"_id": 2, "a": 5, "b": 7}])
+
+    [row] = collection.aggregate(
+        [
+            {
+                "$facet": {
+                    "renamed": [{"$project": {"_id": 0, "x": "$a", "b": 1}}],
+                    "kept_id": [{"$project": {"a": 1}}],
+                }
+            }
+        ]
+    )
+
+    assert row == {
+        "renamed": [{"x": 2, "b": 3}, {"x": 5, "b": 7}],
+        "kept_id": [{"_id": 1, "a": 2}, {"_id": 2, "a": 5}],
+    }

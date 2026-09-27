@@ -58,6 +58,8 @@ cache.get_collection = mongo.get_collection
 from sourcebook.api import main  # noqa: E402
 
 main.ensure_indexes = lambda: None
+# Tests drive the refresh directly (test_reports.py); no thread per TestClient.
+main.start_report_refresh = lambda: None
 
 from fastapi.testclient import TestClient  # noqa: E402
 
