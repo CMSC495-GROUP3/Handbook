@@ -99,45 +99,48 @@ Every code change on the candidate:
 | Real-service latency and error rate on the pilot | Done on `7d3c779`: all five targets pass, 0 errors in 7 requests | [live-benchmark.md](live-benchmark.md), run `e6615d05` |
 | Load run against the deployed pilot ([#212](https://github.com/CMSC495-GROUP3/Sourcebook/issues/212)) | Pending | [docs/load-testing-pilot.md](../../load-testing-pilot.md), Pending |
 | Lighthouse, both themes, phone and desktop ([#214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214)) | Pending: run `scripts/lighthouse` (#280) against the pilot on the candidate | [docs/quality.md](../../quality.md), Pending |
-| End-to-end pass by hand | Pending | [below](#end-to-end-pass-by-hand) |
-| What People Ask on the pilot's query log, 30-day window, signed in with the HR password and with the reviewer password | Pending: record the headline counts, the grouping value, and a sanitized screenshot of each. Question text can identify who asked, so crop or blur it | none yet |
+| End-to-end pass by hand | Done on `7d3c779`: 18 of 18 steps pass | [below](#end-to-end-pass-by-hand), screenshots in [evidence/](evidence/README.md) |
+| What People Ask on the pilot's query log, 30-day window, signed in with the HR password and with the reviewer password | Done: 15 of 87 questions unanswered (17%), `grouping` `meaning`, nothing left unjudged; the reviewer sees the same headline with only rows from at least 3 conversations | [evidence/16](evidence/16-what-people-ask-hr.png) and [evidence/19](evidence/19-what-people-ask-reviewer.png), question text blurred |
 | Screenshots of green CI, Security, and auto-deploy runs ([#207](https://github.com/CMSC495-GROUP3/Sourcebook/issues/207)) | Pending | [evidence/](evidence/README.md) |
 
 ### End-to-end pass by hand
 
-Pending. Repeat the beta's pass with the same steps and expected results, and
-add steps for the #271, #277, #295, #299, and #302 changes and the What People
-Ask page. Sign in with the HR password, and switch to the reviewer password,
-the employee password, or a second browser only for the steps that say so. Save sanitized screenshots to [evidence/](evidence/README.md): no
+Done on 2026-09-27 against the pilot running `7d3c779`. The beta's steps and
+expected results, plus steps for the #271, #277, #295, #299, and #302 changes
+and the What People Ask page. Signed in with the HR password, switching to the
+reviewer password, the employee password, or a second browser only for the
+steps that say so. Driven by a Playwright script from Taylor's session; every
+result below was read from the page, and the screenshots are in
+[evidence/](evidence/README.md). Save sanitized screenshots to [evidence/](evidence/README.md): no
 password, token, or session id visible.
 
 | Field | Value |
 | --- | --- |
-| Date (UTC) | Pending |
-| Tester | Pending |
-| Browser and version | Pending |
-| Deployed commit | Pending |
+| Date (UTC) | 2026-09-27, 14:22 to 14:40 |
+| Tester | Claude, from Taylor's session, with Playwright |
+| Browser and version | Google Chrome 153.0.8010.53 at 1440x1000; 390x844 for the phone step |
+| Deployed commit | `7d3c779` |
 
 | Step | Expected | Result |
 | --- | --- | --- |
-| Sign in with the HR password | lands on the chat page with HR Requests and What People Ask in the sidebar; a wrong password shows "Incorrect password." | Pending |
-| Ask a covered question | streamed answer with at least one cited source and a score | Pending |
-| Open a cited source | the source pane shows the whole document | Pending |
-| Ask a follow-up in the same conversation | the answer uses the history; no cache badge | Pending |
-| Reload the page | the conversation and its sources are restored from history | Pending |
-| Ask an uncovered question in a new conversation | refusal card with the Ask Human Resources button | Pending |
-| Ask an uncovered question as a follow-up (#189) | refusal card, not an answer with unrelated chips | Pending |
-| Ask `unanswerable_01`, "Does Meridian reimburse employee pet insurance?" (#192, #269) | refusal card that says the coverage check refused it, without "Strong match" under "No matching policy" | Pending |
-| Escalate the refusal with a note | confirmation in the UI; the record appears on the HR Requests page | Pending |
-| Escalate the same message again | the first record comes back, not a second one | Pending |
-| Resolve the request on the HR Requests page, then reopen it | the request moves between the open and resolved lists | Pending |
-| Open What People Ask and switch between 7, 30, and 90 days (#286, #288, #298) | the headline counts questions and the share no policy answered; both lists load; the URL carries `?days=`; the captions say wordings of one question share a row | Pending |
-| Sign out, then sign in again with the HR password (#299) | the conversations from this browser are still in the sidebar | Pending |
-| In a private window, sign in with the HR password, then open a `/chat?session_id=` link copied from the first window (#299) | an empty sidebar; the link opens a new chat with "That conversation isn't available in this browser" | Pending |
-| Sign out, sign in with the reviewer password, and open What People Ask (#302) | only What People Ask in the sidebar, not HR Requests; the page says it shows only questions asked in at least 3 separate conversations | Pending |
-| Open `/escalations` with the reviewer password (#290, #299) | the page says it is for Human Resources, with no list and no retry | Pending |
-| Sign out, sign in with the shared employee password, then open `/gaps` (#290, #302) | no HR Requests or What People Ask links in the sidebar; the page says it is for managers and Human Resources instead of loading the report | Pending |
-| At 390px wide, keyboard only: open a request on the HR Requests page, choose "All requests", then press Back (#266) | focus lands on the request's heading, then on its row; Back leaves the page instead of reopening the request | Pending |
+| Sign in with the HR password | lands on the chat page with HR Requests and What People Ask in the sidebar; a wrong password shows "Incorrect password." | Pass. HR Requests and What People Ask in the sidebar; a wrong password shows "Incorrect password." (`01`, `02`) |
+| Ask a covered question | streamed answer with at least one cited source and a score | Pass. Two cited sources at "Strong match · 75%" (`03`) |
+| Open a cited source | the source pane shows the whole document | Pass (`04`) |
+| Ask a follow-up in the same conversation | the answer uses the history; no cache badge | Pass. Answered with sources, no cache badge (`05`) |
+| Reload the page | the conversation and its sources are restored from history | Pass. Both answers and their sources restored (`06`) |
+| Ask an uncovered question in a new conversation | refusal card with the Ask Human Resources button | Pass (`08`) |
+| Ask an uncovered question as a follow-up (#189) | refusal card, not an answer with unrelated chips | Pass (`07`) |
+| Ask `unanswerable_01`, "Does Meridian reimburse employee pet insurance?" (#192, #269) | refusal card that says the coverage check refused it, without "Strong match" under "No matching policy" | Pass. "Not answered by any policy" with the related-policies line from #281; no "Strong match" and no "Nothing indexed came close" (`09`) |
+| Escalate the refusal with a note | confirmation in the UI; the record appears on the HR Requests page | Pass. "Sent to Human Resources · ref 48d08505"; the request heads the HR Requests open list (`10`, `11`, `13`) |
+| Escalate the same message again | the first record comes back, not a second one | Pass. After a reload the message still shows "Sent · ref 48d08505" and offers no second button (`12`). Filing one message twice through the API returned the same `escalation_id` both times, and that test record was resolved |
+| Resolve the request on the HR Requests page, then reopen it | the request moves between the open and resolved lists | Pass. Moved to Resolved with its note, then back to Open; left resolved afterwards (`13`, `14`, `15`) |
+| Open What People Ask and switch between 7, 30, and 90 days (#286, #288, #298) | the headline counts questions and the share no policy answered; both lists load; the URL carries `?days=` except for the 30-day default; the captions say wordings of one question share a row | Pass. 15 of 87 questions in the last 30 days had no policy (17%); both lists load; `?days=7` and `?days=90` in the URL, and no parameter for the 30-day default; the captions say wordings of one question share a row. Question text blurred (`16`) |
+| Sign out, then sign in again with the HR password (#299) | the conversations from this browser are still in the sidebar | Pass (`17`) |
+| In a private window, sign in with the HR password, then open a `/chat?session_id=` link copied from the first window (#299) | an empty sidebar; the link opens a new chat with "That conversation isn't available in this browser" | Pass. Empty sidebar; the link became `/chat` with the notice (`18`) |
+| Sign out, sign in with the reviewer password, and open What People Ask (#302) | only What People Ask in the sidebar, not HR Requests; the page says it shows only questions asked in at least 3 separate conversations | Pass. No HR Requests link; the page says "you see only questions asked in at least 3 separate conversations". Question text blurred (`19`) |
+| Open `/escalations` with the reviewer password (#290, #299) | the page says it is for Human Resources, with no list and no retry | Pass (`20`) |
+| Sign out, sign in with the shared employee password, then open `/gaps` (#290, #302) | no HR Requests or What People Ask links in the sidebar; the page says it is for managers and Human Resources instead of loading the report | Pass. Neither link in the sidebar; "This page is for managers and Human Resources." (`21`) |
+| At 390px wide, keyboard only: open a request on the HR Requests page, choose "All requests", then press Back (#266) | focus lands on the request's heading, then on its row; Back leaves the page instead of reopening the request | Pass. Focus on the request's heading (H2), then on its row; Back left the page for `/chat` (`22`) |
 
 ## Known defects and limitations
 
@@ -189,7 +192,7 @@ README, `docs/README.md`, and `portfolio.md`. That pull request closes
 | Code frozen on `main`; the candidate commit named in the table at the top of this page | Done: `7d3c779`, named 27 September |
 | Smoke and full tier on the candidate, recorded in [live-evaluation.md](live-evaluation.md) | Done |
 | Bounded benchmark against the pilot, recorded in [live-benchmark.md](live-benchmark.md) | Done |
-| End-to-end pass by hand, recorded above with screenshots | Pending |
+| End-to-end pass by hand, recorded above with screenshots | Done |
 | Coverage for the candidate in [evidence/coverage.md](evidence/coverage.md) | Done |
 | Load run and Lighthouse, or recorded as not measured | Pending |
 | `docs/user-guide.md` and `docs/team.md` on `main` | Pending: #259, #231 |
