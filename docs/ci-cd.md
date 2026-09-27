@@ -295,7 +295,13 @@ someone reads the page) has to be the commit covered by every final claim. A
 later deployment can move past it. The tag remains the reproducible portfolio
 artifact.
 
-> **FINAL EVIDENCE PENDING — release:** Replace this note in the follow-up PR
-> with the annotated tag URL, GitHub release URL, full tagged SHA, final release
-> PR, and links to the exact CI, Security, Live evaluation, and deployment
-> evidence described above.
+> **Evidence, release:** annotated tag [`v1.0.0`](https://github.com/CMSC495-GROUP3/Sourcebook/tree/v1.0.0)
+> and the [GitHub release](https://github.com/CMSC495-GROUP3/Sourcebook/releases/tag/v1.0.0), a full release, on
+> `a0f7810c2d5705dcf0245f203e766db4f2e86a7b`, the merge of
+> [#305](https://github.com/CMSC495-GROUP3/Sourcebook/pull/305). The release
+> folder merged in [#274](https://github.com/CMSC495-GROUP3/Sourcebook/pull/274).
+> On the tagged commit: [CI 36331671207](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36331671207) and [Security 36331671210](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36331671210),
+> both green. The Live evaluation and deployment evidence above were taken on
+> the candidate `7d3c779`; every commit from it to the tag changed
+> documentation only, and the pilot deployed the tagged commit at 16:03 UTC
+> with nothing to rebuild.

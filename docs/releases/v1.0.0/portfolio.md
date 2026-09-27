@@ -4,9 +4,9 @@ This is the grader's entry point for Sourcebook's Unit 8 final. Each row below
 is one item from the assignment, linked to the evidence for it on `main` and,
 after the tag, in the tagged tree.
 
-Submitted version: Pending, `v1.0.0` on the release pull request's merge
-commit, which runs the candidate code at `7d3c779` named in
-[handoff.md](handoff.md). Earlier releases:
+Submitted version: [`v1.0.0`](https://github.com/CMSC495-GROUP3/Sourcebook/releases/tag/v1.0.0) on
+[`a0f7810`](https://github.com/CMSC495-GROUP3/Sourcebook/commit/a0f7810c2d5705dcf0245f203e766db4f2e86a7b), which runs the
+candidate code at `7d3c779` named in [handoff.md](handoff.md). Earlier releases:
 [`v0.1.0-alpha.1`](https://github.com/CMSC495-GROUP3/Sourcebook/releases/tag/v0.1.0-alpha.1)
 and [`v0.2.0`](https://github.com/CMSC495-GROUP3/Sourcebook/releases/tag/v0.2.0).
 

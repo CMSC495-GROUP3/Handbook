@@ -11,15 +11,12 @@ the commit under review, lists what changed since the
 what the release does not establish. Nothing here is called verified without a
 link that shows it.
 
-**Status: draft, candidate named.** The candidate is `main` at
+**Status: tagged.** [`v1.0.0`](https://github.com/CMSC495-GROUP3/Sourcebook/releases/tag/v1.0.0) is on
+[`a0f7810`](https://github.com/CMSC495-GROUP3/Sourcebook/commit/a0f7810c2d5705dcf0245f203e766db4f2e86a7b), a full
+release, published 2026-09-27. The code under test is the candidate
 [`7d3c779`](https://github.com/CMSC495-GROUP3/Sourcebook/commit/7d3c7795c197c5be56b15aebc650576760fd75d1),
-the merge of #303, named on Sunday 27 September. The plan on
-[#215](https://github.com/CMSC495-GROUP3/Sourcebook/issues/215#issuecomment-5824613941)
-froze code on Monday 28 September; the last code change landed a day early, so
-measurement starts then. Documentation can still merge. A code change after
-this point makes a new candidate and repeats every measurement. Until the
-blocker table at the end of this page is clear, treat every Pending cell as
-unmeasured.
+the merge of #303. Every commit between the candidate and the tag changed
+documentation only, so every measurement below applies to the tag.
 
 ## Where to start
 
@@ -40,12 +37,12 @@ unmeasured.
 
 | Field | Value |
 | --- | --- |
-| Commit | Pending: the merge commit of the last documentation pull request before the tag, which comes after #274, #259, and #231. Every commit since the candidate changed documentation only |
-| Tag and release | Pending: `v1.0.0`, annotated, a full release (not a prerelease), on that commit |
+| Commit | [`a0f7810c2d5705dcf0245f203e766db4f2e86a7b`](https://github.com/CMSC495-GROUP3/Sourcebook/commit/a0f7810c2d5705dcf0245f203e766db4f2e86a7b), the merge of #305, the last documentation pull request before the tag. It came after #274, #259, and #231. Every commit since the candidate changed documentation only |
+| Tag and release | [`v1.0.0`](https://github.com/CMSC495-GROUP3/Sourcebook/releases/tag/v1.0.0), annotated, a full release (not a prerelease), on that commit |
 | Running at | <https://sourcebook.duckdns.org> |
-| Deployed commit | `7d3c779` in both `HEAD` and `refs/deployed/main` on the pilot host, checked 2026-09-27 14:10 UTC; `67e4953` at 15:37 UTC, with nothing to rebuild. Re-check when the tag is cut |
-| CI | [36330158339](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36330158339) on #274's merge commit `67e4953`, green. The tagged commit's own run is linked by the write-back pull request |
-| Security | [36330158342](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36330158342) on `67e4953`, green. The tagged commit's own run is linked by the write-back pull request |
+| Deployed commit | `7d3c779` in both `HEAD` and `refs/deployed/main` on the pilot host, checked 2026-09-27 14:10 UTC; `67e4953` at 15:37 UTC, with nothing to rebuild; `a0f7810`, the tagged commit, at 16:03 UTC |
+| CI | [36331671207](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36331671207) on the tagged commit, green; [36330158339](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36330158339) on #274's merge commit `67e4953`, green |
+| Security | [36331671210](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36331671210) on the tagged commit, green; [36330158342](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36330158342) on `67e4953`, green |
 | Code under test | [`7d3c779`](https://github.com/CMSC495-GROUP3/Sourcebook/commit/7d3c7795c197c5be56b15aebc650576760fd75d1), the candidate. CI run [36324854066](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36324854066) and Security run [36324854241](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36324854241) are green on it. The release pull request adds documentation only, so its merge commit runs the same code |
 
 ## Passwords on the pilot

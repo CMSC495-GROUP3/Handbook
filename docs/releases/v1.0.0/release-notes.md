@@ -4,7 +4,7 @@ The final release of Sourcebook for CMSC 495, Unit 8. It is a pilot, not a
 production system, and the sections below say plainly what it does, what is
 broken, and what nobody has measured.
 
-Tagged commit: Pending. The evidence behind every claim here is in
+Tagged commit: [`a0f7810`](https://github.com/CMSC495-GROUP3/Sourcebook/commit/a0f7810c2d5705dcf0245f203e766db4f2e86a7b), release [`v1.0.0`](https://github.com/CMSC495-GROUP3/Sourcebook/releases/tag/v1.0.0). The evidence behind every claim here is in
 [handoff.md](handoff.md). Graders start at [portfolio.md](portfolio.md).
 
 Stakeholder video: Pending, linked after upload
