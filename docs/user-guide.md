@@ -255,7 +255,8 @@ Human Resources.
 
 Choose **7 days**, **30 days**, or **90 days** at the top. The first line
 counts how many questions in that window had no policy to answer them, and
-what share of all questions that was. Below it are two lists:
+what share of all questions that was. The page updates every 5 minutes, so a
+question asked in the last few minutes may not show yet. Below it are two lists:
 
 - **Not answered yet**: questions no policy answered, most asked first. Each
   one points to a policy to write or make clearer.

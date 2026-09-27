@@ -284,9 +284,11 @@ across merged wordings. With the same seed (500k asks of one question over
 
 A result document is capped at 16 MB, so the full list fails at roughly
 370k conversations for one wording, and the route did not catch that error.
-`WORDING_SESSION_SAMPLE` now returns at most 1,000 ids with the exact
-`session_count`. A merged group reports the larger of the union and its
-biggest wording's count: exact below the cap, a lower bound above it.
+#296 capped the list at 1,000 ids per wording (`WORDING_SESSION_SAMPLE`) with
+the exact `session_count` beside it. A merged group reports the larger of the
+union and its biggest wording's count: exact below the cap, a lower bound
+above it. #308 replaced that pipeline with the per-day rollup below, which keeps
+the same 1,000-id cap per wording as `ROLLUP_SESSION_SAMPLE`.
 
 ### Reproducing
 
