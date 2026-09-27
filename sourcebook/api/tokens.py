@@ -27,6 +27,15 @@ _ALGORITHM = "HS256"
 # line must never receive a value that can carry a newline (issue #153).
 _CRED_SHAPE = re.compile(r"[A-Z][A-Z0-9_]{0,63}")
 
+# ``sub`` is the owner id: the conversations and projects a session may see
+# carry the same value (issue #290, item 4). There is one shared employee
+# password, so the owner is a browser, not a person. The web app keeps a random
+# id in local storage and sends it at login; login mints one when a client sends
+# none. Tokens issued before owners existed carry ``sub: "user"``, which does not
+# match, so they get 401 and their holders sign in again.
+OWNER_ID_PATTERN = r"^[0-9a-f]{32}$"
+_OWNER_SHAPE = re.compile(OWNER_ID_PATTERN)
+
 
 def _secret_key() -> str | None:
     """The signing secret as currently set in the environment, or None."""
@@ -77,6 +86,16 @@ def cred_claim(claims: dict | None) -> str | None:
     if not isinstance(cred, str) or not _CRED_SHAPE.fullmatch(cred):
         return None
     return cred
+
+
+def owner_claim(claims: dict | None) -> str | None:
+    """The ``sub`` claim when it is an owner id (32 lowercase hex), else None."""
+    if not claims:
+        return None
+    owner = claims.get("sub")
+    if not isinstance(owner, str) or not _OWNER_SHAPE.fullmatch(owner):
+        return None
+    return owner
 
 
 def bearer_token(authorization: str | None) -> str | None:

@@ -38,7 +38,7 @@ without the provider, but the fake provider refuses to start with
 | Estimated cost | about $0.75 at $0.01 a generation | an estimate, confirmed at the prompt; the request count is the hard bound. Record the actual cost from the OpenAI usage page |
 | Error stop | 5 errors in a level ends the run | a failing system is not measured by more load |
 | Questions | the 8 answerable questions `live_benchmark.py` uses, each virtual user in its own session | known to retrieve a policy |
-| Cleanup | the script deletes the conversations it created when the run ends, however it ends | the pilot lists every conversation to every user |
+| Cleanup | the script deletes the conversations it created when the run ends, however it ends | nobody else can see them, but they would stay in the database |
 
 The cost is an estimate because each generated answer makes four provider
 calls (an embedding, the coverage judge, the answer, the follow-ups),
@@ -156,7 +156,7 @@ knowledge-gap report; record the count it prints. If the script could not
 delete every conversation (`failed` above 0 in `cleanup`, or it was killed
 before cleaning up), the same `delete_many` on `conversations_col` removes
 the rest. Ask one question in the browser to confirm the pilot answers with
-the cache back on, and check the sidebar shows no `load-` conversations.
+the cache back on.
 
 **4. Commit the evidence.** Commit the JSON report, then copy the host
 samples to `docs/releases/v1.0.0/evidence/pilot-load-host.csv`. Neither

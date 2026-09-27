@@ -6,6 +6,7 @@ import os
 from datetime import timedelta
 
 import pytest
+from conftest import OWNER
 from starlette.requests import Request
 
 from sourcebook.api import tokens
@@ -19,7 +20,7 @@ from sourcebook.api.routes.auth import (
 
 def _claims(**overrides) -> dict:
     claims = {
-        "sub": "user",
+        "sub": OWNER,
         "cred": PRIMARY_PASSWORD_HASH_VAR,
         "fingerprint": credential_fingerprint(os.environ["APP_PASSWORD_HASH"]),
     }

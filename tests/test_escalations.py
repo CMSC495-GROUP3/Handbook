@@ -114,6 +114,33 @@ class TestCreate:
         assert FAKE_DB["escalations"].count_documents({}) == 1
         assert len(delivered) == 1
 
+    def test_another_browser_cannot_file_on_a_conversation(
+        self, client, auth, other_auth, refused, delivered
+    ):
+        response = _create(client, other_auth, refused)
+        assert response.status_code == 404
+        assert FAKE_DB["escalations"].count_documents({}) == 0
+
+    def test_a_repeat_from_another_browser_does_not_return_hrs_resolution(
+        self, client, auth, hr_auth, other_auth, refused, delivered
+    ):
+        """Filing twice returns the stored record, resolution included. Before
+        conversations had owners, anyone could file on anyone's message and
+        read what HR wrote back."""
+        escalation_id = _create(client, auth, refused).json()["escalation_id"]
+        client.patch(
+            f"/api/escalations/{escalation_id}",
+            json={"status": "resolved", "resolution": "Private reply"},
+            headers=hr_auth,
+        )
+
+        response = _create(client, other_auth, refused)
+
+        assert response.status_code == 404
+        assert "Private reply" not in response.text
+        repeat = _create(client, auth, refused)
+        assert repeat.json()["resolution"] == "Private reply"
+
     def test_losing_a_race_returns_the_winner_without_a_second_webhook(
         self, client, auth, refused, delivered, monkeypatch
     ):
