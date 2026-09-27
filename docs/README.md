@@ -8,6 +8,7 @@ is and why, [CONTRIBUTING.md](../CONTRIBUTING.md) covers changing it, and
 | Page | Covers |
 | --- | --- |
 | [install.md](install.md) | the live site, the offline stub, real services with every `.env` variable, deployment |
+| [user-guide.md](user-guide.md) | using the app: asking, checking sources, escalating, and the HR Requests page |
 | [api.md](api.md) | every HTTP route, with a stub request and response |
 | [openapi.json](openapi.json) | the committed OpenAPI document; `make openapi` regenerates it, CI fails if it drifts |
 | [design.md](design.md) | the paper-and-ink design system for `web/` |
