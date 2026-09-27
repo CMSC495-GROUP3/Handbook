@@ -10,15 +10,18 @@ A false merge is the worse error: it hides a question behind a neighbour that
 needs a different answer. Pick the lowest threshold with no false merges, then
 check how many missed merges that leaves.
 
-With ``--judge``, pairs from ``--floor`` up to ``QUESTION_GROUP_THRESHOLD``
-also go to the utility model with the page's prompt (issue #293), in batches
-of ``QUESTION_JUDGE_MAX_PAIRS``, closest first, as the page sends them. The
-output then scores the combined rule for each floor: a pair merges at or above
-the threshold, or from the floor up when the model says it is one question.
+With ``--judge``, pairs from each floor in ``FLOORS`` up to
+``QUESTION_GROUP_THRESHOLD`` also go to the utility model with the page's
+prompt (issue #293), in batches of ``QUESTION_JUDGE_MAX_PAIRS``, closest first.
+Each floor is judged separately, so its batches are the ones the page would
+send at that floor. The output then scores the combined rule for each floor: a pair
+merges at or above the threshold, or from the floor up when the model says it
+is one question.
 
 Needs ``OPENAI_API_KEY`` in the environment. Each unique text is embedded once,
-in one request, and ``--judge`` adds one chat call per batch, so a run costs a
-fraction of a cent. The output file holds the scores only, never the key:
+in one request, and ``--judge`` adds one chat call per batch for each floor,
+about a dozen in all, so a run costs a fraction of a cent. The output file
+holds the scores only, never the key:
 
     OPENAI_API_KEY=... python scripts/measure_question_groups.py --judge \\
         --out evaluation/question_pairs_results.json
@@ -69,7 +72,8 @@ def embed(texts: list[str]) -> dict[str, list[float]]:
 
 
 def judge(scored: list[dict], floor: float) -> dict[str, bool | None]:
-    """The model's verdict for every pair in the band, keyed by pair id. A
+    """The model's verdict for every pair from ``floor`` up to the threshold,
+    keyed by pair id, in the batches the page would send at that floor. A
     batch whose reply does not parse gives None for its pairs, which the
     combined rule treats as different, as the page does."""
     band = sorted(
@@ -94,28 +98,34 @@ def judge(scored: list[dict], floor: float) -> dict[str, bool | None]:
     return verdicts
 
 
-def combined(scored: list[dict], verdicts: dict[str, bool | None]) -> list[dict]:
-    """Paraphrase recall and false merges of cosine plus the model, per floor."""
-    rows = []
-    for floor in FLOORS:
+def combined(scored: list[dict], floor: float, verdicts: dict[str, bool | None]) -> dict:
+    """Paraphrase recall and false merges of cosine plus the model at one
+    floor, scored with the verdicts judged at that floor."""
 
-        def merges(pair: dict, floor: float = floor) -> bool:
-            if pair["cosine"] >= QUESTION_GROUP_THRESHOLD:
-                return True
-            return pair["cosine"] >= floor and verdicts.get(pair["id"]) is True
+    def merges(pair: dict) -> bool:
+        if pair["cosine"] >= QUESTION_GROUP_THRESHOLD:
+            return True
+        return pair["cosine"] >= floor and verdicts.get(pair["id"]) is True
 
-        same = [p for p in scored if p["label"] == "same"]
-        false = [p["id"] for p in scored if p["label"] == "different" and merges(p)]
-        rows.append(
-            {
-                "floor": floor,
-                "judged": sum(floor <= p["cosine"] < QUESTION_GROUP_THRESHOLD for p in scored),
-                "paraphrases_merged": sum(merges(p) for p in same),
-                "false_merges": len(false),
-                "false_merge_ids": false,
-            }
-        )
-    return rows
+    same = [p for p in scored if p["label"] == "same"]
+    false = [p["id"] for p in scored if p["label"] == "different" and merges(p)]
+    return {
+        "floor": floor,
+        "judged": len(verdicts),
+        "unparsed": sum(verdict is None for verdict in verdicts.values()),
+        "paraphrases_merged": sum(merges(p) for p in same),
+        "false_merges": len(false),
+        "false_merge_ids": false,
+        "verdicts": dict(sorted(verdicts.items())),
+    }
+
+
+def judge_floors(scored: list[dict]) -> list[dict]:
+    """Judge and score each floor on its own. A pair near the end of one
+    floor's band shares a batch with different neighbours at another floor,
+    and the neighbours can change the verdict, so reusing one floor's
+    verdicts for the rest would not measure what the page does."""
+    return [combined(scored, floor, judge(scored, floor)) for floor in FLOORS]
 
 
 def sweep(scored: list[dict]) -> list[dict]:
@@ -173,16 +183,13 @@ def main() -> int:
         ],
     }
     if args.judge:
-        verdicts = judge(scored, min(FLOORS))
         result["judge"] = {
             "model": UTILITY_MODEL,
             "prompt_version": QUESTION_JUDGE_PROMPT_VERSION,
             "threshold": QUESTION_GROUP_THRESHOLD,
             "default_floor": QUESTION_JUDGE_FLOOR,
             "batch_size": QUESTION_JUDGE_MAX_PAIRS,
-            "unparsed": sum(verdict is None for verdict in verdicts.values()),
-            "floors": combined(scored, verdicts),
-            "verdicts": dict(sorted(verdicts.items())),
+            "floors": judge_floors(scored),
         }
     print(f"model {MODEL}, {len(scored)} pairs")
     print(f"same:      {result['same']}")
@@ -192,11 +199,12 @@ def main() -> int:
         print(f"{row['threshold']:.2f}       {row['missed_merges']:>3}    {row['false_merges']:>3}")
     if args.judge:
         print(f"judge {UTILITY_MODEL}, threshold {QUESTION_GROUP_THRESHOLD}")
-        print("floor  judged  paraphrases merged  false merges")
+        print("floor  judged  paraphrases merged  false merges  unparsed")
         for row in result["judge"]["floors"]:
             print(
                 f"{row['floor']:.2f}   {row['judged']:>5}  {row['paraphrases_merged']:>9} of"
                 f" {sum(p['label'] == 'same' for p in scored)}  {row['false_merges']:>11}"
+                f"  {row['unparsed']:>8}"
             )
     if args.out:
         args.out.write_text(json.dumps(result, indent=2) + "\n")
