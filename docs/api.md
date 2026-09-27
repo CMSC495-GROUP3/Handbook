@@ -417,12 +417,13 @@ model (#293). It gets both wordings as untrusted data and must reply
 `QUESTION_JUDGE_MAX_PAIRS` (default 50), closest first; pairs past the cap
 stay apart on that load and are judged on a later one. `unjudged` counts the
 band pairs a load left without a verdict, past the cap or in a failed call,
-and the page asks for a reload while it is above 0. Verdicts are memoized
+and the page asks for a reload while it is above 0. With `CACHE_ENABLED=0`
+every load judges the same closest pairs, so it is 0 there. Verdicts are memoized
 per process (20,000 entries, off when `CACHE_ENABLED=0`) and never stored, so
 a repeat load with nothing new makes no call. At 50 pairs the call is about
 2,000 input tokens and 200 output tokens, under $0.001 on `gpt-4o-mini`. If it
-fails or the reply does not parse, those pairs stay apart and `grouping` is
-`"cosine"`. `QUESTION_JUDGE_MAX_PAIRS=0` turns the check off and also reports
+fails or the reply does not parse, no pair below the threshold merges on that
+load, not even one confirmed earlier, and `grouping` is `"cosine"`. `QUESTION_JUDGE_MAX_PAIRS=0` turns the check off and also reports
 `"cosine"`.
 
 The embed call and the judge call each get `REPORT_PROVIDER_TIMEOUT_SECONDS`

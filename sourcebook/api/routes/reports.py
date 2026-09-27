@@ -219,7 +219,9 @@ def _same_pairs(
     Memoized verdicts are free. Of the rest, the closest
     ``QUESTION_JUDGE_MAX_PAIRS`` go in one call; pairs past the cap count as
     different on this load and are judged on a later one. The count lets the
-    page say so (#300).
+    page say so (#300). It is 0 with the memo off, since a later load would
+    judge the same pairs again. A failed call merges nothing below the
+    threshold, memoized verdicts included.
     """
     known: dict[tuple[str, str], bool] = {}
     if CACHE_ENABLED:
@@ -243,10 +245,12 @@ def _same_pairs(
         # Deliberately broad, as in _vectors: any provider or transport error
         # means "group on cosine alone", never a failed report.
         logger.warning("Question judge failed; grouping on cosine alone.", exc_info=True)
-        return same, False, len(unknown)
+        # Drop the memoized merges too, so "cosine" describes what the page
+        # shows: nothing below the threshold merges on a failed load.
+        return set(), False, len(unknown)
     if verdicts is None:
         logger.warning("Question judge reply did not parse; grouping on cosine alone.")
-        return same, False, len(unknown)
+        return set(), False, len(unknown)
     fresh = dict(zip(pending, verdicts, strict=True))
     if CACHE_ENABLED:
         with _verdict_memo_lock:
@@ -256,10 +260,12 @@ def _same_pairs(
                 _verdict_memo.move_to_end(key)
             while len(_verdict_memo) > VERDICT_MEMO_SIZE:
                 _verdict_memo.popitem(last=False)
+    # With the memo off, a reload sends the same closest pairs again, so the
+    # ones past the cap never get judged and the page must not promise it.
     return (
         same | {pair for pair, verdict in fresh.items() if verdict},
         True,
-        len(unknown) - len(pending),
+        len(unknown) - len(pending) if CACHE_ENABLED else 0,
     )
 
 
