@@ -2,8 +2,8 @@
 
 How to use Sourcebook: asking a policy question, checking where the answer came
 from, and handing a question to Human Resources when Sourcebook can't answer
-it. The last part covers how Human Resources works those requests on the
-**HR Requests** page.
+it. The last two parts are for Human Resources: working those requests on the
+**HR Requests** page, and reading the **What People Ask** report.
 
 To run your own copy, see [install.md](install.md). Scripts and integrations
 use the HTTP API in [api.md](api.md).
@@ -24,6 +24,10 @@ is `dev`.
 
 Sourcebook uses a shared password, not personal accounts. Ask Human
 Resources for it, type it in **Password**, and select **Sign in**.
+
+Human Resources staff sign in with a separate HR password instead. It does
+everything the shared password does and also opens the **HR Requests** and
+**What People Ask** pages.
 
 ![Sign-in page after a wrong password](releases/v0.2.0/evidence/01-wrong-password.png)
 
@@ -168,7 +172,10 @@ a narrow strip of icons.
 ## For Human Resources: the HR Requests page
 
 Select **HR Requests** in the sidebar. Every escalated question lands here.
-Anyone signed in can open this page; the pilot has no separate HR accounts.
+Only someone signed in with the HR password can open this page. With the
+shared password, the sidebar doesn't show it. If you signed in with the HR
+password before this page was limited to it and don't see the link, sign out
+and sign in again.
 
 ![HR Requests with an open request](releases/v0.2.0/evidence/12-hr-requests-open.png)
 
@@ -223,9 +230,31 @@ server allows.
 - "That request was not found." The link you followed points to a request that
   doesn't exist.
 
-### Finding gaps in the policy library
+## For Human Resources: What People Ask
 
-The questions Sourcebook refuses most often are a good list of policies to
-write next. Whoever runs the site can print that report on the server; see
-[Learning from the query log](../README.md#learning-from-the-query-log) in the
-README.
+Select **What People Ask** in the sidebar, under **HR Requests**. Like HR
+Requests, it needs the HR password. It shows what employees asked Sourcebook,
+so you can see which policies to write or make clearer.
+
+The page lists questions as employees typed them. It doesn't say who asked,
+but a question can still identify someone, so keep what you read there inside
+Human Resources.
+
+Choose **7 days**, **30 days**, or **90 days** at the top. The first line
+counts how many questions in that window had no policy to answer them, and
+what share of all questions that was. Below it are two lists:
+
+- **Not answered yet**: questions no policy answered, most asked first. Each
+  one points to a policy to write or make clearer.
+- **Asked most**: questions asked in at least two conversations, ranked by how
+  many. Each bar is green for the times a policy answered and orange for the
+  times none did.
+
+Close rewordings of one question share a row. **Also asked as _N_ other
+wordings** opens the other ways people put it. A question asked in quite
+different words can still appear as two rows, so the counts are a floor.
+
+| What you see | What to do |
+| --- | --- |
+| "This page is for Human Resources. Sign out and sign in with the HR password to see it." | You signed in with the shared password. Sign out and sign in with the HR password. |
+| "Unable to load this report." | Select **Try again**. If it keeps failing on 90 days, choose a shorter window. |
