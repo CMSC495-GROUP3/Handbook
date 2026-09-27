@@ -1120,10 +1120,13 @@ CODEOWNERS boundary.
 The rest of the team: Gavin ([@gavinwathen](https://github.com/gavinwathen))
 and Dominick ([@fudgepop01](https://github.com/fudgepop01)) build the React
 components and own the design and styling; George Struder
-([@Lazzy-dev](https://github.com/Lazzy-dev)) handles administration,
-dependency locks, and the MongoDB deployment; Robert
+([@Lazzy-dev](https://github.com/Lazzy-dev)) handles administration (the
+EC2 instance, S3, and Atlas), dependency locks, and the MongoDB deployment; Rob
 ([@RoNUO](https://github.com/RoNUO)) works on corpus availability and the
 passage index.
+
+Per-person commits, reviews, and the issues that show the work are in
+[docs/team.md](docs/team.md).
 
 ## References
 
