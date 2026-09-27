@@ -590,6 +590,22 @@ def test_a_rare_wording_never_rides_along_under_a_common_one(
     assert manager_row["other_wordings"] == []
 
 
+def test_single_conversation_wordings_do_not_crowd_a_manager_out_of_the_cap(
+    client, manager_auth, monkeypatch
+):
+    """Refused candidates are capped by asks. One person's heavy repeats must
+    not fill the cap ahead of a question asked in several conversations."""
+    monkeypatch.setattr(reports, "CANDIDATE_LIMIT", 2)
+    for question in ("Repeat one", "Repeat two"):
+        for _ in range(5):
+            log(question, refused=True, session_id=f"alone-{question}")
+    _ask("Can I bring my dog?", 3, refused=True)
+
+    gaps = client.get(URL, headers=manager_auth).json()["gaps"]
+
+    assert [(g["question"], g["conversations"]) for g in gaps] == [("Can I bring my dog?", 3)]
+
+
 def test_the_manager_threshold_is_configurable(client, manager_auth, monkeypatch):
     monkeypatch.setattr(reports, "MANAGER_MIN_CONVERSATIONS", 2)
     _ask("Where do I find my W-2?", 2, refused=False)

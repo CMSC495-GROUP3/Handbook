@@ -39,9 +39,10 @@ with the manager or HR password may read it (``require_report_reader``),
 because the text is what employees typed.
 
 A manager session sees only wordings asked in at least
-``MANAGER_MIN_CONVERSATIONS`` conversations. The rest are dropped before
-grouping, so no text on a manager's page, leader or other wording, was typed in
-fewer conversations than that; ``min_conversations`` in the response says the
+``MANAGER_MIN_CONVERSATIONS`` conversations. The rest are dropped in the
+query, before the ``CANDIDATE_LIMIT`` cap and grouping, so they cannot take
+candidate slots, and no text on a manager's page, leader or other wording, was
+typed in fewer conversations than that; ``min_conversations`` in the response says the
 filter was applied. ``total`` and ``refused`` still count every row, since a
 number names nobody. HR sees every wording.
 """
@@ -229,6 +230,8 @@ def coverage_gaps(
     until = datetime.now(UTC)
     since = until - timedelta(days=days)
     window = {"created_at": {"$gte": since, "$lt": until}}
+    min_conversations = MANAGER_MIN_CONVERSATIONS if cred == MANAGER_PASSWORD_HASH_VAR else None
+    candidates = {"min_sessions": min_conversations or 1}
 
     limit = {"maxTimeMS": QUERY_TIMEOUT_MS}
     try:
@@ -236,12 +239,14 @@ def coverage_gaps(
         # cursor is read is caught below too.
         refused_rows = list(
             query_logs_col.aggregate(
-                wording_pipeline(since, until, CANDIDATE_LIMIT, refused_only=True), **limit
+                wording_pipeline(since, until, CANDIDATE_LIMIT, refused_only=True, **candidates),
+                **limit,
             )
         )
         all_rows = list(
             query_logs_col.aggregate(
-                wording_pipeline(since, until, CANDIDATE_LIMIT, refused_only=False), **limit
+                wording_pipeline(since, until, CANDIDATE_LIMIT, refused_only=False, **candidates),
+                **limit,
             )
         )
         total = query_logs_col.count_documents(window, **limit)
@@ -261,10 +266,6 @@ def coverage_gaps(
 
     refused_wordings = [_wording(row) for row in refused_rows]
     all_wordings = [_wording(row) for row in all_rows]
-    min_conversations = MANAGER_MIN_CONVERSATIONS if cred == MANAGER_PASSWORD_HASH_VAR else None
-    if min_conversations is not None:
-        refused_wordings = [w for w in refused_wordings if w.session_count >= min_conversations]
-        all_wordings = [w for w in all_wordings if w.session_count >= min_conversations]
     texts = sorted({w.question for w in refused_wordings + all_wordings if w.question})
     vectors = _vectors(texts)
     if vectors is None:
