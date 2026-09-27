@@ -191,11 +191,12 @@ QUERY_LOG_TTL_SECONDS = int(os.getenv("QUERY_LOG_TTL_SECONDS", str(90 * 86400)))
 # Cosine similarity (raw, -1 to 1, not Atlas's mapped score) at which the
 # report page treats two wordings as one question. Merging two different
 # questions hides a gap behind a covered neighbour, which is worse than showing
-# one question twice. Measured on 80 labelled pairs with text-embedding-3-small
-# (evaluation/question_pairs_results.json, issue #287): the closest pair of
-# different questions scores 0.833, so 0.85 merges none of them. It also merges
-# only 4 of 40 real paraphrases, because paraphrases score as low as 0.47.
-# Lowering it trades false merges for recall; see docs/evaluation.md.
+# one question twice. Measured with text-embedding-3-small on 120 labelled
+# pairs (evaluation/question_pairs_results.json, issues #287 and #293): 0.85
+# merges 6 of 60 paraphrases, which score as low as 0.47, and 2 of 60 different
+# questions one word apart (HSA versus FSA, 0.862; sick versus a sick child,
+# 0.907). 0.91 would stop both and merge 3 paraphrases. Lowering it trades
+# false merges for recall; see docs/evaluation.md.
 QUESTION_GROUP_THRESHOLD = float(os.getenv("QUESTION_GROUP_THRESHOLD", "0.85"))
 
 # Pairs between this floor and QUESTION_GROUP_THRESHOLD go to the utility model,
