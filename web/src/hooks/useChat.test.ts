@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { AxiosResponse } from 'axios'
+import { AxiosError, type AxiosResponse } from 'axios'
 import client, { TOKEN_KEY } from '../api/client'
 
 const signOut = vi.hoisted(() => vi.fn())
@@ -216,6 +216,62 @@ describe('useChat', () => {
       await Promise.resolve()
     })
     expect(result.current.messages).toEqual([])
+  })
+
+  it("reports a conversation that is not this browser's", async () => {
+    // Another owner's session id, or one stored before owners (#290), answers 404.
+    vi.mocked(client.get).mockRejectedValue(
+      new AxiosError('Not Found', '404', undefined, undefined, {
+        status: 404,
+      } as AxiosResponse),
+    )
+    const onSessionMissing = vi.fn()
+
+    renderHook(() =>
+      useChat({ sessionId: 'someone-elses', onSessionCreated: vi.fn(), onSessionMissing }),
+    )
+
+    await waitFor(() => expect(onSessionMissing).toHaveBeenCalledTimes(1))
+  })
+
+  it('does not report a conversation as missing on other load failures', async () => {
+    vi.mocked(client.get).mockRejectedValue(
+      new AxiosError('Server Error', '500', undefined, undefined, {
+        status: 500,
+      } as AxiosResponse),
+    )
+    const onSessionMissing = vi.fn()
+
+    renderHook(() => useChat({ sessionId: 'sess-a', onSessionCreated: vi.fn(), onSessionMissing }))
+
+    await waitFor(() => expect(client.get).toHaveBeenCalled())
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(onSessionMissing).not.toHaveBeenCalled()
+  })
+
+  it('ignores a late 404 for a conversation the user already left', async () => {
+    let rejectGet: (reason: unknown) => void
+    vi.mocked(client.get).mockReturnValue(
+      new Promise((_resolve, reject) => {
+        rejectGet = reject
+      }),
+    )
+    const onSessionMissing = vi.fn()
+
+    const { rerender } = renderHook(
+      ({ sessionId }) => useChat({ sessionId, onSessionCreated: vi.fn(), onSessionMissing }),
+      { initialProps: { sessionId: 'sess-a' as string | null } },
+    )
+
+    rerender({ sessionId: null })
+    await act(async () => {
+      rejectGet(
+        new AxiosError('Not Found', '404', undefined, undefined, { status: 404 } as AxiosResponse),
+      )
+    })
+    expect(onSessionMissing).not.toHaveBeenCalled()
   })
 
   it('clears messages when leaving a conversation and drops a late load', async () => {
