@@ -2,6 +2,7 @@
 
 import hmac
 import os
+from dataclasses import dataclass
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -13,7 +14,7 @@ from sourcebook.api.routes.auth import (
     PASSWORD_HASH_VARS,
     credential_fingerprint,
 )
-from sourcebook.api.tokens import cred_claim, decode_claims
+from sourcebook.api.tokens import cred_claim, decode_claims, owner_claim
 
 bearer_scheme = HTTPBearer()
 
@@ -31,10 +32,23 @@ def _unauthorized() -> HTTPException:
     )
 
 
-def require_auth(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)) -> str:
-    """The token's ``cred`` claim, once the token is shown to be current. Else 401."""
+@dataclass(frozen=True)
+class Principal:
+    """Who a current token speaks for: the password it was opened with, and
+    the owner id its conversations and projects are filed under."""
+
+    cred: str
+    owner: str
+
+
+def require_auth(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)) -> Principal:
+    """The token's cred and owner, once the token is shown to be current. Else 401."""
     payload = decode_claims(credentials.credentials)
     if payload is None:
+        raise _unauthorized()
+
+    owner = owner_claim(payload)
+    if owner is None:
         raise _unauthorized()
 
     cred = cred_claim(payload)
@@ -56,14 +70,14 @@ def require_auth(credentials: HTTPAuthorizationCredentials = Depends(bearer_sche
     expected = credential_fingerprint(current_hash)
     if not hmac.compare_digest(fingerprint, expected):
         raise _unauthorized()
-    return cred
+    return Principal(cred=cred, owner=owner)
 
 
 # For the OpenAPI document: routes behind require_hr can answer 403.
 HR_ONLY_RESPONSES = {403: {"description": "Signed in, but not with the HR password."}}
 
 
-def require_hr(cred: str = Depends(require_auth)) -> None:
+def require_hr(principal: Principal = Depends(require_auth)) -> None:
     """Pass only a session opened with the HR password (issue #290).
 
     HR Requests shows questions employees typed, with their notes, so the
@@ -71,7 +85,7 @@ def require_hr(cred: str = Depends(require_auth)) -> None:
     still a 401 from require_auth; a current token from another password is a
     403, so the web app can tell "sign in again" from "not yours to open".
     """
-    if cred != HR_PASSWORD_HASH_VAR:
+    if principal.cred != HR_PASSWORD_HASH_VAR:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Human Resources sign-in required.",
@@ -85,7 +99,7 @@ REPORT_READER_RESPONSES = {
 }
 
 
-def require_report_reader(cred: str = Depends(require_auth)) -> str:
+def require_report_reader(principal: Principal = Depends(require_auth)) -> str:
     """Pass a session opened with the manager or HR password, and return its cred.
 
     What People Ask is for managers and supervisors, who can see what their
@@ -93,9 +107,9 @@ def require_report_reader(cred: str = Depends(require_auth)) -> str:
     who writes the policies it shows are missing. The route uses the cred to
     decide how much a manager sees. 401 and 403 split as in require_hr.
     """
-    if cred not in REPORT_READER_CREDS:
+    if principal.cred not in REPORT_READER_CREDS:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Manager or Human Resources sign-in required.",
         )
-    return cred
+    return principal.cred

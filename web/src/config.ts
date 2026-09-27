@@ -18,6 +18,12 @@ export const APP_TAGLINE =
 export const TOKEN_KEY = 'sourcebook_token'
 
 /**
+ * localStorage key holding this browser's owner id, sent at login. The server
+ * files conversations and projects under it, so it outlives signing out.
+ */
+export const CLIENT_ID_KEY = 'sourcebook_client_id'
+
+/**
  * The `cred` claim of a session opened with the Human Resources password.
  * Mirrors HR_PASSWORD_HASH_VAR in sourcebook/api/routes/auth.py; change both
  * together.

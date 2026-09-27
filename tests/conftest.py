@@ -127,11 +127,17 @@ def client():
         yield test_client
 
 
-def _bearer(cred: str) -> dict:
+# Owner ids, as a browser would send them at login. Each fixture below is one
+# browser; OTHER_OWNER is a second browser signed in with the same password.
+OWNER = "0" * 31 + "1"
+OTHER_OWNER = "0" * 31 + "2"
+
+
+def _bearer(cred: str, owner: str = OWNER) -> dict:
     """Headers carrying a token minted as login would for the hash in ``cred``."""
     token = create_access_token(
         {
-            "sub": "user",
+            "sub": owner,
             "cred": cred,
             "fingerprint": credential_fingerprint(os.environ[cred]),
         },
@@ -156,6 +162,12 @@ def hr_auth() -> dict:
 def manager_auth() -> dict:
     """A manager or supervisor: signed in with the manager password."""
     return _bearer(MANAGER_PASSWORD_HASH_VAR)
+
+
+@pytest.fixture
+def other_auth() -> dict:
+    """Another employee's browser: the same shared password, a different owner."""
+    return _bearer(PRIMARY_PASSWORD_HASH_VAR, OTHER_OWNER)
 
 
 class Retrieval:

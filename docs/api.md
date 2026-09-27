@@ -46,23 +46,37 @@ token from neither the manager nor the HR password → HTTP 403,
 Login accepts up to four passwords. The token's `cred` claim names the
 variable whose hash matched: `APP_PASSWORD_HASH`, `APP_PASSWORD_HASH_2`,
 `HR_PASSWORD_HASH`, or `MANAGER_PASSWORD_HASH`. Every signed-in route takes
-any of them except these four, which take only an `HR_PASSWORD_HASH` session:
+any of them except these five, which take only an `HR_PASSWORD_HASH` session:
 
 - `GET /api/escalations`
 - `GET /api/escalations/{escalation_id}`
 - `PATCH /api/escalations/{escalation_id}`
 - `POST /api/escalations/{escalation_id}/retry-delivery`
+- `POST /api/documents/reindex`
 
 and `GET /api/reports/gaps`, which takes an `HR_PASSWORD_HASH` or a
 `MANAGER_PASSWORD_HASH` session and filters what a manager sees (see
 [Coverage report](#coverage-report)).
 
 `POST /api/escalations` is not one of them; employees file escalations from
-the chat. When `HR_PASSWORD_HASH` is unset, the four escalation routes answer
-403 to everyone, and when both it and `MANAGER_PASSWORD_HASH` are unset, so
-does the report. The web app decodes the token's payload to decide which
-links to show, but the server check above is the only gate. The conversation routes
-are not HR-only and have no owner filter.
+the chat. When `HR_PASSWORD_HASH` is unset, the five HR-only routes answer 403
+to everyone, and when both it and `MANAGER_PASSWORD_HASH` are unset, so does
+the report. The web app decodes the token's payload to decide which links to
+show, but the server check above is the only gate.
+
+## Owners
+
+Conversations and projects belong to the browser that created them. The
+token's `sub` claim is an owner id, 32 lowercase hex digits; the web app keeps
+one in local storage and sends it as `client_id` at login, so signing out and
+back in on the same browser keeps its history. A client that sends no
+`client_id` gets a fresh owner id at every login. Every conversation, project,
+and chat route, and filing an escalation, sees only the caller's own records;
+someone else's session id or project id answers 404, the same as one that does
+not exist. HR sessions are no exception. Records stored before owners existed
+match no one; `scripts/purge_ownerless_conversations.py` deletes them (see the
+README's Configure section). A token without an owner id in `sub`, which is every token issued
+before this change, gets 401.
 
 Both chat routes answer HTTP 503 when the model provider is at its
 concurrency limit (`OPENAI_MAX_CONCURRENT_REQUESTS`, waited on for
@@ -80,8 +94,10 @@ is not retryable and keeps the shapes below.
 POST /api/auth/login
 Content-Type: application/json
 
-{"password": "dev"}
+{"password": "dev", "client_id": "5f0c3a9e1b7d4c2a8e6f0b1d3c5a7e9f"}
 ```
+
+`client_id` is optional; see [Owners](#owners).
 
 ```json
 {
@@ -378,9 +394,8 @@ row; see [Grouping by meaning](#grouping-by-meaning) below.
 `null` when neither was logged. No session ids are returned, but the question
 text comes from what the employee typed (the condensed rewrite when there is
 one), which is why the route is limited to manager and HR sessions and a
-manager's view drops rare wordings. `GET /api/conversations` still lists
-every conversation to every user, so this route adds ranking and counts, not
-new access.
+manager's view drops rare wordings. It is the one place HR or a manager sees
+questions across browsers.
 
 Each query stops after five seconds. A report that runs longer returns HTTP
 503 with `{"detail": "This report took too long. Try a shorter window."}`.
@@ -408,13 +423,41 @@ in a bounded in-process memo (5,000 entries, off when `CACHE_ENABLED=0`) and nev
 repeat load makes no provider call and the route writes nothing.
 If that call fails, `grouping` is `"exact"` and every wording has its own row.
 
+Cosine cannot tell a paraphrase from a near neighbour, so pairs scoring from
+`QUESTION_JUDGE_FLOOR` (default 0.7) up to the threshold go to the utility
+model (#293). It gets both wordings as untrusted data and must reply
+`{"same": [2, 5]}`, the numbers of the pairs that are one question. A pair
+merges only when it is listed. All of a load's new pairs go in one call, at most
+`QUESTION_JUDGE_MAX_PAIRS` (default 50), closest first; pairs past the cap
+stay apart on that load and are judged on a later one. `unjudged` counts the
+band pairs a load left without a verdict, past the cap or in a failed call,
+and the page asks for a reload while it is above 0. With `CACHE_ENABLED=0`
+every load judges the same closest pairs, so it is 0 there. Verdicts are memoized
+per process (20,000 entries, off when `CACHE_ENABLED=0`) and never stored, so
+a repeat load with nothing new makes no call. At 50 pairs the call is about
+2,000 input tokens and 200 output tokens, under $0.001 on `gpt-4o-mini`. If it
+fails or the reply does not parse, no pair below the threshold merges on that
+load, not even one confirmed earlier, and `grouping` is `"cosine"`. `QUESTION_JUDGE_MAX_PAIRS=0` turns the check off and also reports
+`"cosine"`.
+
+The embed call and the judge call each get `REPORT_PROVIDER_TIMEOUT_SECONDS`
+(default 8) with no retry, instead of the chat's 30 seconds plus a retry, so
+a stalled provider costs a load about 16 seconds at most before it falls back
+(#300).
+
+| `grouping` | Rows merge when |
+| --- | --- |
+| `meaning` | cosine clears the threshold, or clears the floor and the model says they are one question |
+| `cosine` | cosine clears the threshold |
+| `exact` | the text is identical after normalization |
+
 Merging two different questions ("How does PTO accrue?" and "Does unused PTO
 carry over?") hides a gap behind a covered neighbour, which is worse than
-splitting one question into two rows. On 80 labelled pairs the closest two
-different questions score 0.833, so 0.85 merges none of them, but it merges
-only 4 of 40 paraphrases: a missing question mark, a change of case, and two
-close rewordings. Most rephrasings still get their own row. The measurement is
-in [evaluation.md](evaluation.md#question-grouping-threshold).
+splitting one question into two rows. On 120 labelled pairs 0.85 merges 2 of
+60 different questions, both one word apart ("HSA" and "FSA"), and only 6 of
+60 paraphrases: a missing question mark, a change of case, and close
+rewordings. The model check brings paraphrases merged to 29 of 60. The
+measurements are in [evaluation.md](evaluation.md#question-grouping-threshold).
 
 ```http
 GET /api/reports/gaps?days=30
@@ -427,6 +470,7 @@ Authorization: Bearer <hr_access_token>
   "until": "2026-09-26T14:00:00+00:00",
   "days": 30,
   "grouping": "meaning",
+  "unjudged": 0,
   "min_conversations": null,
   "total": 412,
   "refused": 37,
@@ -551,7 +595,8 @@ max 200), `skip`.
 passage strings retrieval sees.
 
 `POST /api/documents/reindex` rebuilds the library and bumps the corpus
-version (that is what invalidates the answer cache):
+version (that is what invalidates the answer cache). It takes only an HR
+session, because every cached answer goes with it:
 
 ```json
 {"ok": true, "documents": 1, "corpus_version": "f971481377004fb3a3fce267dc5facd3"}

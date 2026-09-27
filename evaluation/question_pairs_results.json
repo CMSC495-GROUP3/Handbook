@@ -1,21 +1,21 @@
 {
   "model": "text-embedding-3-small",
-  "pairs": 80,
+  "pairs": 120,
   "same": {
     "min": 0.468,
-    "median": 0.7121,
+    "median": 0.7194,
     "max": 0.9733
   },
   "different": {
     "min": 0.3208,
-    "median": 0.6402,
-    "max": 0.8328
+    "median": 0.6559,
+    "max": 0.9072
   },
   "sweep": [
     {
       "threshold": 0.7,
-      "missed_merges": 18,
-      "false_merges": 10,
+      "missed_merges": 25,
+      "false_merges": 21,
       "false_merge_ids": [
         "diff_05",
         "diff_07",
@@ -26,13 +26,24 @@
         "diff_19",
         "diff_32",
         "diff_35",
-        "diff_40"
+        "diff_40",
+        "diff_41",
+        "diff_42",
+        "diff_43",
+        "diff_47",
+        "diff_48",
+        "diff_54",
+        "diff_56",
+        "diff_57",
+        "diff_58",
+        "diff_59",
+        "diff_60"
       ]
     },
     {
       "threshold": 0.71,
-      "missed_merges": 20,
-      "false_merges": 8,
+      "missed_merges": 28,
+      "false_merges": 16,
       "false_merge_ids": [
         "diff_05",
         "diff_07",
@@ -41,203 +52,284 @@
         "diff_18",
         "diff_19",
         "diff_32",
-        "diff_40"
+        "diff_40",
+        "diff_41",
+        "diff_42",
+        "diff_47",
+        "diff_48",
+        "diff_56",
+        "diff_57",
+        "diff_58",
+        "diff_59"
       ]
     },
     {
       "threshold": 0.72,
-      "missed_merges": 23,
-      "false_merges": 6,
+      "missed_merges": 32,
+      "false_merges": 14,
       "false_merge_ids": [
         "diff_07",
         "diff_08",
         "diff_10",
         "diff_19",
         "diff_32",
-        "diff_40"
+        "diff_40",
+        "diff_41",
+        "diff_42",
+        "diff_47",
+        "diff_48",
+        "diff_56",
+        "diff_57",
+        "diff_58",
+        "diff_59"
       ]
     },
     {
       "threshold": 0.73,
-      "missed_merges": 25,
-      "false_merges": 6,
+      "missed_merges": 34,
+      "false_merges": 13,
       "false_merge_ids": [
         "diff_07",
         "diff_08",
         "diff_10",
         "diff_19",
         "diff_32",
-        "diff_40"
+        "diff_40",
+        "diff_41",
+        "diff_42",
+        "diff_47",
+        "diff_48",
+        "diff_56",
+        "diff_58",
+        "diff_59"
       ]
     },
     {
       "threshold": 0.74,
-      "missed_merges": 27,
-      "false_merges": 6,
+      "missed_merges": 37,
+      "false_merges": 12,
       "false_merge_ids": [
         "diff_07",
         "diff_08",
         "diff_10",
         "diff_19",
         "diff_32",
-        "diff_40"
+        "diff_40",
+        "diff_41",
+        "diff_42",
+        "diff_48",
+        "diff_56",
+        "diff_58",
+        "diff_59"
       ]
     },
     {
       "threshold": 0.75,
-      "missed_merges": 28,
-      "false_merges": 6,
+      "missed_merges": 40,
+      "false_merges": 11,
       "false_merge_ids": [
         "diff_07",
         "diff_08",
         "diff_10",
         "diff_19",
         "diff_32",
-        "diff_40"
+        "diff_40",
+        "diff_41",
+        "diff_42",
+        "diff_48",
+        "diff_56",
+        "diff_58"
       ]
     },
     {
       "threshold": 0.76,
-      "missed_merges": 29,
-      "false_merges": 4,
+      "missed_merges": 42,
+      "false_merges": 9,
       "false_merge_ids": [
         "diff_07",
         "diff_08",
         "diff_19",
-        "diff_32"
+        "diff_32",
+        "diff_41",
+        "diff_42",
+        "diff_48",
+        "diff_56",
+        "diff_58"
       ]
     },
     {
       "threshold": 0.77,
-      "missed_merges": 32,
-      "false_merges": 3,
+      "missed_merges": 46,
+      "false_merges": 8,
       "false_merge_ids": [
         "diff_08",
         "diff_19",
-        "diff_32"
+        "diff_32",
+        "diff_41",
+        "diff_42",
+        "diff_48",
+        "diff_56",
+        "diff_58"
       ]
     },
     {
       "threshold": 0.78,
-      "missed_merges": 32,
-      "false_merges": 3,
+      "missed_merges": 47,
+      "false_merges": 8,
       "false_merge_ids": [
         "diff_08",
         "diff_19",
-        "diff_32"
+        "diff_32",
+        "diff_41",
+        "diff_42",
+        "diff_48",
+        "diff_56",
+        "diff_58"
       ]
     },
     {
       "threshold": 0.79,
-      "missed_merges": 32,
-      "false_merges": 2,
+      "missed_merges": 48,
+      "false_merges": 6,
       "false_merge_ids": [
         "diff_19",
-        "diff_32"
+        "diff_32",
+        "diff_41",
+        "diff_42",
+        "diff_56",
+        "diff_58"
       ]
     },
     {
       "threshold": 0.8,
-      "missed_merges": 32,
-      "false_merges": 2,
+      "missed_merges": 49,
+      "false_merges": 6,
       "false_merge_ids": [
         "diff_19",
-        "diff_32"
+        "diff_32",
+        "diff_41",
+        "diff_42",
+        "diff_56",
+        "diff_58"
       ]
     },
     {
       "threshold": 0.81,
-      "missed_merges": 34,
-      "false_merges": 1,
+      "missed_merges": 51,
+      "false_merges": 4,
       "false_merge_ids": [
-        "diff_32"
+        "diff_32",
+        "diff_41",
+        "diff_56",
+        "diff_58"
       ]
     },
     {
       "threshold": 0.82,
-      "missed_merges": 35,
-      "false_merges": 1,
+      "missed_merges": 52,
+      "false_merges": 3,
       "false_merge_ids": [
-        "diff_32"
+        "diff_32",
+        "diff_56",
+        "diff_58"
       ]
     },
     {
       "threshold": 0.83,
-      "missed_merges": 35,
-      "false_merges": 1,
+      "missed_merges": 53,
+      "false_merges": 3,
       "false_merge_ids": [
-        "diff_32"
+        "diff_32",
+        "diff_56",
+        "diff_58"
       ]
     },
     {
       "threshold": 0.84,
-      "missed_merges": 35,
-      "false_merges": 0,
-      "false_merge_ids": []
+      "missed_merges": 53,
+      "false_merges": 2,
+      "false_merge_ids": [
+        "diff_56",
+        "diff_58"
+      ]
     },
     {
       "threshold": 0.85,
-      "missed_merges": 36,
-      "false_merges": 0,
-      "false_merge_ids": []
+      "missed_merges": 54,
+      "false_merges": 2,
+      "false_merge_ids": [
+        "diff_56",
+        "diff_58"
+      ]
     },
     {
       "threshold": 0.86,
-      "missed_merges": 36,
-      "false_merges": 0,
-      "false_merge_ids": []
+      "missed_merges": 54,
+      "false_merges": 2,
+      "false_merge_ids": [
+        "diff_56",
+        "diff_58"
+      ]
     },
     {
       "threshold": 0.87,
-      "missed_merges": 37,
-      "false_merges": 0,
-      "false_merge_ids": []
+      "missed_merges": 56,
+      "false_merges": 1,
+      "false_merge_ids": [
+        "diff_58"
+      ]
     },
     {
       "threshold": 0.88,
-      "missed_merges": 38,
-      "false_merges": 0,
-      "false_merge_ids": []
+      "missed_merges": 57,
+      "false_merges": 1,
+      "false_merge_ids": [
+        "diff_58"
+      ]
     },
     {
       "threshold": 0.89,
-      "missed_merges": 38,
-      "false_merges": 0,
-      "false_merge_ids": []
+      "missed_merges": 57,
+      "false_merges": 1,
+      "false_merge_ids": [
+        "diff_58"
+      ]
     },
     {
       "threshold": 0.9,
-      "missed_merges": 38,
-      "false_merges": 0,
-      "false_merge_ids": []
+      "missed_merges": 57,
+      "false_merges": 1,
+      "false_merge_ids": [
+        "diff_58"
+      ]
     },
     {
       "threshold": 0.91,
-      "missed_merges": 38,
+      "missed_merges": 57,
       "false_merges": 0,
       "false_merge_ids": []
     },
     {
       "threshold": 0.92,
-      "missed_merges": 38,
+      "missed_merges": 58,
       "false_merges": 0,
       "false_merge_ids": []
     },
     {
       "threshold": 0.93,
-      "missed_merges": 38,
+      "missed_merges": 58,
       "false_merges": 0,
       "false_merge_ids": []
     },
     {
       "threshold": 0.94,
-      "missed_merges": 39,
+      "missed_merges": 59,
       "false_merges": 0,
       "false_merge_ids": []
     },
     {
       "threshold": 0.95,
-      "missed_merges": 39,
+      "missed_merges": 59,
       "false_merges": 0,
       "false_merge_ids": []
     }
@@ -254,9 +346,24 @@
       "cosine": 0.9351
     },
     {
+      "id": "same_41",
+      "label": "same",
+      "cosine": 0.9103
+    },
+    {
+      "id": "diff_58",
+      "label": "different",
+      "cosine": 0.9072
+    },
+    {
       "id": "same_11",
       "label": "same",
       "cosine": 0.8782
+    },
+    {
+      "id": "same_46",
+      "label": "same",
+      "cosine": 0.869
     },
     {
       "id": "same_36",
@@ -264,9 +371,14 @@
       "cosine": 0.8636
     },
     {
+      "id": "diff_56",
+      "label": "different",
+      "cosine": 0.8615
+    },
+    {
       "id": "same_22",
       "label": "same",
-      "cosine": 0.8409
+      "cosine": 0.841
     },
     {
       "id": "diff_32",
@@ -274,14 +386,24 @@
       "cosine": 0.8328
     },
     {
+      "id": "same_60",
+      "label": "same",
+      "cosine": 0.8285
+    },
+    {
       "id": "same_26",
       "label": "same",
-      "cosine": 0.812
+      "cosine": 0.8121
+    },
+    {
+      "id": "diff_41",
+      "label": "different",
+      "cosine": 0.8114
     },
     {
       "id": "same_33",
       "label": "same",
-      "cosine": 0.8079
+      "cosine": 0.8076
     },
     {
       "id": "same_31",
@@ -291,12 +413,37 @@
     {
       "id": "diff_19",
       "label": "different",
-      "cosine": 0.8032
+      "cosine": 0.8031
+    },
+    {
+      "id": "diff_42",
+      "label": "different",
+      "cosine": 0.8006
+    },
+    {
+      "id": "same_57",
+      "label": "same",
+      "cosine": 0.7941
+    },
+    {
+      "id": "same_53",
+      "label": "same",
+      "cosine": 0.7897
+    },
+    {
+      "id": "diff_48",
+      "label": "different",
+      "cosine": 0.7841
     },
     {
       "id": "diff_08",
       "label": "different",
       "cosine": 0.7829
+    },
+    {
+      "id": "same_44",
+      "label": "same",
+      "cosine": 0.773
     },
     {
       "id": "same_07",
@@ -306,7 +453,7 @@
     {
       "id": "diff_07",
       "label": "different",
-      "cosine": 0.7669
+      "cosine": 0.7668
     },
     {
       "id": "same_32",
@@ -319,6 +466,11 @@
       "cosine": 0.7646
     },
     {
+      "id": "same_52",
+      "label": "same",
+      "cosine": 0.7645
+    },
+    {
       "id": "diff_40",
       "label": "different",
       "cosine": 0.7551
@@ -326,7 +478,12 @@
     {
       "id": "diff_10",
       "label": "different",
-      "cosine": 0.7543
+      "cosine": 0.7544
+    },
+    {
+      "id": "same_58",
+      "label": "same",
+      "cosine": 0.7518
     },
     {
       "id": "same_21",
@@ -334,19 +491,49 @@
       "cosine": 0.7507
     },
     {
+      "id": "same_42",
+      "label": "same",
+      "cosine": 0.7488
+    },
+    {
+      "id": "same_48",
+      "label": "same",
+      "cosine": 0.7463
+    },
+    {
       "id": "same_35",
       "label": "same",
       "cosine": 0.7446
     },
     {
+      "id": "diff_59",
+      "label": "different",
+      "cosine": 0.743
+    },
+    {
       "id": "same_08",
       "label": "same",
-      "cosine": 0.7363
+      "cosine": 0.7364
     },
     {
       "id": "same_29",
       "label": "same",
       "cosine": 0.734
+    },
+    {
+      "id": "same_50",
+      "label": "same",
+      "cosine": 0.732
+    },
+    {
+      "id": "diff_47",
+      "label": "different",
+      "cosine": 0.7304
+    },
+    {
+      "id": "diff_57",
+      "label": "different",
+      "cosine": 0.728
     },
     {
       "id": "same_28",
@@ -376,7 +563,12 @@
     {
       "id": "diff_05",
       "label": "different",
-      "cosine": 0.719
+      "cosine": 0.7191
+    },
+    {
+      "id": "same_56",
+      "label": "same",
+      "cosine": 0.7169
     },
     {
       "id": "same_38",
@@ -384,24 +576,54 @@
       "cosine": 0.7121
     },
     {
+      "id": "same_51",
+      "label": "same",
+      "cosine": 0.7099
+    },
+    {
       "id": "same_17",
       "label": "same",
-      "cosine": 0.7082
+      "cosine": 0.7081
     },
     {
       "id": "diff_11",
       "label": "different",
-      "cosine": 0.7073
+      "cosine": 0.7071
+    },
+    {
+      "id": "diff_60",
+      "label": "different",
+      "cosine": 0.7065
     },
     {
       "id": "diff_35",
       "label": "different",
-      "cosine": 0.7062
+      "cosine": 0.7063
+    },
+    {
+      "id": "diff_54",
+      "label": "different",
+      "cosine": 0.7041
+    },
+    {
+      "id": "diff_43",
+      "label": "different",
+      "cosine": 0.7029
     },
     {
       "id": "same_04",
       "label": "same",
-      "cosine": 0.7003
+      "cosine": 0.7004
+    },
+    {
+      "id": "diff_46",
+      "label": "different",
+      "cosine": 0.6998
+    },
+    {
+      "id": "same_55",
+      "label": "same",
+      "cosine": 0.6992
     },
     {
       "id": "same_14",
@@ -411,7 +633,7 @@
     {
       "id": "diff_25",
       "label": "different",
-      "cosine": 0.6956
+      "cosine": 0.6957
     },
     {
       "id": "same_39",
@@ -421,17 +643,37 @@
     {
       "id": "same_27",
       "label": "same",
-      "cosine": 0.6871
+      "cosine": 0.687
     },
     {
       "id": "diff_31",
       "label": "different",
-      "cosine": 0.6856
+      "cosine": 0.6855
     },
     {
       "id": "diff_33",
       "label": "different",
-      "cosine": 0.6853
+      "cosine": 0.6854
+    },
+    {
+      "id": "same_59",
+      "label": "same",
+      "cosine": 0.68
+    },
+    {
+      "id": "same_47",
+      "label": "same",
+      "cosine": 0.6775
+    },
+    {
+      "id": "diff_45",
+      "label": "different",
+      "cosine": 0.6752
+    },
+    {
+      "id": "same_49",
+      "label": "same",
+      "cosine": 0.6736
     },
     {
       "id": "diff_02",
@@ -441,7 +683,7 @@
     {
       "id": "diff_24",
       "label": "different",
-      "cosine": 0.6663
+      "cosine": 0.6662
     },
     {
       "id": "same_19",
@@ -451,22 +693,27 @@
     {
       "id": "diff_13",
       "label": "different",
-      "cosine": 0.659
+      "cosine": 0.6589
     },
     {
       "id": "same_37",
       "label": "same",
-      "cosine": 0.6559
+      "cosine": 0.656
     },
     {
       "id": "diff_20",
       "label": "different",
+      "cosine": 0.6559
+    },
+    {
+      "id": "same_45",
+      "label": "same",
       "cosine": 0.6558
     },
     {
       "id": "diff_34",
       "label": "different",
-      "cosine": 0.6554
+      "cosine": 0.6553
     },
     {
       "id": "diff_21",
@@ -476,12 +723,17 @@
     {
       "id": "same_06",
       "label": "same",
-      "cosine": 0.6456
+      "cosine": 0.6462
+    },
+    {
+      "id": "same_54",
+      "label": "same",
+      "cosine": 0.6439
     },
     {
       "id": "same_34",
       "label": "same",
-      "cosine": 0.6414
+      "cosine": 0.6415
     },
     {
       "id": "same_16",
@@ -501,12 +753,17 @@
     {
       "id": "same_13",
       "label": "same",
-      "cosine": 0.636
+      "cosine": 0.6359
     },
     {
       "id": "same_12",
       "label": "same",
       "cosine": 0.634
+    },
+    {
+      "id": "diff_53",
+      "label": "different",
+      "cosine": 0.6288
     },
     {
       "id": "same_24",
@@ -519,9 +776,14 @@
       "cosine": 0.6151
     },
     {
+      "id": "same_43",
+      "label": "same",
+      "cosine": 0.6069
+    },
+    {
       "id": "diff_15",
       "label": "different",
-      "cosine": 0.6065
+      "cosine": 0.6064
     },
     {
       "id": "same_03",
@@ -531,7 +793,7 @@
     {
       "id": "diff_29",
       "label": "different",
-      "cosine": 0.5968
+      "cosine": 0.5969
     },
     {
       "id": "diff_16",
@@ -541,12 +803,12 @@
     {
       "id": "diff_36",
       "label": "different",
-      "cosine": 0.5886
+      "cosine": 0.5887
     },
     {
       "id": "diff_01",
       "label": "different",
-      "cosine": 0.5883
+      "cosine": 0.5882
     },
     {
       "id": "diff_28",
@@ -556,12 +818,12 @@
     {
       "id": "diff_39",
       "label": "different",
-      "cosine": 0.5825
+      "cosine": 0.5817
     },
     {
       "id": "same_01",
       "label": "same",
-      "cosine": 0.5798
+      "cosine": 0.5794
     },
     {
       "id": "same_25",
@@ -576,17 +838,32 @@
     {
       "id": "diff_26",
       "label": "different",
-      "cosine": 0.5726
+      "cosine": 0.5725
+    },
+    {
+      "id": "diff_51",
+      "label": "different",
+      "cosine": 0.5722
     },
     {
       "id": "diff_06",
       "label": "different",
-      "cosine": 0.5617
+      "cosine": 0.5616
     },
     {
       "id": "same_23",
       "label": "same",
       "cosine": 0.5525
+    },
+    {
+      "id": "diff_55",
+      "label": "different",
+      "cosine": 0.5473
+    },
+    {
+      "id": "diff_49",
+      "label": "different",
+      "cosine": 0.5427
     },
     {
       "id": "diff_04",
@@ -601,7 +878,12 @@
     {
       "id": "same_40",
       "label": "same",
-      "cosine": 0.5297
+      "cosine": 0.5296
+    },
+    {
+      "id": "diff_52",
+      "label": "different",
+      "cosine": 0.5169
     },
     {
       "id": "same_10",
@@ -611,12 +893,17 @@
     {
       "id": "diff_22",
       "label": "different",
-      "cosine": 0.4665
+      "cosine": 0.4655
     },
     {
       "id": "diff_30",
       "label": "different",
       "cosine": 0.4386
+    },
+    {
+      "id": "diff_50",
+      "label": "different",
+      "cosine": 0.407
     },
     {
       "id": "diff_23",
@@ -626,7 +913,7 @@
     {
       "id": "diff_03",
       "label": "different",
-      "cosine": 0.3555
+      "cosine": 0.3557
     },
     {
       "id": "diff_27",
@@ -636,12 +923,636 @@
     {
       "id": "diff_12",
       "label": "different",
-      "cosine": 0.3504
+      "cosine": 0.3505
+    },
+    {
+      "id": "diff_44",
+      "label": "different",
+      "cosine": 0.3325
     },
     {
       "id": "diff_38",
       "label": "different",
       "cosine": 0.3208
     }
-  ]
+  ],
+  "judge": {
+    "model": "gpt-4o-mini",
+    "prompt_version": "v3",
+    "threshold": 0.85,
+    "default_floor": 0.7,
+    "batch_size": 50,
+    "floors": [
+      {
+        "floor": 0.45,
+        "judged": 104,
+        "unparsed": 0,
+        "paraphrases_merged": 45,
+        "false_merges": 9,
+        "false_merge_ids": [
+          "diff_02",
+          "diff_09",
+          "diff_26",
+          "diff_35",
+          "diff_45",
+          "diff_54",
+          "diff_56",
+          "diff_58",
+          "diff_60"
+        ],
+        "verdicts": {
+          "diff_01": false,
+          "diff_02": true,
+          "diff_04": false,
+          "diff_05": false,
+          "diff_06": false,
+          "diff_07": false,
+          "diff_08": false,
+          "diff_09": true,
+          "diff_10": false,
+          "diff_11": false,
+          "diff_13": false,
+          "diff_14": false,
+          "diff_15": false,
+          "diff_16": false,
+          "diff_17": false,
+          "diff_18": false,
+          "diff_19": false,
+          "diff_20": false,
+          "diff_21": false,
+          "diff_22": false,
+          "diff_24": false,
+          "diff_25": false,
+          "diff_26": true,
+          "diff_28": false,
+          "diff_29": false,
+          "diff_31": false,
+          "diff_32": false,
+          "diff_33": false,
+          "diff_34": false,
+          "diff_35": true,
+          "diff_36": false,
+          "diff_37": false,
+          "diff_39": false,
+          "diff_40": false,
+          "diff_41": false,
+          "diff_42": false,
+          "diff_43": false,
+          "diff_45": true,
+          "diff_46": false,
+          "diff_47": false,
+          "diff_48": false,
+          "diff_49": false,
+          "diff_51": false,
+          "diff_52": false,
+          "diff_53": false,
+          "diff_54": true,
+          "diff_55": false,
+          "diff_57": false,
+          "diff_59": false,
+          "diff_60": true,
+          "same_01": false,
+          "same_03": true,
+          "same_04": false,
+          "same_05": true,
+          "same_06": true,
+          "same_07": false,
+          "same_08": true,
+          "same_09": true,
+          "same_10": true,
+          "same_12": true,
+          "same_13": false,
+          "same_14": true,
+          "same_16": true,
+          "same_17": true,
+          "same_18": true,
+          "same_19": true,
+          "same_20": false,
+          "same_21": true,
+          "same_22": true,
+          "same_23": true,
+          "same_24": false,
+          "same_25": true,
+          "same_26": true,
+          "same_27": true,
+          "same_28": true,
+          "same_29": true,
+          "same_30": true,
+          "same_31": true,
+          "same_32": false,
+          "same_33": false,
+          "same_34": true,
+          "same_35": true,
+          "same_37": false,
+          "same_38": true,
+          "same_39": true,
+          "same_40": true,
+          "same_42": true,
+          "same_43": false,
+          "same_44": false,
+          "same_45": true,
+          "same_47": true,
+          "same_48": true,
+          "same_49": true,
+          "same_50": true,
+          "same_51": true,
+          "same_52": false,
+          "same_53": true,
+          "same_54": true,
+          "same_55": false,
+          "same_56": false,
+          "same_57": true,
+          "same_58": true,
+          "same_59": false,
+          "same_60": true
+        }
+      },
+      {
+        "floor": 0.5,
+        "judged": 102,
+        "unparsed": 0,
+        "paraphrases_merged": 44,
+        "false_merges": 8,
+        "false_merge_ids": [
+          "diff_02",
+          "diff_09",
+          "diff_35",
+          "diff_45",
+          "diff_54",
+          "diff_56",
+          "diff_58",
+          "diff_60"
+        ],
+        "verdicts": {
+          "diff_01": false,
+          "diff_02": true,
+          "diff_04": false,
+          "diff_05": false,
+          "diff_06": false,
+          "diff_07": false,
+          "diff_08": false,
+          "diff_09": true,
+          "diff_10": false,
+          "diff_11": false,
+          "diff_13": false,
+          "diff_14": false,
+          "diff_15": false,
+          "diff_16": false,
+          "diff_17": false,
+          "diff_18": false,
+          "diff_19": false,
+          "diff_20": false,
+          "diff_21": false,
+          "diff_24": false,
+          "diff_25": false,
+          "diff_26": false,
+          "diff_28": false,
+          "diff_29": false,
+          "diff_31": false,
+          "diff_32": false,
+          "diff_33": false,
+          "diff_34": false,
+          "diff_35": true,
+          "diff_36": false,
+          "diff_37": false,
+          "diff_39": false,
+          "diff_40": false,
+          "diff_41": false,
+          "diff_42": false,
+          "diff_43": false,
+          "diff_45": true,
+          "diff_46": false,
+          "diff_47": false,
+          "diff_48": false,
+          "diff_49": false,
+          "diff_51": false,
+          "diff_52": false,
+          "diff_53": false,
+          "diff_54": true,
+          "diff_55": false,
+          "diff_57": false,
+          "diff_59": false,
+          "diff_60": true,
+          "same_01": false,
+          "same_03": true,
+          "same_04": false,
+          "same_05": true,
+          "same_06": true,
+          "same_07": false,
+          "same_08": true,
+          "same_09": true,
+          "same_12": true,
+          "same_13": false,
+          "same_14": true,
+          "same_16": true,
+          "same_17": true,
+          "same_18": true,
+          "same_19": true,
+          "same_20": false,
+          "same_21": true,
+          "same_22": true,
+          "same_23": true,
+          "same_24": false,
+          "same_25": true,
+          "same_26": true,
+          "same_27": true,
+          "same_28": true,
+          "same_29": true,
+          "same_30": true,
+          "same_31": true,
+          "same_32": false,
+          "same_33": false,
+          "same_34": true,
+          "same_35": true,
+          "same_37": false,
+          "same_38": true,
+          "same_39": true,
+          "same_40": true,
+          "same_42": true,
+          "same_43": false,
+          "same_44": false,
+          "same_45": true,
+          "same_47": true,
+          "same_48": true,
+          "same_49": true,
+          "same_50": true,
+          "same_51": true,
+          "same_52": false,
+          "same_53": true,
+          "same_54": true,
+          "same_55": false,
+          "same_56": false,
+          "same_57": true,
+          "same_58": true,
+          "same_59": false,
+          "same_60": true
+        }
+      },
+      {
+        "floor": 0.55,
+        "judged": 96,
+        "unparsed": 0,
+        "paraphrases_merged": 39,
+        "false_merges": 6,
+        "false_merge_ids": [
+          "diff_01",
+          "diff_02",
+          "diff_09",
+          "diff_45",
+          "diff_56",
+          "diff_58"
+        ],
+        "verdicts": {
+          "diff_01": true,
+          "diff_02": true,
+          "diff_05": false,
+          "diff_06": false,
+          "diff_07": false,
+          "diff_08": false,
+          "diff_09": true,
+          "diff_10": false,
+          "diff_11": false,
+          "diff_13": false,
+          "diff_15": false,
+          "diff_16": false,
+          "diff_17": false,
+          "diff_18": false,
+          "diff_19": false,
+          "diff_20": false,
+          "diff_21": false,
+          "diff_24": false,
+          "diff_25": false,
+          "diff_26": false,
+          "diff_28": false,
+          "diff_29": false,
+          "diff_31": false,
+          "diff_32": false,
+          "diff_33": false,
+          "diff_34": false,
+          "diff_35": false,
+          "diff_36": false,
+          "diff_37": false,
+          "diff_39": false,
+          "diff_40": false,
+          "diff_41": false,
+          "diff_42": false,
+          "diff_43": false,
+          "diff_45": true,
+          "diff_46": false,
+          "diff_47": false,
+          "diff_48": false,
+          "diff_51": false,
+          "diff_53": false,
+          "diff_54": false,
+          "diff_57": false,
+          "diff_59": false,
+          "diff_60": false,
+          "same_01": false,
+          "same_03": true,
+          "same_04": true,
+          "same_05": true,
+          "same_06": true,
+          "same_07": false,
+          "same_08": false,
+          "same_09": true,
+          "same_12": true,
+          "same_13": false,
+          "same_14": true,
+          "same_16": true,
+          "same_17": true,
+          "same_18": true,
+          "same_19": true,
+          "same_20": false,
+          "same_21": true,
+          "same_22": true,
+          "same_23": true,
+          "same_24": false,
+          "same_25": true,
+          "same_26": true,
+          "same_27": true,
+          "same_28": true,
+          "same_29": false,
+          "same_30": true,
+          "same_31": true,
+          "same_32": false,
+          "same_33": false,
+          "same_34": true,
+          "same_35": false,
+          "same_37": false,
+          "same_38": true,
+          "same_39": true,
+          "same_42": true,
+          "same_43": false,
+          "same_44": false,
+          "same_45": false,
+          "same_47": true,
+          "same_48": false,
+          "same_49": true,
+          "same_50": false,
+          "same_51": true,
+          "same_52": false,
+          "same_53": true,
+          "same_54": true,
+          "same_55": true,
+          "same_56": false,
+          "same_57": true,
+          "same_58": true,
+          "same_59": false,
+          "same_60": true
+        }
+      },
+      {
+        "floor": 0.6,
+        "judged": 83,
+        "unparsed": 0,
+        "paraphrases_merged": 40,
+        "false_merges": 7,
+        "false_merge_ids": [
+          "diff_02",
+          "diff_24",
+          "diff_35",
+          "diff_54",
+          "diff_56",
+          "diff_58",
+          "diff_60"
+        ],
+        "verdicts": {
+          "diff_02": true,
+          "diff_05": false,
+          "diff_07": false,
+          "diff_08": false,
+          "diff_10": false,
+          "diff_11": false,
+          "diff_13": false,
+          "diff_15": false,
+          "diff_17": false,
+          "diff_18": false,
+          "diff_19": false,
+          "diff_20": false,
+          "diff_21": false,
+          "diff_24": true,
+          "diff_25": false,
+          "diff_31": false,
+          "diff_32": false,
+          "diff_33": false,
+          "diff_34": false,
+          "diff_35": true,
+          "diff_37": false,
+          "diff_40": false,
+          "diff_41": false,
+          "diff_42": false,
+          "diff_43": false,
+          "diff_45": false,
+          "diff_46": false,
+          "diff_47": false,
+          "diff_48": false,
+          "diff_53": false,
+          "diff_54": true,
+          "diff_57": false,
+          "diff_59": false,
+          "diff_60": true,
+          "same_03": true,
+          "same_04": false,
+          "same_05": true,
+          "same_06": true,
+          "same_07": false,
+          "same_08": true,
+          "same_09": true,
+          "same_12": true,
+          "same_13": false,
+          "same_14": true,
+          "same_16": true,
+          "same_17": true,
+          "same_18": true,
+          "same_19": true,
+          "same_20": false,
+          "same_21": true,
+          "same_22": true,
+          "same_24": false,
+          "same_26": true,
+          "same_27": true,
+          "same_28": true,
+          "same_29": true,
+          "same_30": true,
+          "same_31": true,
+          "same_32": false,
+          "same_33": false,
+          "same_34": true,
+          "same_35": true,
+          "same_37": false,
+          "same_38": true,
+          "same_39": true,
+          "same_42": true,
+          "same_43": false,
+          "same_44": false,
+          "same_45": false,
+          "same_47": true,
+          "same_48": true,
+          "same_49": true,
+          "same_50": true,
+          "same_51": true,
+          "same_52": false,
+          "same_53": true,
+          "same_54": true,
+          "same_55": false,
+          "same_56": false,
+          "same_57": true,
+          "same_58": true,
+          "same_59": false,
+          "same_60": true
+        }
+      },
+      {
+        "floor": 0.65,
+        "judged": 69,
+        "unparsed": 0,
+        "paraphrases_merged": 35,
+        "false_merges": 9,
+        "false_merge_ids": [
+          "diff_02",
+          "diff_20",
+          "diff_24",
+          "diff_35",
+          "diff_45",
+          "diff_54",
+          "diff_56",
+          "diff_58",
+          "diff_60"
+        ],
+        "verdicts": {
+          "diff_02": true,
+          "diff_05": false,
+          "diff_07": false,
+          "diff_08": false,
+          "diff_10": false,
+          "diff_11": false,
+          "diff_13": false,
+          "diff_18": false,
+          "diff_19": false,
+          "diff_20": true,
+          "diff_21": false,
+          "diff_24": true,
+          "diff_25": false,
+          "diff_31": false,
+          "diff_32": false,
+          "diff_33": false,
+          "diff_34": false,
+          "diff_35": true,
+          "diff_40": false,
+          "diff_41": false,
+          "diff_42": false,
+          "diff_43": false,
+          "diff_45": true,
+          "diff_46": false,
+          "diff_47": false,
+          "diff_48": false,
+          "diff_54": true,
+          "diff_57": false,
+          "diff_59": false,
+          "diff_60": true,
+          "same_04": false,
+          "same_05": true,
+          "same_07": false,
+          "same_08": true,
+          "same_09": false,
+          "same_14": true,
+          "same_17": true,
+          "same_18": true,
+          "same_19": true,
+          "same_21": true,
+          "same_22": true,
+          "same_26": true,
+          "same_27": true,
+          "same_28": true,
+          "same_29": true,
+          "same_30": true,
+          "same_31": true,
+          "same_32": false,
+          "same_33": false,
+          "same_35": true,
+          "same_37": false,
+          "same_38": true,
+          "same_39": true,
+          "same_42": true,
+          "same_44": false,
+          "same_45": true,
+          "same_47": true,
+          "same_48": true,
+          "same_49": true,
+          "same_50": true,
+          "same_51": true,
+          "same_52": true,
+          "same_53": true,
+          "same_55": false,
+          "same_56": false,
+          "same_57": true,
+          "same_58": true,
+          "same_59": false,
+          "same_60": true
+        }
+      },
+      {
+        "floor": 0.7,
+        "judged": 48,
+        "unparsed": 0,
+        "paraphrases_merged": 29,
+        "false_merges": 3,
+        "false_merge_ids": [
+          "diff_56",
+          "diff_57",
+          "diff_58"
+        ],
+        "verdicts": {
+          "diff_05": false,
+          "diff_07": false,
+          "diff_08": false,
+          "diff_10": false,
+          "diff_11": false,
+          "diff_18": false,
+          "diff_19": false,
+          "diff_32": false,
+          "diff_35": false,
+          "diff_40": false,
+          "diff_41": false,
+          "diff_42": false,
+          "diff_43": false,
+          "diff_47": false,
+          "diff_48": false,
+          "diff_54": false,
+          "diff_57": true,
+          "diff_59": false,
+          "diff_60": false,
+          "same_04": false,
+          "same_05": true,
+          "same_07": false,
+          "same_08": true,
+          "same_09": true,
+          "same_17": true,
+          "same_18": true,
+          "same_21": true,
+          "same_22": true,
+          "same_26": true,
+          "same_28": true,
+          "same_29": true,
+          "same_30": true,
+          "same_31": true,
+          "same_32": false,
+          "same_33": false,
+          "same_35": true,
+          "same_38": true,
+          "same_42": true,
+          "same_44": false,
+          "same_48": true,
+          "same_50": true,
+          "same_51": true,
+          "same_52": true,
+          "same_53": true,
+          "same_56": false,
+          "same_57": true,
+          "same_58": true,
+          "same_60": true
+        }
+      }
+    ]
+  }
 }

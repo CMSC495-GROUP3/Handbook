@@ -2,16 +2,17 @@ import hashlib
 import logging
 import os
 import re
+import uuid
 from datetime import UTC, datetime, timedelta
 
 import anyio
 import bcrypt
 from anyio import CapacityLimiter
 from fastapi import APIRouter, HTTPException, Request, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from sourcebook.api.limiter import limiter
-from sourcebook.api.tokens import encode_token
+from sourcebook.api.tokens import OWNER_ID_PATTERN, encode_token
 from sourcebook.rag.config import LOGIN_THREADPOOL_TOKENS
 
 logger = logging.getLogger(__name__)
@@ -109,6 +110,9 @@ def validate_password_hashes() -> list[tuple[str, str]]:
 
 class LoginRequest(BaseModel):
     password: str
+    # The browser's owner id, kept in local storage so its conversations
+    # survive signing out. Optional: a script that sends none gets a fresh one.
+    client_id: str | None = Field(default=None, pattern=OWNER_ID_PATTERN)
 
 
 class TokenResponse(BaseModel):
@@ -177,7 +181,7 @@ def create_access_token(data: dict, expires_delta: timedelta) -> str:
     return encode_token(payload)
 
 
-def _authenticate(password: str, client_host: str) -> TokenResponse:
+def _authenticate(password: str, client_id: str | None, client_host: str) -> TokenResponse:
     """Verify the password and mint a token. Runs on the login thread pool."""
     hashes = _password_hashes()
 
@@ -208,7 +212,7 @@ def _authenticate(password: str, client_host: str) -> TokenResponse:
     logger.info("Login with %s from %s", cred, client_host)
     token = create_access_token(
         data={
-            "sub": "user",
+            "sub": client_id or uuid.uuid4().hex,
             "cred": cred,
             "fingerprint": credential_fingerprint(password_hash),
         },
@@ -223,6 +227,7 @@ async def login(request: Request, body: LoginRequest):
     return await anyio.to_thread.run_sync(
         _authenticate,
         body.password,
+        body.client_id,
         _client_host(request),
         limiter=_login_limiter,
     )

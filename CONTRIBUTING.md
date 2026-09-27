@@ -173,6 +173,7 @@ keep it obviously partial rather than pretending to be complete.
 | the answer prompt | `sourcebook/rag/rag_chain.py` `ANSWER_SYSTEM_PROMPT`, then bump `PROMPT_VERSION` in `sourcebook/rag/config.py` or cached answers keep serving the old prompt |
 | the coverage-judge prompt or parser | `sourcebook/rag/rag_chain.py` `COVERAGE_SYSTEM_PROMPT` / `_parse_coverage_response`, then bump `COVERAGE_PROMPT_VERSION` in `sourcebook/rag/config.py` or cached answers and refusals keep serving the old judge |
 | retrieval or the grounding gate | `sourcebook/rag/rag_chain.py` |
+| the What People Ask pair check | `sourcebook/rag/question_judge.py`, then bump `QUESTION_JUDGE_PROMPT_VERSION` there and rerun `scripts/measure_question_groups.py --judge` ([evaluation.md](docs/evaluation.md#question-grouping-threshold)) |
 | which model or vendor is used | `sourcebook/rag/llm.py` only. Add a subclass, register it in `_PROVIDERS`, set `LLM_PROVIDER` |
 | how a source format is parsed | `sourcebook/rag/documents.py` |
 | an API endpoint | `sourcebook/api/routes/`; one file per area, mounted in `sourcebook/api/main.py` |

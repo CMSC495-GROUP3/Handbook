@@ -213,6 +213,19 @@ function Summary({ report, requested }: { report: CoverageReport; requested: num
           words has a row for each wording.
         </p>
       )}
+      {report.grouping === 'cosine' && (
+        <p className="mt-2 max-w-120 text-[13px] leading-normal text-ink-3">
+          Rewordings are not being checked right now, so only near-identical
+          wordings share a row.
+        </p>
+      )}
+      {report.grouping === 'meaning' && report.unjudged > 0 && (
+        <p className="mt-2 max-w-120 text-[13px] leading-normal text-ink-3">
+          {plural(report.unjudged, 'pair')} of close wordings {report.unjudged === 1 ? 'is' : 'are'} still
+          waiting to be checked, so some rewordings may have their own row. Reload
+          to check the next batch.
+        </p>
+      )}
       {report.days < requested && (
         <p className="mt-2 max-w-120 text-[13px] leading-normal text-ink-3">
           The query log keeps {plural(report.days, 'day')} of questions, so this is the longest window there is.
@@ -293,10 +306,13 @@ export default function CoverageGapsPage() {
     const threshold = report.min_conversations
     // Asked most always needs two conversations; a manager's view needs more.
     const repeats = Math.max(2, threshold ?? 0)
-    const grouping =
-      report.grouping === 'meaning'
-        ? 'Near-identical wordings share a row, but a question asked in other words can still appear twice.'
-        : 'Each wording has its own row.'
+    const grouping = {
+      meaning:
+        'Wordings of one question share a row, but a rewording the check missed can still appear twice.',
+      cosine:
+        'Near-identical wordings share a row, but a question asked in other words can still appear twice.',
+      exact: 'Each wording has its own row.',
+    }[report.grouping]
     body = (
       <>
         <Summary report={report} requested={days} />

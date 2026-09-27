@@ -476,11 +476,13 @@ The first two lists are on the What People Ask page in the web app, over the las
 7, 30, or 90 days. The page and its route need the manager or HR password, and
 a manager sees only questions asked in several separate conversations (see
 [Configure](#1-configure)). The page also merges wordings whose embeddings are within
-`QUESTION_GROUP_THRESHOLD` cosine (default 0.85, #287). That catches a missing
-question mark or a close rewording, not most paraphrases: on 80 labelled pairs
-it merged 4 of 40 paraphrases and none of 40 different questions
-([measurement](docs/evaluation.md#question-grouping-threshold)). The terminal
-report below groups by exact wording only.
+`QUESTION_GROUP_THRESHOLD` cosine (default 0.85, #287). On 120 labelled pairs
+that merged 6 of 60 paraphrases and 2 of 60 different questions
+([measurement](docs/evaluation.md#question-grouping-threshold)). For pairs
+between 0.7 and 0.85 the utility model decides whether the two wordings are
+one question, in one call per page load (#293). If that call fails, the page
+groups on cosine alone and says so. The terminal report below groups by exact
+wording only.
 
 For the score histograms or an exact window, run the read-only report on the
 EC2 host. The cluster's IP access list admits that host, so anywhere else waits out
@@ -582,8 +584,9 @@ same way, and a session opened with either can do everything the shared
 password can as well.
 
 - **`HR_PASSWORD_HASH`**, for Human Resources. It is the only password that
-  opens the HR Requests queue, and it opens the What People Ask report too,
-  with every question listed.
+  opens the HR Requests queue and the only one that can call
+  `POST /api/documents/reindex`, which drops every cached answer. It opens the
+  What People Ask report too, with every question listed.
 - **`MANAGER_PASSWORD_HASH`**, for managers and supervisors. It opens the What
   People Ask report and nothing else beyond the employee routes, so a manager
   can see what their people keep asking and cover it in training and
@@ -605,8 +608,28 @@ grader's password opens What People Ask, and gives HR a password of its own.
 A token keeps the `cred` it was issued with, so after that change anyone
 signed in with the grader's password signs out and back in once to see the
 page, and a session opened with the old HR password stops working once
-`HR_PASSWORD_HASH` changes. Neither password protects conversations; see
-[Known limitations](#known-limitations).
+`HR_PASSWORD_HASH` changes.
+
+Conversations are separate from the passwords. Each browser keeps a random id
+and sends it at login, and a session sees only the conversations and projects
+filed under that id, whichever password opened it. Signing out keeps them;
+clearing the browser's site data or switching browsers starts an empty
+history. Conversations stored before this existed have no owner and stop
+appearing for anyone. Every token issued before it is rejected, so everyone
+signs in once more after the upgrade.
+
+Those ownerless conversations and projects stay in Mongo, and nothing in the
+app can reach or delete them. They still hold the questions employees typed,
+so remove them once the upgrade has settled. The script counts them and
+changes nothing until it is given `--delete`:
+
+```bash
+.venv/bin/python -m scripts.purge_ownerless_conversations
+.venv/bin/python -m scripts.purge_ownerless_conversations --delete
+```
+
+Escalation records are kept. HR Requests reads only those, and each one
+copies the question and answer it was filed from.
 
 ### 2. Load the corpus
 
@@ -1052,14 +1075,14 @@ The product name lives in three places: `APP_NAME` in
   corpus size. Move to Atlas Search if the library grows large.
 - **JWTs live in browser local storage.** Acceptable for an internal pilot
   behind shared credentials, not for a multi-user security model.
-- **The HR and manager passwords guard two pages, not conversations.** HR
-  Requests needs `HR_PASSWORD_HASH`, and What People Ask needs that or
-  `MANAGER_PASSWORD_HASH`
-  ([#290](https://github.com/CMSC495-GROUP3/Sourcebook/issues/290)).
-  `GET /api/conversations` and `GET /api/conversations/{session_id}` still
-  have no owner filter, so anyone with a password can list and open every
-  conversation, including the question text those pages show. Scoping them to
-  the caller needs a per-user identity, which the pilot does not have.
+- **Conversations belong to a browser, not a person.** There is no per-user
+  sign-in, so the owner of a conversation is a random id the browser keeps in
+  local storage ([#290](https://github.com/CMSC495-GROUP3/Sourcebook/issues/290)).
+  Clearing site data or moving to another device loses the history, and anyone
+  who copies that id and knows a password can read it, as with the token
+  stored next to it. The HR and manager passwords guard pages, not
+  conversations: a session sees only its own browser's conversations whichever
+  password opened it.
 - **Do not deploy under gunicorn `--preload`.** `MongoClient` is not fork-safe
   and the collection handles bind at import. `uvicorn --workers` is safe
   because each worker imports the app after forking. See

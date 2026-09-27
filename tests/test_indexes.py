@@ -86,3 +86,34 @@ def test_ensure_indexes_tolerates_an_index_that_already_exists(monkeypatch):
     db.ensure_indexes()
 
     assert calls == 2
+
+
+def test_ensure_indexes_drops_the_old_updated_at_index(monkeypatch):
+    dropped: list[str] = []
+    monkeypatch.setattr(FAKE_DB["conversations"], "drop_index", dropped.append)
+
+    db.ensure_indexes()
+
+    assert dropped == ["updated_at_-1"]
+
+
+def test_ensure_indexes_tolerates_the_old_index_being_gone(monkeypatch):
+    # IndexNotFound is what every start after the first sees.
+    def missing(name):
+        raise OperationFailure("index not found", code=27)
+
+    monkeypatch.setattr(FAKE_DB["conversations"], "drop_index", missing)
+
+    db.ensure_indexes()
+
+
+def test_ensure_indexes_logs_other_drop_failures_and_carries_on(monkeypatch, caplog):
+    # The index only costs writes, so failing to drop it must not stop startup.
+    def unauthorized(name):
+        raise OperationFailure("not authorized", code=13)
+
+    monkeypatch.setattr(FAKE_DB["conversations"], "drop_index", unauthorized)
+
+    db.ensure_indexes()
+
+    assert "Could not drop the unused updated_at_-1 index" in caplog.text

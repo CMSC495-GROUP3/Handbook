@@ -11,7 +11,7 @@
  * must show "Incorrect password." instead of being navigated away.
  */
 import axios from 'axios'
-import { HR_CRED, MANAGER_CRED, TOKEN_KEY } from '../config'
+import { CLIENT_ID_KEY, HR_CRED, MANAGER_CRED, TOKEN_KEY } from '../config'
 
 export { TOKEN_KEY }
 
@@ -23,10 +23,27 @@ const client = axios.create({
   baseURL: '/',
 })
 
-/** Clear the stored JWT and return to the sign-in page. */
+/** Clear the stored JWT and return to the sign-in page. The browser id stays. */
 export function signOut(): void {
   localStorage.removeItem(TOKEN_KEY)
   window.location.href = '/'
+}
+
+const CLIENT_ID_SHAPE = /^[0-9a-f]{32}$/
+
+/**
+ * This browser's owner id: 32 random hex digits, made on first use and kept in
+ * localStorage. Login sends it, and the server shows a session only the
+ * conversations and projects filed under it. Clearing site data starts over
+ * with an empty history. It is as private as the token next to it.
+ */
+export function browserId(): string {
+  const stored = localStorage.getItem(CLIENT_ID_KEY)
+  if (stored !== null && CLIENT_ID_SHAPE.test(stored)) return stored
+  const bytes = crypto.getRandomValues(new Uint8Array(16))
+  const id = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
+  localStorage.setItem(CLIENT_ID_KEY, id)
+  return id
 }
 
 /**

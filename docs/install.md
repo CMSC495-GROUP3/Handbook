@@ -121,7 +121,8 @@ Set `HR_PASSWORD_HASH` if anyone will work escalations in the web app. It is
 the Human Resources password, generated the same way and different from
 `APP_PASSWORD_HASH`. Only a session opened with it can use the HR Requests
 queue (`GET /api/escalations`, and `GET`, `PATCH`, and retry-delivery on
-`/api/escalations/{escalation_id}`). It opens What People Ask too.
+`/api/escalations/{escalation_id}`) or call `POST /api/documents/reindex`. It
+opens What People Ask too.
 
 Set `MANAGER_PASSWORD_HASH` if managers or supervisors will read What People
 Ask (`GET /api/reports/gaps`) to plan training and orientation. It opens that
@@ -133,9 +134,9 @@ gives HR a password of its own.
 
 Every other valid token gets 403 on those pages, and the sidebar hides their
 links from it. With a variable unset, nobody can open its pages, and employees
-can still escalate from the chat. Neither scopes conversations: any password
-still lists and opens every conversation. The README's
-[Known limitations](../README.md#known-limitations) says why.
+can still escalate from the chat. Neither changes which conversations a
+session sees: each browser sees only its own, whichever password it signed in
+with (see the README's [Known limitations](../README.md#known-limitations)).
 
 Every variable `.env.example` sets or mentions is listed below, once, with
 what it is for and where its value comes from. The comments in
@@ -196,6 +197,7 @@ default first.
 | `OPENAI_STREAM_DEADLINE_SECONDS` | wall-clock limit on a stream that keeps trickling |
 | `OPENAI_MAX_CONCURRENT_REQUESTS` | how many provider calls may be in flight |
 | `OPENAI_CAPACITY_WAIT_SECONDS` | how long a request waits for one of those slots |
+| `REPORT_PROVIDER_TIMEOUT_SECONDS` | how long each What People Ask provider call may take, with no retry, before the page falls back to coarser grouping |
 | `MONGO_MAX_POOL_SIZE` | connections per process; the arithmetic against the Atlas cap is in `sourcebook/rag/mongo.py` |
 | `SIMILARITY_THRESHOLD` | refuse when the best passage scores below this; tune it from `query_logs`, never from the stub |
 | `RETRIEVAL_K` | how many passages the model sees |

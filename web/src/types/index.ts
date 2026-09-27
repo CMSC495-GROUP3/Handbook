@@ -122,8 +122,17 @@ export interface CoverageReport {
   since: string
   until: string
   days: number
-  /** "exact" when grouping by meaning was unavailable and each wording is its own row. */
-  grouping: 'meaning' | 'exact'
+  /**
+   * "meaning": close wordings merge, and the model checked the rewordings.
+   * "cosine": the model check was off or failed, so only near-identical wordings merge.
+   * "exact": embeddings were unavailable and each wording is its own row.
+   */
+  grouping: 'meaning' | 'cosine' | 'exact'
+  /**
+   * Close pairs of wordings this load left without a verdict: past the
+   * per-load cap, or in a check that failed. A later load judges the next batch.
+   */
+  unjudged: number
   /**
    * Set on a manager's report: only wordings asked in at least this many
    * conversations are listed. Null on HR's, which lists every wording.
