@@ -109,6 +109,7 @@ George also lists EC2 and S3 setup and administration in his [comment on PR #231
 - Merged: [PR #150](https://github.com/CMSC495-GROUP3/Sourcebook/pull/150) / [issue #89](https://github.com/CMSC495-GROUP3/Sourcebook/issues/89), keep the live corpus available during re-ingestion (`8e8c36e`).
 - Merged: [PR #176](https://github.com/CMSC495-GROUP3/Sourcebook/pull/176) / [issue #158](https://github.com/CMSC495-GROUP3/Sourcebook/issues/158), unique `(source, chunk_index)` index (`a724d38`).
 - Reviews: [PR #181](https://github.com/CMSC495-GROUP3/Sourcebook/pull/181) (requested the NaN rejection, then approved) and [PR #171](https://github.com/CMSC495-GROUP3/Sourcebook/pull/171).
+- Merged after the snapshot: [PR #279](https://github.com/CMSC495-GROUP3/Sourcebook/pull/279) / [issue #142](https://github.com/CMSC495-GROUP3/Sourcebook/issues/142), transactions for project assignment and deletion (`d2ae7ba`, 2026-09-26). It is not in the counts above.
 
 ## Gavin
 
@@ -125,6 +126,8 @@ Assigned [#82](https://github.com/CMSC495-GROUP3/Sourcebook/issues/82) is owners
 **Owns, per the README.** React components, design, and styling, with Gavin.
 
 **What GitHub shows on this snapshot.** Zero author commits, zero pull requests, zero reviews, and no issue comments found under `fudgepop01`. Assigned on the same design and frontend cluster ([#41](https://github.com/CMSC495-GROUP3/Sourcebook/issues/41)–[#53](https://github.com/CMSC495-GROUP3/Sourcebook/issues/53), [#82](https://github.com/CMSC495-GROUP3/Sourcebook/issues/82), [#84](https://github.com/CMSC495-GROUP3/Sourcebook/issues/84), [#159](https://github.com/CMSC495-GROUP3/Sourcebook/issues/159), [#174](https://github.com/CMSC495-GROUP3/Sourcebook/issues/174), [#175](https://github.com/CMSC495-GROUP3/Sourcebook/issues/175)), plus [#214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214) (Lighthouse accessibility and performance per theme, still open). Assigned [#175](https://github.com/CMSC495-GROUP3/Sourcebook/issues/175) is ownership, not merged authorship; the merged facing-page fix on `main` (`c00b30c`) is Daniel's commit and is recorded on his row. No author commits under Dominick's name appear on `main` as of `origin/main` `5b35d3c`.
+
+**After the snapshot.** Dominick opened [PR #292](https://github.com/CMSC495-GROUP3/Sourcebook/pull/292) (`docs: add lighthouse metrics to quality.md`, for [#214](https://github.com/CMSC495-GROUP3/Sourcebook/issues/214)) on 2026-09-26. It is open, with changes requested, and not in the counts above.
 
 ## Scope of this record
 
