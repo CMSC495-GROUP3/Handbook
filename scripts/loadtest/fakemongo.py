@@ -117,13 +117,17 @@ def _is_missing(doc: dict, expr: Any) -> bool:
 
 def _resolve(doc: dict, expr: Any) -> Any:
     """A field path ("$refused", "$_id.hash"), {"$eq": [a, b]},
-    {"$cond": [if, then, else]}, {"$size": array}, an object of expressions
+    {"$cond": [if, then, else]}, {"$size": array}, {"$slice": [array, n]} with
+    n >= 0, an object of expressions
     ({"hash": "$question_hash"}), or a literal."""
     if isinstance(expr, str) and expr.startswith("$"):
         value = _field(doc, expr[1:])
         return None if value is _MISSING else value
     if isinstance(expr, dict) and "$size" in expr:
         return len(_resolve(doc, expr["$size"]))
+    if isinstance(expr, dict) and "$slice" in expr:
+        array, n = expr["$slice"]
+        return _resolve(doc, array)[:n]
     if isinstance(expr, dict) and "$eq" in expr:
         left, right = expr["$eq"]
         return _resolve(doc, left) == _resolve(doc, right)

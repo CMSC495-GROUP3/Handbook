@@ -120,6 +120,7 @@ def _wording(row: dict[str, Any]) -> Wording:
         count=int(row.get("count") or 0),
         refused=int(row.get("refused_count") or 0),
         sessions=frozenset(row.get("sessions") or ()),
+        session_count=int(row.get("session_count") or 0),
     )
 
 

@@ -88,3 +88,16 @@ def test_fake_provider_embeds_a_batch_with_one_delay(monkeypatch):
 
     assert len(sleeps) == 1
     assert batch == [provider._vector(text) for text in ("a", "b", "c")]
+
+
+def test_a_capped_member_keeps_its_exact_count_as_a_floor():
+    """wording_pipeline returns a sample of session ids past its cap (#291),
+    so the union can undercount. The largest exact member count is a floor."""
+    words = [
+        Wording("pto", "pto", 9, 0, frozenset({"s1", "s2"}), session_count=6),
+        Wording("vacation", "vacation", 1, 0, frozenset({"s9"}), session_count=1),
+    ]
+
+    [group] = group_by_meaning(words, {"pto": [1, 0], "vacation": [1, 0]}, 0.9)
+
+    assert group.conversations == 6

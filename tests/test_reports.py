@@ -10,6 +10,7 @@ from pymongo.errors import ExecutionTimeout, OperationFailure
 from scripts.loadtest.fakemongo import FakeCollection
 from sourcebook.api.routes import reports
 from sourcebook.api.routes.reports import MAX_WINDOW_DAYS
+from sourcebook.rag import query_log_reports
 
 URL = "/api/reports/gaps"
 # Each logged row is its own conversation unless a test passes session_id.
@@ -465,3 +466,37 @@ def test_cache_disabled_turns_the_vector_memo_off(client, auth, monkeypatch):
 
     assert calls == [["Where do I park?"], ["Where do I park?"]]
     assert len(reports._vector_memo) == 0
+
+
+def test_wording_pipeline_returns_a_capped_sample_of_session_ids(monkeypatch):
+    """A popular wording's full id list would pass the 16 MB result document
+    limit at about 370k conversations (#291). The count stays exact."""
+    monkeypatch.setattr(query_log_reports, "WORDING_SESSION_SAMPLE", 2)
+    now = datetime.now(UTC)
+    collection = FakeCollection()
+    collection.insert_many(
+        [
+            {"created_at": now, "question_hash": "pto", "refused": False, "session_id": s}
+            for s in ("a", "b", "c", "d")
+        ]
+    )
+
+    [row] = collection.aggregate(
+        query_log_reports.wording_pipeline(
+            now - timedelta(days=1), now + timedelta(days=1), 10, refused_only=False
+        )
+    )
+
+    assert row["session_count"] == 4
+    assert len(row["sessions"]) == 2
+
+
+def test_a_wording_past_the_sample_cap_reports_its_exact_conversations(client, auth, monkeypatch):
+    monkeypatch.setattr(query_log_reports, "WORDING_SESSION_SAMPLE", 2)
+    vectors(monkeypatch, {"Where do I park?": PARKING})
+    for session in ("a", "b", "c"):
+        log("Where do I park?", refused=False, session_id=session)
+
+    [row] = client.get(URL, headers=auth).json()["faq"]
+
+    assert row["conversations"] == 3

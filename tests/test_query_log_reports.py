@@ -167,6 +167,9 @@ class SyntheticQueryLogs:
                 return when_true if self._resolve(doc, predicate) else when_false
             if "$size" in expr:
                 return len(self._resolve(doc, expr["$size"]))
+            if "$slice" in expr:
+                array, n = expr["$slice"]
+                return self._resolve(doc, array)[:n]
         return expr
 
     @staticmethod
