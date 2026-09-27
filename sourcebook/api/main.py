@@ -48,7 +48,7 @@ from sourcebook.rag.config import (  # noqa: E402
 )
 
 # A malformed hash refuses to start rather than locking everyone out; see
-# validate_password_hashes for why. Both variables get the same treatment.
+# validate_password_hashes for why. Every hash variable gets the same treatment.
 try:
     validate_password_hashes()
 except PasswordHashError as exc:

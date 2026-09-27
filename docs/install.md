@@ -122,9 +122,9 @@ coverage report in the web app. It is the Human Resources password, generated
 the same way and different from `APP_PASSWORD_HASH`. It may be the same hash
 as `APP_PASSWORD_HASH_2`, which makes the second password the HR one; the
 course deployment does this for the grader. Only a session opened with it
-can use the HR Requests queue (`GET`, `PATCH`, and retry on
-`/api/escalations`) and What People Ask (`GET /api/reports/gaps`); every
-other token gets 403 there, and the sidebar hides both links from it. With it
+can use the HR Requests queue (`GET /api/escalations`, and `GET`, `PATCH`,
+and retry-delivery on `/api/escalations/{escalation_id}`) and What People Ask
+(`GET /api/reports/gaps`); every other valid token gets 403 there, and the sidebar hides both links from it. With it
 unset, nobody can open either page, and employees can still escalate from the
 chat. It does not scope conversations: any password still lists and opens
 every conversation. The README's

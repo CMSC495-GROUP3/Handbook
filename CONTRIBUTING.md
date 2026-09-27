@@ -345,8 +345,9 @@ backup and investigate before retrying.
 - SSE by hand:
   `curl -N -X POST localhost:8000/api/chat/stream -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{"question":"How much PTO do I get?"}'`
 - Escalations queue: `GET /api/escalations?status=open`. Retry a failed webhook
-  with `POST /api/escalations/{id}/retry-delivery`. There is no UI for it
-  yet.
+  with `POST /api/escalations/{id}/retry-delivery`. Both need a token from the
+  HR password (`hr` under `make stub`). In the web app this is the HR Requests
+  page.
 - Query analytics are in the `query_logs` collection: refused questions grouped
   by `question_hash` are the content gaps, and `best_score` on answered versus
   refused rows is what the threshold should be tuned against. Run a read-only
