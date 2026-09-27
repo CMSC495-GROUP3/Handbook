@@ -553,7 +553,7 @@ def test_both_provider_calls_get_the_report_timeout(client, hr_auth, monkeypatch
 
     def complete(messages, **kwargs):
         seen["judge"] = kwargs
-        return '{"same": [true]}'
+        return '{"same": [1]}'
 
     monkeypatch.setattr(reports.get_provider(), "embed_many", embed_many)
     monkeypatch.setattr(reports.get_provider(), "complete", complete)
