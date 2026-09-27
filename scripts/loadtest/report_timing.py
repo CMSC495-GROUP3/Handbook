@@ -7,7 +7,8 @@ FAQ pipelines the way ``GET /api/reports/gaps`` does, with the route's
 the two-pass ``$group`` alternative #291 proposed, which measured slower and was
 not adopted, and checks that they agree.
 
-Point it at a throwaway server only. It drops the database it seeds:
+Point it at a throwaway server only. It drops ``query_logs`` in the database
+it seeds, and refuses a ``--db`` that does not start with ``report_timing``:
 
     docker run -d --rm --name sourcebook-report-timing -p 27099:27017 mongo:7
     .venv/bin/python -m scripts.loadtest.report_timing --uri mongodb://localhost:27099
@@ -41,6 +42,7 @@ BATCH = 10_000
 # app's own Mongo client from MONGODB_URI, which this script must not touch.
 QUERY_TIMEOUT_MS = 5000
 HOT_HASH = "hot-question"
+SCRATCH_DB_PREFIX = "report_timing"
 
 
 def _two_pass_group(extra: dict[str, Any]) -> list[dict[str, Any]]:
@@ -230,6 +232,10 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.sessions > args.rows:
         parser.error("--sessions cannot exceed --rows")
+    # seed() drops query_logs. Only a database named for this script may be
+    # dropped, so pointing --uri at the real cluster cannot delete its log.
+    if not args.db.startswith(SCRATCH_DB_PREFIX):
+        parser.error(f"--db must start with {SCRATCH_DB_PREFIX!r}; this script drops query_logs")
 
     client = MongoClient(args.uri, serverSelectionTimeoutMS=5000)
     col = client[args.db]["query_logs"]
