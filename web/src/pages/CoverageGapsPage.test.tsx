@@ -76,6 +76,9 @@ describe('CoverageGapsPage', () => {
 
     const faq = screen.getByRole('list', { name: 'Asked most' })
     expect(faq).toHaveTextContent('Asked 19 times in 12 conversations · 2 not answered')
+    expect(
+      screen.getByText(/Each bar is green for the asks a policy answered and orange for the asks none did\./),
+    ).toBeInTheDocument()
   })
 
   it('asks for 30 days by default and switches window through the URL', async () => {

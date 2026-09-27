@@ -262,7 +262,7 @@ export default function CoverageGapsPage() {
           />
           <Section
             title="Asked most"
-            caption={`Questions asked in at least two conversations, most conversations first. ${grouping} The ochre end of each bar is the share no policy answered.`}
+            caption={`Questions asked in at least two conversations, ranked by how many. ${grouping} Each bar is green for the asks a policy answered and orange for the asks none did.`}
             empty="No question came up in more than one conversation in this window."
             rows={report.faq.map((group) => ({
               group,
