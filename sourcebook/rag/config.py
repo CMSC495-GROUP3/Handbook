@@ -200,10 +200,11 @@ QUESTION_GROUP_THRESHOLD = float(os.getenv("QUESTION_GROUP_THRESHOLD", "0.85"))
 
 # Pairs between this floor and QUESTION_GROUP_THRESHOLD go to the utility model,
 # which decides whether they are one question (issue #293). Below the floor a
-# pair never merges. At 0.6, 35 of the 40 measured paraphrases can merge (4 on
-# cosine, 31 if the model agrees) and 5 cannot; 22 of the 40 different pairs
-# reach the model.
-QUESTION_JUDGE_FLOOR = float(os.getenv("QUESTION_JUDGE_FLOOR", "0.6"))
+# pair never merges. Below 0.7 the model merged the same few different pairs in
+# every measured run ("How does PTO accrue?" with "Does unused PTO carry
+# over?"); at 0.7 it merged 29 of 60 paraphrases in each of four runs, and one
+# different pair in two of them. See docs/evaluation.md.
+QUESTION_JUDGE_FLOOR = float(os.getenv("QUESTION_JUDGE_FLOOR", "0.7"))
 # Pairs judged per page load, in one utility call, closest first. The rest wait
 # for a later load. 0 turns the judge off.
 QUESTION_JUDGE_MAX_PAIRS = int(os.getenv("QUESTION_JUDGE_MAX_PAIRS", "50"))
