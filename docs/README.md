@@ -46,6 +46,7 @@ the deployed system, and the evidence behind them.
 
 | Release | Handoff | Notes | Measured |
 | --- | --- | --- | --- |
+| [v1.1.0](https://github.com/CMSC495-GROUP3/Sourcebook/releases/tag/v1.1.0) | [handoff](releases/v1.1.0/handoff.md) | [release notes](releases/v1.1.0/release-notes.md) | [What People Ask timing](load-testing.md#the-per-day-rollup); the rest carries over from v1.0.0 |
 | [v1.0.0](https://github.com/CMSC495-GROUP3/Sourcebook/releases/tag/v1.0.0) | [handoff](releases/v1.0.0/handoff.md) | [release notes](releases/v1.0.0/release-notes.md), [portfolio](releases/v1.0.0/portfolio.md) | [benchmark](releases/v1.0.0/live-benchmark.md), [evaluation](releases/v1.0.0/live-evaluation.md), [load](load-testing-demo.md), [Lighthouse](releases/v1.0.0/evidence/lighthouse.md) |
 | [v0.2.0](https://github.com/CMSC495-GROUP3/Sourcebook/releases/tag/v0.2.0) | [handoff](releases/v0.2.0/handoff.md) | [release notes](releases/v0.2.0/release-notes.md) | [benchmark](releases/v0.2.0/live-benchmark.md), [evaluation](releases/v0.2.0/live-evaluation.md) |
 | [v0.1.0-alpha.1](https://github.com/CMSC495-GROUP3/Sourcebook/releases/tag/v0.1.0-alpha.1) | [handoff](releases/v0.1.0-alpha.1/handoff.md) | [release notes](releases/v0.1.0-alpha.1/release-notes.md) | [benchmark](releases/v0.1.0-alpha.1/live-benchmark.md), [evaluation](releases/v0.1.0-alpha.1/live-evaluation.md) |
