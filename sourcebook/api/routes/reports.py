@@ -68,12 +68,12 @@ import logging
 import threading
 from array import array
 from collections import OrderedDict
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from pymongo.errors import ExecutionTimeout, OperationFailure
+from pymongo.errors import ExecutionTimeout, OperationFailure, PyMongoError
 
 from sourcebook.api.db import query_log_daily_col, query_log_report_col
 from sourcebook.api.limiter import limiter
@@ -252,11 +252,42 @@ def refresh_snapshots() -> None:
     )
 
 
-def start_refresh() -> threading.Event | None:
-    """Start the background refresh, or None when ``REPORT_REFRESH_SECONDS`` is 0."""
+def start_refresh() -> Callable[[], None] | None:
+    """Start the background refresh and return the function that stops it, or
+    None when ``REPORT_REFRESH_SECONDS`` is 0.
+
+    Stopping releases the lease when no refresh is running, so the API that
+    replaces this one on a deploy refreshes at once. Mid-refresh it leaves the
+    lease to expire: releasing it then would let another worker start a
+    refresh alongside the one still running on this daemon thread.
+    """
     if REPORT_REFRESH_SECONDS <= 0:
         return None
-    return report_snapshots.start(REPORT_REFRESH_SECONDS, refresh_snapshots)
+    # Held for each refresh, and by stop() while it releases the lease.
+    running = threading.Lock()
+    stopped = threading.Event()
+
+    def refresh_unless_stopped() -> None:
+        with running:
+            if not stopped.is_set():
+                refresh_snapshots()
+
+    stop_thread = report_snapshots.start(REPORT_REFRESH_SECONDS, refresh_unless_stopped)
+
+    def stop() -> None:
+        stopped.set()
+        stop_thread.set()
+        if not running.acquire(blocking=False):
+            return
+        try:
+            report_snapshots.release_lease(query_log_report_col)
+        except PyMongoError:
+            # Shutdown goes on; the lease expires on its own, as it did before.
+            logger.warning("Could not release the What People Ask refresh lease.", exc_info=True)
+        finally:
+            running.release()
+
+    return stop
 
 
 def _remember(vectors: dict[str, list[float]]) -> None:

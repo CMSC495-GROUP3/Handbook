@@ -403,6 +403,11 @@ What this says:
 - **Counts on the page are normally up to one interval old**, and never more
   than three: past that the route computes the window live. `until` in the
   response says when the snapshot was taken.
+- **A deploy does not age them.** An API that shuts down between refreshes
+  deletes its lease, so the API that replaces it refreshes as it starts. One
+  that shuts down mid-refresh leaves the lease to expire, since releasing it
+  would let another worker start alongside the unfinished run; the new API
+  then waits out the hold, up to 12 minutes.
 
 **Not measured on Atlas.** The seed writes about 30 GB, which does not belong
 in the production cluster, so these runs used the local container. Point
