@@ -83,10 +83,11 @@ async def lifespan(_app: FastAPI):
     ensure_indexes()
     # Precomputes the What People Ask windows (#291). A daemon thread, so a
     # refresh still running at shutdown does not hold the process open.
+    # Stopping it releases the refresh lease, so the next API refreshes at once.
     stop_report_refresh = start_report_refresh()
     yield
     if stop_report_refresh is not None:
-        stop_report_refresh.set()
+        stop_report_refresh()
 
 
 app = FastAPI(

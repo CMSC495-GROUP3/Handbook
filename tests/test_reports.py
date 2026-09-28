@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from conftest import FAKE_DB, make_passages
-from pymongo.errors import ExecutionTimeout, OperationFailure
+from pymongo.errors import ExecutionTimeout, OperationFailure, ServerSelectionTimeoutError
 
 from scripts.loadtest.fakemongo import FakeCollection
 from sourcebook.api.routes import reports
@@ -1025,6 +1025,90 @@ def test_the_lease_covers_every_window_at_its_timeouts():
     held = lease["expires_at"] - snapshot["until"]
     # Three windows, each an aggregation and a round of sample lookups.
     assert held >= timedelta(milliseconds=3 * 2 * reports.REFRESH_TIMEOUT_MS)
+
+
+def test_a_released_lease_lets_another_worker_refresh_at_once():
+    snapshots = FAKE_DB[report_snapshots.SNAPSHOT_COLLECTION]
+    now = datetime.now(UTC)
+    hold = timedelta(minutes=12)
+
+    assert report_snapshots.acquire_lease(snapshots, now, hold, holder="a")
+    report_snapshots.release_lease(snapshots, holder="a")
+
+    assert report_snapshots.acquire_lease(snapshots, now + timedelta(seconds=1), hold, "b")
+
+
+def test_a_worker_cannot_release_another_workers_lease():
+    snapshots = FAKE_DB[report_snapshots.SNAPSHOT_COLLECTION]
+    now = datetime.now(UTC)
+    hold = timedelta(minutes=12)
+
+    assert report_snapshots.acquire_lease(snapshots, now, hold, holder="a")
+    report_snapshots.release_lease(snapshots, holder="b")
+
+    assert not report_snapshots.acquire_lease(snapshots, now + timedelta(seconds=1), hold, "b")
+
+
+def _wait_for(condition, timeout: float = 5) -> bool:
+    deadline = datetime.now(UTC) + timedelta(seconds=timeout)
+    while datetime.now(UTC) < deadline:
+        if condition():
+            return True
+        threading.Event().wait(0.01)
+    return False
+
+
+def test_stopping_the_refresh_releases_the_lease(monkeypatch):
+    """A restarted API gets a new holder id, so a lease left behind would keep
+    it from refreshing for up to 12 minutes after a deploy."""
+    monkeypatch.setattr(reports, "REPORT_REFRESH_SECONDS", 3600)
+    snapshots = FAKE_DB[report_snapshots.SNAPSHOT_COLLECTION]
+    key = report_snapshots.snapshot_id(
+        7, reports.CANDIDATE_LIMIT, reports.MANAGER_MIN_CONVERSATIONS
+    )
+
+    stop = reports.start_refresh()
+    assert _wait_for(lambda: snapshots.find_one({"_id": key}) is not None)
+    stop()
+
+    assert snapshots.find_one({"_id": report_snapshots.LEASE_ID}) is None
+
+
+def test_stopping_mid_refresh_keeps_the_lease(monkeypatch):
+    """Releasing the lease while a refresh still runs would let another worker
+    start one alongside it."""
+    monkeypatch.setattr(reports, "REPORT_REFRESH_SECONDS", 3600)
+    snapshots = FAKE_DB[report_snapshots.SNAPSHOT_COLLECTION]
+    entered, finish = threading.Event(), threading.Event()
+
+    def slow_refresh():
+        report_snapshots.acquire_lease(snapshots, datetime.now(UTC), timedelta(minutes=12))
+        entered.set()
+        finish.wait(5)
+
+    monkeypatch.setattr(reports, "refresh_snapshots", slow_refresh)
+    stop = reports.start_refresh()
+    assert entered.wait(5)
+    stop()
+    finish.set()
+
+    assert snapshots.find_one({"_id": report_snapshots.LEASE_ID}) is not None
+
+
+def test_a_lease_that_cannot_be_released_is_logged_and_shutdown_goes_on(monkeypatch, caplog):
+    monkeypatch.setattr(reports, "REPORT_REFRESH_SECONDS", 3600)
+    runs = []
+    monkeypatch.setattr(reports, "refresh_snapshots", lambda: runs.append(1))
+
+    def unreachable(*_args, **_kwargs):
+        raise ServerSelectionTimeoutError("cluster unreachable")
+
+    monkeypatch.setattr(report_snapshots, "release_lease", unreachable)
+    stop = reports.start_refresh()
+    assert _wait_for(lambda: runs)
+    stop()
+
+    assert "Could not release" in caplog.text
 
 
 def test_a_worker_without_the_lease_does_not_refresh(monkeypatch):

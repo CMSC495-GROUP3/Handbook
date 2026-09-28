@@ -75,6 +75,13 @@ def acquire_lease(snapshots, now: datetime, hold: timedelta, holder: str = HOLDE
     return True
 
 
+def release_lease(snapshots, holder: str = HOLDER) -> None:
+    """Drop the lease if ``holder`` has it, so the next worker to start can
+    refresh at once. A restarted API gets a new ``HOLDER``, so without this it
+    waits out its predecessor's hold, up to 12 minutes, after every deploy."""
+    snapshots.delete_one({"_id": LEASE_ID, "holder": holder})
+
+
 def refresh(
     daily,
     snapshots,
