@@ -3,7 +3,7 @@
 
 # FastAPI — web framework
 fastapi
-uvicorn[standard]>=0.53.0
+uvicorn[standard]>=0.54.0
 slowapi
 
 # Auth — JWT tokens + password hashing. HS256 only, so PyJWT needs no
