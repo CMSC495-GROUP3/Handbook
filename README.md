@@ -195,7 +195,10 @@ The `v1.0.0` release was tagged on 2026-09-27. Its figures come from the
 release candidate `7d3c779`. The later
 [`v1.1.0`](docs/releases/v1.1.0/release-notes.md) changes only the What People
 Ask report, so these figures apply to it too, except that the load run
-predates the report's extra writes per ask. Each row links its source, and
+predates the report's extra writes per ask.
+[`v1.1.1`](docs/releases/v1.1.1/release-notes.md) updates the OpenAI client,
+so both answer-quality tiers ran again on it and
+[matched](docs/releases/v1.1.1/live-evaluation.md) every figure below. Each row links its source, and
 all but the stubbed throughput figures are also in the
 [shared evidence sheet](docs/releases/v1.0.0/evidence/numbers.md).
 
