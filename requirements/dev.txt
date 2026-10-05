@@ -20,9 +20,9 @@ bcrypt==5.0.0
     # via -r api.in
 boolean-py==5.0
     # via license-expression
-boto3==1.43.97
+boto3==1.43.107
     # via -r ingest.in
-botocore==1.43.98
+botocore==1.43.108
     # via
     #   boto3
     #   s3transfer
@@ -55,7 +55,7 @@ distro==1.9.0
     # via langsmith
 dnspython==2.8.0
     # via pymongo
-fastapi==0.141.1
+fastapi==0.142.2
     # via -r api.in
 filelock==3.32.5
     # via cachecontrol
@@ -114,8 +114,10 @@ mdurl==0.1.2
     # via markdown-it-py
 msgpack==1.2.2
     # via cachecontrol
-openai==3.15.0
+openai==3.23.0
     # via -r base.in
+opentelemetry-api==1.45.0
+    # via fastapi
 orjson==3.12.0
     # via langsmith
 packageurl-python==0.17.6
@@ -158,9 +160,9 @@ pygments==2.21.0
     # via
     #   pytest
     #   rich
-pyjwt==2.14.0
+pyjwt==2.15.1
     # via -r api.in
-pymongo==4.18.1
+pymongo==4.18.2
     # via -r base.in
 pyparsing==3.3.2
     # via pip-requirements-parser
@@ -176,7 +178,7 @@ pytest-cov==7.1.0
     # via -r dev.in
 python-dateutil==2.9.0.post0
     # via botocore
-python-dotenv==1.2.3
+python-dotenv==1.2.4
     # via
     #   -r base.in
     #   uvicorn
@@ -194,7 +196,7 @@ requests-toolbelt==1.0.0
     # via langsmith
 rich==15.0.0
     # via pip-audit
-ruff==0.16.8
+ruff==0.16.10
     # via -r lint.in
 s3transfer==0.19.2
     # via boto3
@@ -231,6 +233,7 @@ typing-extensions==4.16.0
     #   langsmith
     #   limits
     #   openai
+    #   opentelemetry-api
     #   pydantic
     #   pydantic-core
     #   starlette
@@ -247,7 +250,7 @@ uuid-utils==0.17.0
     # via
     #   langchain-core
     #   langsmith
-uvicorn[standard]==0.53.0
+uvicorn[standard]==0.54.0
     # via -r api.in
 uvloop==0.22.1
     # via uvicorn
