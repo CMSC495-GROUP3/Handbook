@@ -12,9 +12,9 @@ anyio==4.15.1
     #   httpx2
     #   langsmith
     #   openai
-boto3==1.43.97
+boto3==1.43.107
     # via -r ingest.in
-botocore==1.43.98
+botocore==1.43.108
     # via
     #   boto3
     #   s3transfer
@@ -67,7 +67,7 @@ langchain-text-splitters==1.1.2
     # via -r ingest.in
 langsmith==0.12.2
     # via langchain-core
-openai==3.15.0
+openai==3.23.0
     # via -r base.in
 orjson==3.12.0
     # via langsmith
@@ -82,11 +82,11 @@ pydantic==2.13.5
     #   openai
 pydantic-core==2.46.5
     # via pydantic
-pymongo==4.18.1
+pymongo==4.18.2
     # via -r base.in
 python-dateutil==2.9.0.post0
     # via botocore
-python-dotenv==1.2.3
+python-dotenv==1.2.4
     # via -r base.in
 pyyaml==6.0.3
     # via langchain-core
