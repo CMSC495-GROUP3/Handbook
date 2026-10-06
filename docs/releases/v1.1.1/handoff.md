@@ -15,8 +15,8 @@ which measurements were taken again. Graders still start at the `v1.0.0`
 | CI | [37389834036](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/37389834036) on `ccd9688`, green |
 | Security | [37389834676](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/37389834676) on `ccd9688`, green, including Dependency advisories |
 | Live evaluation | Smoke [37389949312](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/37389949312) and full [37389952311](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/37389952311) on `ccd9688`, both green. See [live-evaluation.md](live-evaluation.md) |
-| Tagged commit | The merge of this release's pull request. It changes documentation only, so the tag runs the same code as `ccd9688`. The [release page](https://github.com/CMSC495-GROUP3/Sourcebook/releases/tag/v1.1.1) names the commit |
-| Tag and release | [`v1.1.1`](https://github.com/CMSC495-GROUP3/Sourcebook/releases/tag/v1.1.1), annotated, a full release |
+| Tagged commit | [`7a01b0d`](https://github.com/CMSC495-GROUP3/Sourcebook/commit/7a01b0daf00eae5bf467c2b389cb8ae1834e7982), the merge of #322, this release's pull request. It changes documentation only, so the tag runs the same code as `ccd9688`. [CI](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/37391054920) and [Security](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/37391054822) green on it |
+| Tag and release | [`v1.1.1`](https://github.com/CMSC495-GROUP3/Sourcebook/releases/tag/v1.1.1), annotated, a full release marked Latest, published at 23:55 UTC on 2026-10-05 |
 | Running at | <https://sourcebook.duckdns.org> |
 | Deployed commit | `ccd9688` in both `HEAD` and `refs/deployed/main` on the demo host, checked about 23:50 UTC on 2026-10-05. The API container started at 23:36 UTC for that deploy, reports openai 3.23.0, fastapi 0.142.2, and pyjwt 2.15.1, and logged no errors since |
 
@@ -72,23 +72,29 @@ In addition:
 
 ## The tag
 
-The tag waits for this release's pull request to merge. To recheck the
-snapshots on the demo host, which prints ids and times only:
+Done. #322 merged as `7a01b0d` and its CI and Security runs passed. Then the
+snapshot check below ran on the demo host at 23:53 UTC on 2026-10-05, with
+`ccd9688` deployed. The refresh lease and the 7, 30, and 90-day snapshots were
+all present, each taken 2 minutes 30 seconds earlier. The snapshot check,
+which prints ids and times only:
 
 ```bash
 docker compose exec -T api python -c 'from sourcebook.rag.mongo import get_collection as g
 for d in g("query_log_report").find({}, {"until": 1, "expires_at": 1}): print(d)' < /dev/null
 ```
 
-Then, on this pull request's merge commit:
+The tag and release commands, with the tagged commit filled in:
 
 ```bash
 git fetch upstream
-git tag -a v1.1.1 <merge commit> -m "Dependency updates and refresh lease fix: verified per docs/releases/v1.1.1/handoff.md"
+git tag -a v1.1.1 7a01b0daf00eae5bf467c2b389cb8ae1834e7982 -m "Dependency updates and refresh lease fix: verified per docs/releases/v1.1.1/handoff.md"
 git push upstream v1.1.1
 gh release create v1.1.1 --repo CMSC495-GROUP3/Sourcebook \
   --title "v1.1.1" --latest --notes-file <release notes with absolute links>
 ```
 
-Rewrite the relative links in the release notes to absolute links into the
-tagged tree before publishing, as for `v1.1.0`.
+The release body is [release-notes.md](release-notes.md) with its relative
+links rewritten to absolute links into the tagged tree, each paragraph on one
+line because a release body renders every newline as a line break, and a
+"Checked before the tag" section recording the snapshot check. No follow-up
+pull request is planned beyond this one.
