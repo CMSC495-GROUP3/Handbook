@@ -7,7 +7,7 @@ broken, and what nobody has measured.
 Tagged commit: [`a0f7810`](https://github.com/CMSC495-GROUP3/Sourcebook/commit/a0f7810c2d5705dcf0245f203e766db4f2e86a7b), release [`v1.0.0`](https://github.com/CMSC495-GROUP3/Sourcebook/releases/tag/v1.0.0). The evidence behind every claim here is in
 [handoff.md](handoff.md). Graders start at [portfolio.md](portfolio.md).
 
-Stakeholder video: Pending, linked after upload
+Stakeholder video: <https://youtu.be/ywaTO12U8Ls>
 ([#216](https://github.com/CMSC495-GROUP3/Sourcebook/issues/216)).
 
 ## What it does

@@ -1,8 +1,7 @@
 ﻿# Stakeholder video script (v1.0.0)
 
-**Status:** Script and shot list only. Recording, final screenshots, deployed
-SHA, and video URL are **pending**. Do not treat this page as proof that the
-Unit 8 video was recorded or published.
+**Status:** Recorded and published at <https://youtu.be/ywaTO12U8Ls>.
+This page is the script the team recorded from.
 
 **Issue:** [#216](https://github.com/CMSC495-GROUP3/Sourcebook/issues/216)
 (part of [#201](https://github.com/CMSC495-GROUP3/Sourcebook/issues/201) step 5).
