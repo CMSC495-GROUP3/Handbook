@@ -10,7 +10,7 @@ candidate code at `7d3c779` named in [handoff.md](handoff.md). Earlier releases:
 [`v0.1.0-alpha.1`](https://github.com/CMSC495-GROUP3/Sourcebook/releases/tag/v0.1.0-alpha.1)
 and [`v0.2.0`](https://github.com/CMSC495-GROUP3/Sourcebook/releases/tag/v0.2.0).
 
-Stakeholder video: Pending, linked after upload
+Stakeholder video: <https://youtu.be/ywaTO12U8Ls>
 ([#216](https://github.com/CMSC495-GROUP3/Sourcebook/issues/216)).
 
 ## Two ways in
@@ -32,7 +32,7 @@ Stakeholder video: Pending, linked after upload
 | Integrated system | [README](../../../README.md); the demo site; [handoff.md](handoff.md) | end-to-end pass in [handoff.md](handoff.md#end-to-end-pass-by-hand) |
 | Working AI feature | README: [How a question is answered](../../../README.md#how-a-question-is-answered), [Keeping the model honest](../../../README.md#keeping-the-model-honest) | smoke and full tier in [live-evaluation.md](live-evaluation.md); the beta fixed the refusal gap, 0% to 100% ([beta evaluation](../v0.2.0/live-evaluation.md)) |
 | CI/CD evidence | [docs/ci-cd.md](../../ci-cd.md): each workflow and the auto-deploy path | screenshots of green runs on the final commit in [evidence/](evidence/README.md) ([#207](https://github.com/CMSC495-GROUP3/Sourcebook/issues/207)) |
-| README | [README.md](../../../README.md) | release row and video link, written after the tag |
+| README | [README.md](../../../README.md) | release row, and the [video link](https://youtu.be/ywaTO12U8Ls) in the header |
 | API documentation | [docs/api.md](../../api.md), [docs/openapi.json](../../openapi.json) | CI fails when the committed OpenAPI document is stale |
 | Installation guide | [docs/install.md](../../install.md) | none needed |
 | User manual | [docs/user-guide.md](../../user-guide.md) ([#206](https://github.com/CMSC495-GROUP3/Sourcebook/issues/206)) | screenshots from the final browser pass in [evidence/](evidence/README.md) |

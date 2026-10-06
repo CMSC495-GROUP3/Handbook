@@ -1,7 +1,6 @@
 ﻿# Stakeholder video shot list (v1.0.0)
 
-**Status:** Pre-production only. Recording, final screenshots, deployed SHA,
-and video URL are **pending**. Pair with
+**Status:** Recorded and published at <https://youtu.be/ywaTO12U8Ls>. Pair with
 [stakeholder-video-script.md](stakeholder-video-script.md).
 
 **Issue:** [#216](https://github.com/CMSC495-GROUP3/Sourcebook/issues/216).

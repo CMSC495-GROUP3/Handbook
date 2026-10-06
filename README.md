@@ -23,6 +23,7 @@
 
 <p align="center">
   <a href="https://sourcebook.duckdns.org">Demo site</a> ·
+  <a href="https://youtu.be/ywaTO12U8Ls">Demo video</a> ·
   <a href="#start-here">Start here</a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="docs/architecture.md">How it works</a> ·
@@ -36,7 +37,7 @@
 
 | You are | Read first | Then |
 | --- | --- | --- |
-| Grading or evaluating the project | This page, from [The problem](#the-problem) through [Evidence](#evidence) | the [demo site](https://sourcebook.duckdns.org) with the [user guide](docs/user-guide.md), the `v1.0.0` [handoff](docs/releases/v1.0.0/handoff.md) and [portfolio](docs/releases/v1.0.0/portfolio.md), [quality.md](docs/quality.md), [evaluation.md](docs/evaluation.md) |
+| Grading or evaluating the project | This page, from [The problem](#the-problem) through [Evidence](#evidence) | the [stakeholder video](https://youtu.be/ywaTO12U8Ls), the [demo site](https://sourcebook.duckdns.org) with the [user guide](docs/user-guide.md), the `v1.0.0` [handoff](docs/releases/v1.0.0/handoff.md) and [portfolio](docs/releases/v1.0.0/portfolio.md), [quality.md](docs/quality.md), [evaluation.md](docs/evaluation.md) |
 | Running or deploying it | [docs/install.md](docs/install.md) | [docs/ci-cd.md](docs/ci-cd.md) for the deploy pipeline, [docs/evaluation.md](docs/evaluation.md) to measure it |
 | Changing the code | [Quick start](#quick-start), then [CONTRIBUTING.md](CONTRIBUTING.md) | [docs/architecture.md](docs/architecture.md), [docs/api.md](docs/api.md), [docs/design.md](docs/design.md) |
 
