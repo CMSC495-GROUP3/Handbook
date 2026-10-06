@@ -13,8 +13,8 @@ except the What People Ask timing, covered below.
 | Code under test | [`1059d73`](https://github.com/CMSC495-GROUP3/Sourcebook/commit/1059d73bfd4e57e03cd248a72d23fa7cba3061a2), the merge of #313 on 2026-09-27. It is the last commit on `main` that changed code |
 | CI | [36355326962](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36355326962) on `1059d73`, green |
 | Security | [36355326918](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36355326918) on `1059d73`, green |
-| Tagged commit | The merge of this release's pull request, which follows #292's merge `d4ebc78`. Both change documentation only, so the tag runs the same code as `1059d73`. The [release page](https://github.com/CMSC495-GROUP3/Sourcebook/releases/tag/v1.1.0) names the commit |
-| Tag and release | [`v1.1.0`](https://github.com/CMSC495-GROUP3/Sourcebook/releases/tag/v1.1.0), annotated, a full release |
+| Tagged commit | [`eb234c6`](https://github.com/CMSC495-GROUP3/Sourcebook/commit/eb234c661085f606c0648b2f410cf71366616d34), the merge of #314, this release's pull request, which follows #292's merge `d4ebc78`. Both change documentation only, so the tag runs the same code as `1059d73`. [CI](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36366005644) and [Security](https://github.com/CMSC495-GROUP3/Sourcebook/actions/runs/36366005616) green on it |
+| Tag and release | [`v1.1.0`](https://github.com/CMSC495-GROUP3/Sourcebook/releases/tag/v1.1.0), annotated, a full release, published at 01:28 UTC on 2026-09-28 |
 | Running at | <https://sourcebook.duckdns.org> |
 | Deployed commit | `1059d73` in both `HEAD` and `refs/deployed/main` on the demo host, checked about 22:30 UTC on 2026-09-27. The API container had restarted for that deploy 5 minutes earlier and logged no errors or warnings since. #292's merge `d4ebc78` deployed after this check; it changed only `docs/quality.md`, so the API was not rebuilt |
 
@@ -46,7 +46,7 @@ message strings that pointed at moved README sections; no behavior changed.
 | Timing at the planned volume | 7 million questions a day for 90 days on a local MongoDB 7: snapshot read 1 ms; refresh of all three windows 8.4 s at 50,000 distinct questions a day and 56.2 s at 200,000 | [load-testing.md](../../load-testing.md#the-per-day-rollup) |
 | By hand, local | Startup built the covering index, the thread stored all three snapshots, the 30-day page served its snapshot, and a 14-day window computed live | [#308](https://github.com/CMSC495-GROUP3/Sourcebook/pull/308) |
 | Backfill on the demo host | Run after #308 deployed | [install.md](../../install.md#query-log-report-and-rollup-backfill) |
-| Snapshots on the demo host | Pending: the three `query_log_report` documents exist and their `until` is under 5 minutes old | The command under [The tag](#the-tag) |
+| Snapshots on the demo host | Passed at 01:25 UTC on 2026-09-28, with `d4ebc78` deployed. The refresh lease and the 7, 30, and 90-day snapshots were all present, each taken 2 minutes 47 seconds earlier | The command under [The tag](#the-tag) |
 
 ## What carries over from v1.0.0
 
@@ -81,9 +81,9 @@ a day, against the route's 5 s limit.
 
 ## The tag
 
-The tag waits for this release's pull request to merge and for the snapshot
-check. To run the snapshot check on the demo host, which prints ids
-and times only:
+Done. #314 merged as `eb234c6`, and the snapshot check passed on the demo
+host at 01:25 UTC on 2026-09-28, as recorded under Verification. The snapshot
+check, which prints ids and times only:
 
 ```bash
 docker compose exec -T api python -c 'from sourcebook.rag.mongo import get_collection as g
@@ -93,16 +93,18 @@ for d in g("query_log_report").find({}, {"until": 1, "expires_at": 1}): print(d)
 Expect `refresh-lease` and three snapshots, `7d|...`, `30d|...`, and `90d|...`, each with an
 `until` under 15 minutes old (normally under 5).
 After a restart the new API waits out the old one's refresh lease, up to 12
-minutes, which is why the bound is looser than the refresh interval. Then, on this pull request's merge commit:
+minutes, which is why the bound is looser than the refresh interval. The tag and release commands, with the tagged commit filled in:
 
 ```bash
 git fetch upstream
-git tag -a v1.1.0 <merge commit> -m "What People Ask at planned volume: verified per docs/releases/v1.1.0/handoff.md"
+git tag -a v1.1.0 eb234c661085f606c0648b2f410cf71366616d34 -m "What People Ask at planned volume: verified per docs/releases/v1.1.0/handoff.md"
 git push upstream v1.1.0
 gh release create v1.1.0 --repo CMSC495-GROUP3/Sourcebook \
   --title "v1.1.0" --latest --notes-file <release notes with absolute links>
 ```
 
-Rewrite the relative links in the release notes to absolute links into the
-tagged tree before publishing, as for `v1.0.0`. No follow-up pull request is
-planned: the release page records the tagged commit.
+The release body is [release-notes.md](release-notes.md) with its relative
+links rewritten to absolute links into the tagged tree, and a "Checked before
+the tag" section recording the snapshot check. On 2026-10-05 the body was
+edited to put each paragraph on one line, because a release body renders
+every newline as a line break; the wording did not change.
